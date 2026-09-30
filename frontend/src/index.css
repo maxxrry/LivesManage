@@ -1,0 +1,14 @@
+@import 'tailwindcss';
+
+@theme {
+  /* Rosado del cuaderno: destaca lo pagado. */
+  --color-marca-50: #fdf2f8;
+  --color-marca-100: #fce7f3;
+  --color-marca-600: #db2777;
+  --color-marca-700: #be185d;
+}
+
+html,
+body {
+  overflow-x: hidden;
+}
