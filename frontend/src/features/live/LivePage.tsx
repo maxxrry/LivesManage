@@ -30,6 +30,7 @@ export function LivePage() {
   const [errorCarga, setErrorCarga] = useState('');
   const [aviso, setAviso] = useState<{ texto: string; anotacionId: string; lineaId: string } | null>(null);
   const [errorAccion, setErrorAccion] = useState('');
+  const [busqueda, setBusqueda] = useState('');
 
   useEffect(() => {
     let vigente = true; // ignora la respuesta si se cambió de live antes de que llegara
@@ -66,6 +67,7 @@ export function LivePage() {
   async function alAnotar(destino: DestinoAnotacion, precios: MontoClp[]) {
     setErrorAccion('');
     const { anotacionId, linea } = await anotar(id, destino, precios);
+    setBusqueda(''); // la línea anotada debe verse aunque no coincida con la búsqueda
     const total = precios.reduce((suma, p) => suma + p, 0);
     setAviso({
       anotacionId,
@@ -159,6 +161,8 @@ export function LivePage() {
         onAlternarPrenda={(lineaId, prendaId) => void alAlternarPrenda(lineaId, prendaId)}
         onCambiarClienta={alCambiarClienta}
         onAlternarPago={(lineaId) => void alAlternarPago(lineaId)}
+        busqueda={busqueda}
+        onBuscar={setBusqueda}
       />
 
       {aviso && <Aviso texto={aviso.texto} onDeshacer={() => void alDeshacer()} onCerrar={cerrarAviso} />}

@@ -61,6 +61,18 @@ describe('Hoja y totales del live (RF-08)', () => {
     expect(lineasVisibles().map((li) => li.textContent?.split(/\d/)[0])).toEqual(['Javiera Soto']);
   });
 
+  it('al anotar se borra la búsqueda, para que la línea anotada se vea', async () => {
+    const usuario = await abrirLive();
+    const buscar = screen.getByRole('searchbox', { name: 'Buscar en la hoja' });
+    await usuario.type(buscar, 'flo');
+
+    await usuario.type(screen.getByRole('combobox', { name: 'Anotación' }), 'ana 5{Enter}');
+
+    expect(await screen.findByText('ana')).toBeInTheDocument();
+    expect(buscar).toHaveValue('');
+    expect(lineasVisibles()).toHaveLength(6);
+  });
+
   it('sin coincidencias lo indica, y al borrar vuelven todas las líneas', async () => {
     const usuario = await abrirLive();
     const buscar = screen.getByRole('searchbox', { name: 'Buscar en la hoja' });

@@ -14,6 +14,9 @@ interface HojaLiveProps {
   onAlternarPrenda: (lineaId: string, prendaId: string) => void;
   onCambiarClienta: (lineaId: string, destino: DestinoAnotacion) => Promise<void>;
   onAlternarPago: (lineaId: string) => void;
+  /** Texto de búsqueda (RF-08). Lo controla LivePage, que lo borra al anotar. */
+  busqueda: string;
+  onBuscar: (texto: string) => void;
 }
 
 function PrendaHoja({ prenda, editable, onAlternar }: { prenda: Prenda; editable: boolean; onAlternar: () => void }) {
@@ -63,9 +66,17 @@ function EstadoPagoLinea({ linea, editable, onAlternar }: { linea: Linea; editab
  * RF-06: tocar una prenda la cancela o la restaura; el lápiz cambia la clienta de la línea.
  * RF-07: el botón Pagado marca o desmarca el pago; la línea pagada se destaca en rosado, como en el cuaderno.
  */
-export function HojaLive({ lineas, editable, clientas, onAlternarPrenda, onCambiarClienta, onAlternarPago }: HojaLiveProps) {
+export function HojaLive({
+  lineas,
+  editable,
+  clientas,
+  onAlternarPrenda,
+  onCambiarClienta,
+  onAlternarPago,
+  busqueda,
+  onBuscar,
+}: HojaLiveProps) {
   const [editando, setEditando] = useState<string | null>(null);
-  const [busqueda, setBusqueda] = useState('');
 
   if (lineas.length === 0) {
     return <p className="p-4 text-sm text-gray-500">Aún no hay anotaciones en este live.</p>;
@@ -82,7 +93,7 @@ export function HojaLive({ lineas, editable, clientas, onAlternarPrenda, onCambi
         <input
           type="search"
           value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
+          onChange={(e) => onBuscar(e.target.value)}
           aria-label="Buscar en la hoja"
           placeholder="Buscar clienta en la hoja"
           autoComplete="off"
