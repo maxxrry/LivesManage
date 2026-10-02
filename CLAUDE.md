@@ -75,8 +75,9 @@ Precios: enteros de 1 a 999 (miles). Los decimales (3,5) están pendientes de co
 
 ## Frontend
 
-- Mobile-first: diseñar a 360 px de ancho, sin scroll horizontal, áreas táctiles de al menos 44×44 px.
-- Pantalla de live: totales fijos arriba, campo de anotación siempre visible, líneas debajo.
+- Responsive, mobile-first: se diseña primero a 360 px (celular en vertical, uso principal durante el live), pero también es una web de computador (Chrome, Edge y Firefox en PC; ERS 3.1.2 y RNF-25). Cada pantalla debe aprovechar el ancho en escritorio (contenido con ancho máximo, columnas o tablas cuando ayuden) en vez de verse como un celular estirado.
+- Sin scroll horizontal en ningún ancho. Áreas táctiles de al menos 44×44 px. En PC, todo se usa con teclado y mouse (foco visible, Enter para enviar, hover).
+- Pantalla de live: totales fijos arriba, campo de anotación siempre visible, líneas debajo. En escritorio puede usar más columnas, pero sigue igual de rápida de anotar.
 - Solo `src/services/` habla con la API. Mientras no haya backend, los servicios devuelven datos simulados con la misma forma que tendrá la API real.
 - Montos con `Intl.NumberFormat('es-CL')` ($17.000). Fechas dd/mm/aaaa, zona America/Santiago. Textos en español de Chile.
 
