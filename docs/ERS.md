@@ -396,6 +396,7 @@ Cada RF tiene un criterio de aceptación verificable. El criterio se automatiza 
 * ☐ ¿Hay precios que no sean miles exactos (ej: $3.500)? Si existen, la sintaxis debería aceptar un decimal (3,5).
 * ☐ ¿El despacho tiene costo para la clienta? Si es así, ¿se suma a su total?
 * ☐ ¿Hay pagos parciales o abonos? Hoy una línea está Pendiente o Pagada completa.
+* ☐ Si una clienta ya pagó y luego se cancela una de sus prendas, ¿se le devuelve el dinero o queda a favor? Hoy la línea sigue Pagada (D-20).
 * ☐ ¿La entrega en feria necesita registrar qué feria y qué día?
 * ☐ ¿Anota una sola persona por live? El sistema asume que sí.
 * ☐ ¿Se necesita registrar las ventas del local físico? Hoy quedan fuera de alcance.

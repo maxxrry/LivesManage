@@ -23,6 +23,9 @@ Registro de decisiones de diseño que complementan o precisan el ERS (`docs/ERS.
 | D-17 | 02/10/2026 | RF-04 | Nombre por defecto, sin confirmación al abrir y enlace de cada live. |
 | D-18 | 02/10/2026 | RF-06, RF-08 | Cancelar o restaurar una prenda no cambia el orden de la hoja. |
 | D-19 | 02/10/2026 | RF-06 | Cambiar la clienta de una línea: a una existente o nueva, y reglas al unir líneas. |
+| D-20 | 02/10/2026 | RF-05, RF-06, RF-07 | Una línea Pagada vuelve a Pendiente si se le agrega o restaura una prenda. |
+| D-21 | 02/10/2026 | RF-07 | Marcar el pago no reordena la hoja; fecha y usuario se guardan sin mostrarse. |
+| D-22 | 02/10/2026 | RF-05, RF-06, RF-07 | Cualquier cambio en la línea recién anotada anula su Deshacer. Amplía D-11 y D-19. |
 
 ## D-01 · Estilos con Tailwind CSS
 
@@ -129,3 +132,20 @@ RF-08 muestra la última línea modificada arriba. Cancelar o restaurar una pren
 - Si la clienta elegida ya tiene línea en el live, se pide confirmación ("¿Unirlas?") y las prendas pasan a esa línea; la línea original desaparece. Sin unión no hay confirmación.
 - Estado de la línea unida: Pagado solo si ambas estaban Pagadas (si no, Pendiente: hay un monto sin cobrar); bolsa revisada solo si ambas lo estaban; entrega la de la línea de destino o, si no tiene, la de la otra.
 - Tras cambiar la clienta, el Deshacer de la última anotación (D-11) deja de aplicar.
+
+## D-20 · Cambios de monto en una línea Pagada
+
+- Si a una línea Pagada se le agrega una prenda (anotar, RF-05) o se le restaura una cancelada (RF-06), vuelve a Pendiente: hay un monto sin cobrar. Es la misma regla de D-19 al unir líneas. El cambio queda registrado con fecha y usuario como cualquier cambio de pago.
+- Si se cancela una prenda de una línea Pagada, sigue Pagado. Devoluciones y saldos a favor quedan fuera de alcance; la pregunta está en "Pendientes por confirmar" del ERS.
+
+## D-21 · Marcar el pago
+
+- Marcar o desmarcar el pago no reordena la hoja, por la misma razón de D-18.
+- La fecha, hora y usuario del cambio (RF-07) se guardan en `Linea.pagoActualizado` pero no se muestran por ahora; pueden mostrarse en el historial de la ficha (RF-13) o en el cierre (RF-09).
+- Con un live Cerrado, el estado de pago se muestra como texto y no se puede cambiar.
+
+## D-22 · Deshacer solo si la línea no cambió
+
+Deshacer (D-11) devuelve la línea a como estaba antes de anotar, incluido su estado de pago (D-20). Si después de anotar la línea cambió (cancelar o restaurar una prenda, marcar el pago o cambiar la clienta), Deshacer ya no aplica: el aviso se cierra y el servicio rechaza deshacer. Así Deshacer nunca deja como Pagado un monto que nadie cobró. Cambios en otras líneas no afectan el aviso.
+
+Una línea "No pagó" muestra su estado como texto aunque el live sea editable; qué se puede hacer con ella al reabrir un cierre se define en RF-11.

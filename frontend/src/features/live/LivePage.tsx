@@ -3,6 +3,7 @@ import { useParams } from 'react-router';
 import { Pantalla } from '../../components/Pantalla';
 import { listarClientas } from '../../services/clientasService';
 import {
+  alternarPago,
   alternarPrenda,
   anotar,
   cambiarClienta,
@@ -26,7 +27,7 @@ export function LivePage() {
   const [detalle, setDetalle] = useState<SesionDetalle | null>(null);
   const [clientas, setClientas] = useState<Clienta[]>([]);
   const [errorCarga, setErrorCarga] = useState('');
-  const [aviso, setAviso] = useState<{ texto: string; anotacionId: string } | null>(null);
+  const [aviso, setAviso] = useState<{ texto: string; anotacionId: string; lineaId: string } | null>(null);
   const [errorAccion, setErrorAccion] = useState('');
 
   useEffect(() => {
@@ -67,6 +68,7 @@ export function LivePage() {
     const total = precios.reduce((suma, p) => suma + p, 0);
     setAviso({
       anotacionId,
+      lineaId: linea.id,
       texto: `${linea.clientaNombre}: ${precios.map((p) => p / 1000).join('-')} = ${formatearClp(total)}`,
     });
     await recargar();
@@ -84,13 +86,31 @@ export function LivePage() {
     await recargar();
   }
 
-  // RF-06: cancelar o restaurar una prenda. No cierra el aviso: Deshacer sigue valiendo.
+  // Un cambio en la línea recién anotada anula su Deshacer (D-22): el aviso se cierra.
+  function cerrarAvisoDe(lineaId: string) {
+    setAviso((actual) => (actual?.lineaId === lineaId ? null : actual));
+  }
+
+  // RF-06: cancelar o restaurar una prenda.
   async function alAlternarPrenda(lineaId: string, prendaId: string) {
     setErrorAccion('');
+    cerrarAvisoDe(lineaId);
     try {
       await alternarPrenda(id, lineaId, prendaId);
     } catch (e) {
       setErrorAccion(mensaje(e, 'No se pudo corregir la prenda.'));
+    }
+    await recargar();
+  }
+
+  // RF-07: marcar o desmarcar el pago de una línea.
+  async function alAlternarPago(lineaId: string) {
+    setErrorAccion('');
+    cerrarAvisoDe(lineaId);
+    try {
+      await alternarPago(id, lineaId);
+    } catch (e) {
+      setErrorAccion(mensaje(e, 'No se pudo cambiar el pago.'));
     }
     await recargar();
   }
@@ -112,22 +132,35 @@ export function LivePage() {
   }
 
   const { sesion, lineas } = detalle;
-  const totalLive = lineas.reduce((suma, l) => suma + totalLinea(l.prendas), 0);
+  const sumar = (ls: typeof lineas) => ls.reduce((suma, l) => suma + totalLinea(l.prendas), 0);
+  const totalLive = sumar(lineas);
+  const totalPagado = sumar(lineas.filter((l) => l.estadoPago === 'PAGADO'));
 
   return (
     <>
       <div className="sticky top-14 z-10 space-y-2 border-b border-gray-200 bg-gray-50 px-4 py-3">
-        <div className="flex items-baseline justify-between gap-2">
+        <div className="flex items-start justify-between gap-2">
           <h1 className="truncate font-semibold">{nombreSesion(sesion)}</h1>
-          <p className="shrink-0 text-sm">
-            Total del live <strong className="text-base tabular-nums" data-testid="total-live">{formatearClp(totalLive)}</strong>
-          </p>
+          <dl className="shrink-0 text-right text-sm">
+            <div>
+              <dt className="inline">Total del live </dt>
+              <dd className="inline text-base font-bold tabular-nums" data-testid="total-live">
+                {formatearClp(totalLive)}
+              </dd>
+            </div>
+            <div className="text-marca-700">
+              <dt className="inline">Pagado </dt>
+              <dd className="inline font-semibold tabular-nums" data-testid="total-pagado">
+                {formatearClp(totalPagado)}
+              </dd>
+            </div>
+          </dl>
         </div>
         {sesion.estado === 'ABIERTA' ? (
           <CampoAnotacion clientas={clientas} idsConLinea={new Set(lineas.map((l) => l.clientaId))} onAnotar={alAnotar} />
         ) : (
           <p className="text-sm text-gray-600">
-            Este live está {ETIQUETAS_ESTADO_SESION[sesion.estado].toLowerCase()}: ya no se puede anotar.
+            Estado: {ETIQUETAS_ESTADO_SESION[sesion.estado]}. Ya no se puede anotar.
           </p>
         )}
         {errorAccion && (
@@ -143,6 +176,7 @@ export function LivePage() {
         clientas={clientas}
         onAlternarPrenda={(lineaId, prendaId) => void alAlternarPrenda(lineaId, prendaId)}
         onCambiarClienta={alCambiarClienta}
+        onAlternarPago={(lineaId) => void alAlternarPago(lineaId)}
       />
 
       {aviso && <Aviso texto={aviso.texto} onDeshacer={() => void alDeshacer()} onCerrar={cerrarAviso} />}

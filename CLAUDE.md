@@ -13,8 +13,9 @@ Proyecto del ramo Desarrollo FullStack 2 (Duoc UC) y para un cliente real.
 - Hecho: RF-05. Parser (`features/live/parseAnotacion.ts`), sugerencias, `anotar()`/`deshacerAnotacion()` simulados, pantalla de live con total del live, hoja en formato cuaderno y aviso con Deshacer. Cobertura con `npm run coverage`. Guía de pruebas en `docs/pruebas.md`.
 - Hecho: RF-04. Lista de lives con fecha, estado, clientas, total y pagado (`SesionResumen`, totales calculados por el servicio), abrir live con nombre opcional y "Continuar" si ya hay uno Abierto.
 - Hecho: RF-06. Prendas como botones de 44 px que cancelan o restauran (sin reordenar, D-18) y "Cambiar clienta" por línea, con unión confirmada (D-19). Disponible En cierre; en Cerrada es solo lectura.
-- Decisiones D-01 a D-19 en `docs/decisiones.md`.
-- Siguiente: RF-07 (pago) y RF-08 (totales completos y búsqueda), que completan la pantalla de live.
+- Hecho: RF-07. Botón Pagado por línea (aria-pressed), línea pagada en rosado, "Pagado" en la cabecera; fecha y usuario guardados sin mostrar (D-21). Agregar o restaurar una prenda en una línea Pagada la vuelve a Pendiente (D-20).
+- Decisiones D-01 a D-22 en `docs/decisiones.md`.
+- Siguiente: RF-08 (pendiente por cobrar, número de clientas y búsqueda), que completa la pantalla de live.
 
 ## Estructura
 

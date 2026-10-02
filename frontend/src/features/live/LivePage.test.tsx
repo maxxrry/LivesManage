@@ -100,7 +100,7 @@ describe('Pantalla de live (RF-05)', () => {
 
   it('en un live Cerrado no aparece el campo de anotación', async () => {
     await abrirLive('s-1');
-    expect(await screen.findByText(/ya no se puede anotar/)).toBeInTheDocument();
+    expect(await screen.findByText(/ya no se puede anotar/i)).toBeInTheDocument();
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 });

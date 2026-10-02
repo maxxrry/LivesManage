@@ -1,6 +1,6 @@
-import type { Clienta, Linea, MontoClp, Prenda, Sesion, SesionDetalle, SesionResumen } from '../types/dominio';
+import type { Clienta, EstadoPago, Linea, MontoClp, Prenda, Sesion, SesionDetalle, SesionResumen } from '../types/dominio';
 import { totalLinea } from '../utils/montos';
-import { clientas, entregas, lineas, nuevoId, sesiones } from './mock/datos';
+import { clientas, entregas, lineas, nuevoId, sesiones, usuarios } from './mock/datos';
 
 // Simulado en memoria. Con backend:
 //   GET    /api/lives                          listarSesiones
@@ -10,6 +10,7 @@ import { clientas, entregas, lineas, nuevoId, sesiones } from './mock/datos';
 //   DELETE /api/lives/{id}/anotaciones/{aid}   deshacerAnotacion
 //   PATCH  /api/lives/{id}/lineas/{lid}/prendas/{pid}   alternarPrenda
 //   PATCH  /api/lives/{id}/lineas/{lid}/clienta         cambiarClienta
+//   PATCH  /api/lives/{id}/lineas/{lid}/pago            alternarPago
 
 /** RF-04: cada live con sus totales, calculados desde las prendas vigentes (como hará ms-lives). */
 export async function listarSesiones(): Promise<SesionResumen[]> {
@@ -63,8 +64,19 @@ interface Anotacion {
   lineaCreada: boolean;
   actualizadaAnterior?: string;
   clientaCreadaId?: string;
+  /** Pago de la línea antes de anotar, si la anotación la devolvió a Pendiente (D-20). */
+  pagoAnterior?: Pick<Linea, 'estadoPago' | 'pagoActualizado'>;
 }
 const anotaciones = new Map<string, Anotacion>();
+
+// Usuario autenticado. Simulado: la administradora; con backend sale del JWT.
+const usuarioSesionId = () => usuarios[0]?.id ?? 'desconocido';
+
+/** Cambia el estado de pago y registra fecha, hora y usuario (RF-07). */
+function registrarPago(linea: Linea, estado: EstadoPago): void {
+  linea.estadoPago = estado;
+  linea.pagoActualizado = { fecha: new Date().toISOString(), usuarioId: usuarioSesionId() };
+}
 
 /** La clienta existente del destino, o una nueva creada con ese nombre. */
 function resolverClienta(destino: DestinoAnotacion): Clienta {
@@ -108,6 +120,10 @@ export async function anotar(sesionId: string, destino: DestinoAnotacion, precio
   if (existente) {
     existente.prendas.push(...nuevas);
     existente.actualizada = ahora;
+    if (existente.estadoPago === 'PAGADO') {
+      anotacion.pagoAnterior = structuredClone({ estadoPago: existente.estadoPago, pagoActualizado: existente.pagoActualizado });
+      registrarPago(existente, 'PENDIENTE'); // D-20: hay un monto sin cobrar
+    }
     linea = existente;
   } else {
     linea = {
@@ -142,11 +158,19 @@ export async function deshacerAnotacion(anotacionId: string): Promise<void> {
     } else {
       linea.prendas = linea.prendas.filter((p) => !anotacion.prendaIds.includes(p.id));
       linea.actualizada = anotacion.actualizadaAnterior ?? linea.actualizada;
+      if (anotacion.pagoAnterior) Object.assign(linea, anotacion.pagoAnterior);
     }
   }
 
   const j = clientas.findIndex((c) => c.id === anotacion.clientaCreadaId);
   if (j >= 0) clientas.splice(j, 1);
+}
+
+/** Tras cualquier cambio en una línea, sus anotaciones ya no se pueden deshacer (D-19, D-22). */
+function anularDeshacer(...lineaIds: (string | undefined)[]): void {
+  for (const [id, a] of anotaciones) {
+    if (lineaIds.includes(a.lineaId)) anotaciones.delete(id);
+  }
 }
 
 /** Línea de un live que se puede corregir: existe y el live no está Cerrado (RF-06). */
@@ -164,7 +188,19 @@ export async function alternarPrenda(sesionId: string, lineaId: string, prendaId
   const linea = lineaEditable(sesionId, lineaId);
   const prenda = linea.prendas.find((p) => p.id === prendaId);
   if (!prenda) throw new Error('Prenda no encontrada');
+  anularDeshacer(linea.id);
   prenda.estado = prenda.estado === 'VIGENTE' ? 'CANCELADA' : 'VIGENTE';
+  // D-20: restaurar en una línea Pagada agrega un monto sin cobrar. Cancelar la deja Pagada.
+  if (prenda.estado === 'VIGENTE' && linea.estadoPago === 'PAGADO') registrarPago(linea, 'PENDIENTE');
+  return structuredClone(linea);
+}
+
+/** RF-07: pasa la línea de Pendiente a Pagado o al revés. No reordena la hoja (D-21). */
+export async function alternarPago(sesionId: string, lineaId: string): Promise<Linea> {
+  const linea = lineaEditable(sesionId, lineaId);
+  if (linea.estadoPago === 'NO_PAGO') throw new Error('"No pagó" se revisa en el cierre del live.');
+  anularDeshacer(linea.id);
+  registrarPago(linea, linea.estadoPago === 'PAGADO' ? 'PENDIENTE' : 'PAGADO');
   return structuredClone(linea);
 }
 
@@ -180,10 +216,7 @@ export async function cambiarClienta(sesionId: string, lineaId: string, destino:
   const otra = lineas.find((l) => l.sesionId === sesionId && l.clientaId === clienta.id);
   const ahora = new Date().toISOString();
 
-  // Las anotaciones sobre estas líneas ya no se pueden deshacer (D-19).
-  for (const [id, a] of anotaciones) {
-    if (a.lineaId === linea.id || a.lineaId === otra?.id) anotaciones.delete(id);
-  }
+  anularDeshacer(linea.id, otra?.id);
 
   if (!otra) {
     linea.clientaId = clienta.id;
