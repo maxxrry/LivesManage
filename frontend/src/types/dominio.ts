@@ -117,6 +117,14 @@ export interface Usuario {
   activo: boolean;
 }
 
+/** Un live en la lista de lives (RF-04). Los totales los calcula el backend. */
+export interface SesionResumen extends Sesion {
+  /** Número de clientas: una línea por clienta. */
+  clientas: number;
+  total: MontoClp;
+  totalPagado: MontoClp;
+}
+
 /** Respuesta de la API al pedir un live con su hoja completa. */
 export interface SesionDetalle {
   sesion: Sesion;

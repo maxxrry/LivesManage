@@ -1,14 +1,37 @@
-import type { Clienta, Linea, MontoClp, Prenda, Sesion, SesionDetalle } from '../types/dominio';
+import type { Clienta, Linea, MontoClp, Prenda, Sesion, SesionDetalle, SesionResumen } from '../types/dominio';
+import { totalLinea } from '../utils/montos';
 import { clientas, entregas, lineas, nuevoId, sesiones } from './mock/datos';
 
 // Simulado en memoria. Con backend:
 //   GET    /api/lives                          listarSesiones
+//   POST   /api/lives                          abrirSesion
 //   GET    /api/lives/{id}                     obtenerSesion
 //   POST   /api/lives/{id}/anotaciones         anotar
 //   DELETE /api/lives/{id}/anotaciones/{aid}   deshacerAnotacion
 
-export async function listarSesiones(): Promise<Sesion[]> {
-  return structuredClone(sesiones);
+/** RF-04: cada live con sus totales, calculados desde las prendas vigentes (como hará ms-lives). */
+export async function listarSesiones(): Promise<SesionResumen[]> {
+  return sesiones.map((sesion) => {
+    const suyas = lineas.filter((l) => l.sesionId === sesion.id);
+    const sumar = (ls: Linea[]) => ls.reduce((suma, l) => suma + totalLinea(l.prendas), 0);
+    return {
+      ...structuredClone(sesion),
+      clientas: suyas.length,
+      total: sumar(suyas),
+      totalPagado: sumar(suyas.filter((l) => l.estadoPago === 'PAGADO')),
+    };
+  });
+}
+
+/** RF-04: abre un live nuevo. Solo puede haber uno Abierto; uno En cierre no bloquea. */
+export async function abrirSesion(nombre?: string): Promise<Sesion> {
+  if (sesiones.some((s) => s.estado === 'ABIERTA')) {
+    throw new Error('Ya hay un live abierto. Continúa en él o termínalo antes de abrir otro.');
+  }
+  const sesion: Sesion = { id: nuevoId('s'), inicio: new Date().toISOString(), estado: 'ABIERTA' };
+  if (nombre?.trim()) sesion.nombre = nombre.trim();
+  sesiones.push(sesion);
+  return structuredClone(sesion);
 }
 
 export async function obtenerSesion(id: string): Promise<SesionDetalle> {

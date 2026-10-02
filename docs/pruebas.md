@@ -155,4 +155,5 @@ Cada prueba E2E lleva la etiqueta de su RF y prueba su criterio de aceptación (
 
 | **RF** | **Criterio de aceptación** | **Unitarias** | **E2E** |
 | --- | --- | --- | --- |
+| RF-04 | Con un live Abierto no se puede abrir otro; la lista muestra los totales de cada live. | `sesiones.test.ts`, `fechas.test.ts`, `LivesPage.test.tsx` | `e2e/rf-04.spec.ts` (`@RF-04`): totales de la lista, no abrir otro y continuar, tocar un live abre su pantalla |
 | RF-05 | "flo 6-4" suma $10.000 a la línea existente de Florencia; "ana 5" crea clienta y línea; "flo 6-" muestra error y conserva el texto. | `parseAnotacion.test.ts`, `sugerirClientas.test.ts`, `montos.test.ts`, `anotar.test.ts`, `LivePage.test.tsx` | `e2e/rf-05.spec.ts` (`@RF-05`): los tres casos del criterio y Deshacer (D-11) |

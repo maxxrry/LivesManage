@@ -6,6 +6,7 @@ import { anotar, deshacerAnotacion, obtenerSesion, type DestinoAnotacion } from 
 import type { Clienta, MontoClp, SesionDetalle } from '../../types/dominio';
 import { ETIQUETAS_ESTADO_SESION } from '../../types/etiquetas';
 import { formatearClp, totalLinea } from '../../utils/montos';
+import { nombreSesion } from '../../utils/sesion';
 import { Aviso } from './Aviso';
 import { CampoAnotacion } from './CampoAnotacion';
 import { HojaLive } from './HojaLive';
@@ -76,7 +77,7 @@ export function LivePage() {
     <>
       <div className="sticky top-14 z-10 space-y-2 border-b border-gray-200 bg-gray-50 px-4 py-3">
         <div className="flex items-baseline justify-between gap-2">
-          <h1 className="truncate font-semibold">{sesion.nombre ?? 'Live'}</h1>
+          <h1 className="truncate font-semibold">{nombreSesion(sesion)}</h1>
           <p className="shrink-0 text-sm">
             Total del live <strong className="text-base tabular-nums" data-testid="total-live">{formatearClp(totalLive)}</strong>
           </p>

@@ -11,7 +11,8 @@ Proyecto del ramo Desarrollo FullStack 2 (Duoc UC) y para un cliente real.
 - Fase: frontend primero, con datos simulados. El backend aún no existe.
 - Hecho: base del frontend (Vite + React + TS 6, Tailwind 4, React Router, Vitest, Playwright en Chromium 360×740). Tipos del dominio en `src/types/` (textos visibles solo en `etiquetas.ts`), servicios simulados en `src/services/` (live Abierto con 5 líneas, live Cerrado, usuario ADMIN), router con pantallas vacías de 3.1.1 y layout con menú.
 - Hecho: RF-05. Parser (`features/live/parseAnotacion.ts`), sugerencias, `anotar()`/`deshacerAnotacion()` simulados, pantalla de live con total del live, hoja en formato cuaderno y aviso con Deshacer. Cobertura con `npm run coverage`. Guía de pruebas en `docs/pruebas.md`.
-- Decisiones D-01 a D-16 en `docs/decisiones.md` (las de RF-05: D-11 a D-16).
+- Hecho: RF-04. Lista de lives con fecha, estado, clientas, total y pagado (`SesionResumen`, totales calculados por el servicio), abrir live con nombre opcional y "Continuar" si ya hay uno Abierto.
+- Decisiones D-01 a D-17 en `docs/decisiones.md`.
 - Siguiente: RF-06 (corregir línea), RF-07 (pago) y RF-08 (totales completos y búsqueda), que completan la pantalla de live.
 
 ## Estructura
