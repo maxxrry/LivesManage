@@ -2,7 +2,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router';
 import { Pantalla } from '../../components/Pantalla';
 import { listarClientas } from '../../services/clientasService';
-import { anotar, deshacerAnotacion, obtenerSesion, type DestinoAnotacion } from '../../services/sesionesService';
+import {
+  alternarPrenda,
+  anotar,
+  cambiarClienta,
+  deshacerAnotacion,
+  obtenerSesion,
+  type DestinoAnotacion,
+} from '../../services/sesionesService';
 import type { Clienta, MontoClp, SesionDetalle } from '../../types/dominio';
 import { ETIQUETAS_ESTADO_SESION } from '../../types/etiquetas';
 import { formatearClp, totalLinea } from '../../utils/montos';
@@ -20,6 +27,7 @@ export function LivePage() {
   const [clientas, setClientas] = useState<Clienta[]>([]);
   const [errorCarga, setErrorCarga] = useState('');
   const [aviso, setAviso] = useState<{ texto: string; anotacionId: string } | null>(null);
+  const [errorAccion, setErrorAccion] = useState('');
 
   useEffect(() => {
     let vigente = true; // ignora la respuesta si se cambió de live antes de que llegara
@@ -37,15 +45,24 @@ export function LivePage() {
   }, [id]);
 
   // Los totales se recalculan siempre desde lo que devuelve el servicio (fuente de verdad).
+  // Nunca lanza: si la acción ya se guardó, un fallo al recargar no debe informarse como fallo de la acción.
   async function recargar() {
-    const [sesion, todas] = await cargar(id);
-    setDetalle(sesion);
-    setClientas(todas);
+    try {
+      const [sesion, todas] = await cargar(id);
+      setDetalle(sesion);
+      setClientas(todas);
+    } catch {
+      setErrorAccion('Se guardó el cambio, pero no se pudo actualizar la hoja. Recarga la página.');
+    }
   }
+
+  const mensaje = (e: unknown, porDefecto: string) => (e instanceof Error ? e.message : porDefecto);
 
   const cerrarAviso = useCallback(() => setAviso(null), []);
 
+  // Si anotar falla, el error sube a CampoAnotacion, que conserva el texto (RNF-13).
   async function alAnotar(destino: DestinoAnotacion, precios: MontoClp[]) {
+    setErrorAccion('');
     const { anotacionId, linea } = await anotar(id, destino, precios);
     const total = precios.reduce((suma, p) => suma + p, 0);
     setAviso({
@@ -58,7 +75,31 @@ export function LivePage() {
   async function alDeshacer() {
     if (!aviso) return;
     setAviso(null);
-    await deshacerAnotacion(aviso.anotacionId);
+    setErrorAccion('');
+    try {
+      await deshacerAnotacion(aviso.anotacionId);
+    } catch (e) {
+      setErrorAccion(mensaje(e, 'No se pudo deshacer la anotación.'));
+    }
+    await recargar();
+  }
+
+  // RF-06: cancelar o restaurar una prenda. No cierra el aviso: Deshacer sigue valiendo.
+  async function alAlternarPrenda(lineaId: string, prendaId: string) {
+    setErrorAccion('');
+    try {
+      await alternarPrenda(id, lineaId, prendaId);
+    } catch (e) {
+      setErrorAccion(mensaje(e, 'No se pudo corregir la prenda.'));
+    }
+    await recargar();
+  }
+
+  // RF-06: si el cambio falla, el error se muestra en el selector de la línea. Tras el cambio, Deshacer ya no aplica (D-19).
+  async function alCambiarClienta(lineaId: string, destino: DestinoAnotacion) {
+    setErrorAccion('');
+    await cambiarClienta(id, lineaId, destino);
+    setAviso(null);
     await recargar();
   }
 
@@ -89,9 +130,20 @@ export function LivePage() {
             Este live está {ETIQUETAS_ESTADO_SESION[sesion.estado].toLowerCase()}: ya no se puede anotar.
           </p>
         )}
+        {errorAccion && (
+          <p role="alert" className="text-sm text-red-700">
+            {errorAccion}
+          </p>
+        )}
       </div>
 
-      <HojaLive lineas={lineas} />
+      <HojaLive
+        lineas={lineas}
+        editable={sesion.estado !== 'CERRADA'}
+        clientas={clientas}
+        onAlternarPrenda={(lineaId, prendaId) => void alAlternarPrenda(lineaId, prendaId)}
+        onCambiarClienta={alCambiarClienta}
+      />
 
       {aviso && <Aviso texto={aviso.texto} onDeshacer={() => void alDeshacer()} onCerrar={cerrarAviso} />}
     </>

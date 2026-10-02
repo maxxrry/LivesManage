@@ -3,13 +3,13 @@ import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 import { rutas } from '../../app/router';
-import { anotar } from '../../services/sesionesService';
+import { anotar, obtenerSesion } from '../../services/sesionesService';
 
 // Mock parcial: anotar sigue usando la implementación real, salvo en el test
 // que fuerza un error de conexión con mockRejectedValueOnce.
 vi.mock('../../services/sesionesService', async (original) => {
   const real = await original<typeof import('../../services/sesionesService')>();
-  return { ...real, anotar: vi.fn(real.anotar) };
+  return { ...real, anotar: vi.fn(real.anotar), obtenerSesion: vi.fn(real.obtenerSesion) };
 });
 
 async function abrirLive(id = 's-2') {
@@ -62,6 +62,17 @@ describe('Pantalla de live (RF-05)', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('No se guardó la anotación. Sin conexión.');
     expect(campo).toHaveValue('flo 6-4');
     expect(lineaDe('Florencia Ruiz')).toHaveTextContent('= $10.000');
+  });
+
+  it('si la anotación se guarda pero la hoja no se puede recargar, no dice que falló', async () => {
+    const { usuario, campo } = await abrirLive();
+    vi.mocked(obtenerSesion).mockRejectedValueOnce(new Error('Sin conexión.'));
+
+    await usuario.type(campo!, 'flo 6-4{Enter}');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Se guardó el cambio, pero no se pudo actualizar la hoja');
+    expect(screen.getByRole('status')).toHaveTextContent('Florencia Ruiz: 6-4 = $10.000');
+    expect(campo).toHaveValue('');
   });
 
   it('sugiere clientas y tocar "Nueva clienta" crea la línea (D-13)', async () => {

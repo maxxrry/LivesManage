@@ -31,3 +31,23 @@ export function sugerirClientas(texto: string, clientas: Clienta[], idsConLinea:
     )
     .slice(0, MAX_SUGERENCIAS);
 }
+
+/** Opción de la lista de sugerencias: una clienta o crear una nueva con el nombre escrito. */
+export type Opcion = { tipo: 'clienta'; clienta: Clienta } | { tipo: 'nueva'; nombre: string };
+
+/** Sugerencias para un nombre escrito, más la opción "Nueva clienta" al final. */
+export function opcionesPara(nombre: string, clientas: Clienta[], idsConLinea: ReadonlySet<string>): Opcion[] {
+  if (!nombre) return [];
+  return [
+    ...sugerirClientas(nombre, clientas, idsConLinea).map((clienta) => ({ tipo: 'clienta' as const, clienta })),
+    { tipo: 'nueva', nombre },
+  ];
+}
+
+/** Mueve la opción resaltada con las flechas. Devuelve true si manejó la tecla. */
+export function moverResaltada(tecla: string, total: number, cambiar: (f: (i: number) => number) => void): boolean {
+  if (total === 0 || (tecla !== 'ArrowDown' && tecla !== 'ArrowUp')) return false;
+  const paso = tecla === 'ArrowDown' ? 1 : -1;
+  cambiar((i) => (i + paso + total) % total);
+  return true;
+}

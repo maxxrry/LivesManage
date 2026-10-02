@@ -1,8 +1,9 @@
 import { useId, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import type { DestinoAnotacion } from '../../services/sesionesService';
 import type { Clienta, MontoClp } from '../../types/dominio';
+import { ListaSugerencias } from './ListaSugerencias';
+import { moverResaltada, opcionesPara, type Opcion } from './sugerirClientas';
 import { nombreEscrito, parseAnotacion } from './parseAnotacion';
-import { sugerirClientas } from './sugerirClientas';
 
 interface CampoAnotacionProps {
   clientas: Clienta[];
@@ -11,8 +12,6 @@ interface CampoAnotacionProps {
   /** Guarda la anotación. Si falla, el texto se conserva (RNF-13). */
   onAnotar: (destino: DestinoAnotacion, precios: MontoClp[]) => Promise<void>;
 }
-
-type Opcion = { tipo: 'clienta'; clienta: Clienta } | { tipo: 'nueva'; nombre: string };
 
 /** RF-05: campo de anotación con sintaxis rápida y sugerencias de clientas. */
 export function CampoAnotacion({ clientas, idsConLinea, onAnotar }: CampoAnotacionProps) {
@@ -24,13 +23,7 @@ export function CampoAnotacion({ clientas, idsConLinea, onAnotar }: CampoAnotaci
   const idLista = useId();
   const idError = useId();
 
-  const nombre = nombreEscrito(texto);
-  const opciones: Opcion[] = nombre
-    ? [
-        ...sugerirClientas(nombre, clientas, idsConLinea).map((clienta) => ({ tipo: 'clienta' as const, clienta })),
-        { tipo: 'nueva', nombre },
-      ]
-    : [];
+  const opciones = opcionesPara(nombreEscrito(texto), clientas, idsConLinea);
 
   async function enviar(opcion: Opcion | undefined) {
     const resultado = parseAnotacion(texto);
@@ -61,12 +54,7 @@ export function CampoAnotacion({ clientas, idsConLinea, onAnotar }: CampoAnotaci
   }
 
   function alPresionarTecla(e: KeyboardEvent) {
-    if (opciones.length === 0) return;
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      e.preventDefault();
-      const paso = e.key === 'ArrowDown' ? 1 : -1;
-      setResaltada((i) => (i + paso + opciones.length) % opciones.length);
-    }
+    if (moverResaltada(e.key, opciones.length, setResaltada)) e.preventDefault();
   }
 
   return (
@@ -110,37 +98,14 @@ export function CampoAnotacion({ clientas, idsConLinea, onAnotar }: CampoAnotaci
         </p>
       )}
 
-      {opciones.length > 0 && (
-        <ul
-          id={idLista}
-          role="listbox"
-          aria-label="Sugerencias de clientas"
-          className="absolute inset-x-0 top-full z-10 mt-1 overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg"
-        >
-          {opciones.map((opcion, i) => (
-            <li
-              key={opcion.tipo === 'clienta' ? opcion.clienta.id : 'nueva'}
-              id={`${idLista}-${i}`}
-              role="option"
-              aria-selected={i === resaltada}
-              // D-13: tocar una sugerencia anota directamente.
-              onClick={() => void enviar(opcion)}
-              className={`flex min-h-11 cursor-pointer items-center justify-between gap-2 px-3 ${
-                i === resaltada ? 'bg-marca-100' : 'hover:bg-gray-50'
-              }`}
-            >
-              {opcion.tipo === 'clienta' ? (
-                <>
-                  <span>{opcion.clienta.nombre}</span>
-                  {idsConLinea.has(opcion.clienta.id) && <span className="text-xs text-gray-500">en este live</span>}
-                </>
-              ) : (
-                <span className="text-marca-700">+ Nueva clienta "{opcion.nombre}"</span>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+      {/* D-13: tocar una sugerencia anota directamente. */}
+      <ListaSugerencias
+        id={idLista}
+        opciones={opciones}
+        resaltada={resaltada}
+        idsConLinea={idsConLinea}
+        onElegir={(opcion) => void enviar(opcion)}
+      />
     </form>
   );
 }

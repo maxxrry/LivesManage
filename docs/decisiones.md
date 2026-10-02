@@ -21,6 +21,8 @@ Registro de decisiones de diseño que complementan o precisan el ERS (`docs/ERS.
 | D-15 | 01/10/2026 | RF-05, RF-13, RF-14 | `Clienta.ultimaCompra` en el contrato de la API de clientas. |
 | D-16 | 01/10/2026 | Todos (3.5) | El proyecto WebKit (iPhone) de Playwright corre solo en Linux y macOS. Complementa D-09. |
 | D-17 | 02/10/2026 | RF-04 | Nombre por defecto, sin confirmación al abrir y enlace de cada live. |
+| D-18 | 02/10/2026 | RF-06, RF-08 | Cancelar o restaurar una prenda no cambia el orden de la hoja. |
+| D-19 | 02/10/2026 | RF-06 | Cambiar la clienta de una línea: a una existente o nueva, y reglas al unir líneas. |
 
 ## D-01 · Estilos con Tailwind CSS
 
@@ -116,3 +118,14 @@ Al agregar el proyecto WebKit (iPhone 13) según D-09, el navegador no arranca e
 - Un live sin nombre se muestra como "Live del dd/mm" (fecha de inicio, hora de Chile). Ese texto se arma al mostrarlo; no se guarda como nombre.
 - Abrir un live no pide confirmación: el formulario tiene Cancelar y abrir no es una acción importante en el sentido de 3.1.1.
 - Cada live de la lista abre `/lives/:id`, cualquiera sea su estado. Cuando exista la pantalla de cierre (RF-09), los lives En cierre podrán ir directo a ella.
+
+## D-18 · Cancelar o restaurar no reordena la hoja
+
+RF-08 muestra la última línea modificada arriba. Cancelar o restaurar una prenda (RF-06) no cuenta como modificación para ese orden: si la línea saltara al primer lugar, se movería bajo el dedo justo al tocarla. Sí reordenan anotar (RF-05) y cambiar la clienta de la línea.
+
+## D-19 · Cambiar clienta y unir líneas
+
+- Se puede cambiar a una clienta existente o a una nueva (misma opción "Nueva clienta" de RF-05).
+- Si la clienta elegida ya tiene línea en el live, se pide confirmación ("¿Unirlas?") y las prendas pasan a esa línea; la línea original desaparece. Sin unión no hay confirmación.
+- Estado de la línea unida: Pagado solo si ambas estaban Pagadas (si no, Pendiente: hay un monto sin cobrar); bolsa revisada solo si ambas lo estaban; entrega la de la línea de destino o, si no tiene, la de la otra.
+- Tras cambiar la clienta, el Deshacer de la última anotación (D-11) deja de aplicar.
