@@ -17,7 +17,7 @@ test('"flo 6-4" suma $10.000 a la línea existente de Florencia', { tag: '@RF-05
   await expect(linea(page, 'Florencia Ruiz')).toContainText('= $10.000');
 
   await campo(page).fill('flo 6-4');
-  await page.getByRole('button', { name: 'Agregar' }).tap();
+  await page.getByRole('button', { name: 'Agregar' }).click();
 
   await expect(page.getByRole('status')).toHaveText(/Florencia Ruiz: 6-4 = \$10\.000/);
   await expect(linea(page, 'Florencia Ruiz')).toContainText('6-4-6-4= $20.000');
@@ -49,7 +49,7 @@ test('Deshacer quita lo recién anotado', { tag: '@RF-05' }, async ({ page }) =>
   await campo(page).press('Enter');
   await expect(totalLive(page)).toHaveText('$68.000');
 
-  await page.getByRole('button', { name: 'Deshacer' }).tap();
+  await page.getByRole('button', { name: 'Deshacer' }).click();
 
   await expect(totalLive(page)).toHaveText('$58.000');
   await expect(linea(page, 'Florencia Ruiz')).toContainText('= $10.000');

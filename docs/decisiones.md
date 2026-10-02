@@ -27,6 +27,7 @@ Registro de decisiones de diseño que complementan o precisan el ERS (`docs/ERS.
 | D-21 | 02/10/2026 | RF-07 | Marcar el pago no reordena la hoja; fecha y usuario se guardan sin mostrarse. |
 | D-22 | 02/10/2026 | RF-05, RF-06, RF-07 | Cualquier cambio en la línea recién anotada anula su Deshacer. Amplía D-11 y D-19. |
 | D-23 | 02/10/2026 | RF-04, RF-08 | Pendiente por cobrar, número de clientas y totales con búsqueda activa. |
+| D-24 | 02/10/2026 | Todos (3.1.3, RNF-25) | Versión de computador: menú fijo, lista de lives en tabla y E2E también en escritorio. Complementa D-09 y D-16. |
 
 ## D-01 · Estilos con Tailwind CSS
 
@@ -160,3 +161,12 @@ Una línea "No pagó" muestra su estado como texto aunque el live sea editable; 
 - Un solo cálculo (`totalesDeLineas`) para la pantalla de live y la lista de lives.
 - Los totales son siempre del live completo, también con la búsqueda activa. El criterio de RF-08 ("el total del live es igual a la suma de las líneas visibles") se verifica sin búsqueda; con búsqueda se indica "Mostrando N de M clientas".
 - La versión de escritorio de la pantalla de live se hace en RF-08. La lista de lives, el menú y el proyecto de Playwright de escritorio quedan para una tarea aparte.
+
+## D-24 · Versión de computador
+
+La app es mobile-first, pero también se usa en PC (Chrome, Edge y Firefox; ERS 3.1.3 y RNF-25). Desde 1024 px de ancho (`lg` de Tailwind):
+
+- **Menú:** fijo a la izquierda y siempre visible; desaparece el botón ☰. En celular sigue siendo un panel que abre ☰. Es un solo `<nav>` que cambia de estilo, sin duplicar enlaces.
+- **Ancho:** cada pantalla define el suyo. Las pantallas comunes (`Pantalla`) llegan a ~1024 px; la pantalla de live a ~1150 px, con la hoja en dos columnas (RF-08).
+- **Lista de lives:** tabla con columnas Live, Inicio, Estado, Clientas, Total y Pagado, para comparar montos en columna. La fila completa abre el live. En celular siguen las tarjetas.
+- **Pruebas:** Playwright tiene el proyecto `escritorio` (Chromium 1280×800, mouse y teclado) además de `celular` (y `iphone` fuera de Windows, D-16). Todos los E2E corren en ambos; usan `click()`, que funciona con y sin pantalla táctil. Las pruebas que dependen del ancho usan `isMobile` (por ejemplo, el menú en la prueba de humo).

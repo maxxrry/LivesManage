@@ -23,6 +23,11 @@ export default defineConfig({
         hasTouch: true,
       },
     },
+    {
+      // PC con mouse y teclado (ERS 3.1.3, D-24).
+      name: 'escritorio',
+      use: { browserName: 'chromium', viewport: { width: 1280, height: 800 } },
+    },
     // Safari en celular (ERS 3.1.3). El WebKit de Playwright para Windows no trae
     // jxl.dll ni libsharpyuv.dll y no arranca, así que este proyecto corre en Linux/macOS.
     ...(process.platform === 'win32' ? [] : [{ name: 'iphone', use: { ...devices['iPhone 13'] } }]),

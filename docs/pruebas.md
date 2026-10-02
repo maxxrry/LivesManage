@@ -21,7 +21,7 @@ El profesor aceptó Vitest en vez de Jasmine + Karma (D-10). Los conceptos son l
 | --- | --- |
 | `frontend/vite.config.ts` (bloque `test`) | Vitest: entorno `jsdom` (un DOM simulado en Node), archivo de setup, qué archivos son tests y la cobertura (`v8`, reporte en texto y HTML). |
 | `frontend/src/test/setup.ts` | Antes de cada test reinicia los datos simulados (`reiniciarDatos()`), para que cada test parta igual; después de cada test desmonta lo renderizado (`cleanup()`). Carga los matchers de `jest-dom` (`toBeInTheDocument`, `toHaveValue`, ...). |
-| `frontend/playwright.config.ts` | Playwright: proyecto `celular` (Chromium 360×740, táctil, es-CL, America/Santiago) y proyecto `iphone` (WebKit, solo Linux/macOS, D-16). Levanta `npm run dev` automáticamente. |
+| `frontend/playwright.config.ts` | Playwright: proyecto `celular` (Chromium 360×740, táctil, es-CL, America/Santiago), proyecto `escritorio` (Chromium 1280×800, mouse y teclado, D-24) y proyecto `iphone` (WebKit, solo Linux/macOS, D-16). Cada E2E corre en todos los proyectos. Levanta `npm run dev` automáticamente. |
 
 ## 3. Cómo se corren
 

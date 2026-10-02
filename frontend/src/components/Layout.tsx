@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router';
 import { ENTRADAS_MENU } from './menu';
 
-/** Layout mobile-first: cabecera fija con botón de menú y panel lateral. */
+/** Layout: cabecera fija; menú como panel en celular y fijo a la izquierda en computador (D-24). */
 export function Layout() {
   const [menuAbierto, setMenuAbierto] = useState(false);
   const { pathname } = useLocation();
@@ -25,10 +25,10 @@ export function Layout() {
 
   return (
     <div className="min-h-dvh bg-gray-50 text-gray-900">
-      <header className="fixed inset-x-0 top-0 z-20 flex h-14 items-center gap-2 bg-marca-600 px-2 text-white shadow">
+      <header className="fixed inset-x-0 top-0 z-20 flex h-14 items-center gap-2 bg-marca-600 px-2 text-white shadow lg:px-5">
         <button
           type="button"
-          className="flex size-11 items-center justify-center rounded-md hover:bg-marca-700 focus-visible:outline-2 focus-visible:outline-white"
+          className="flex size-11 items-center justify-center rounded-md hover:bg-marca-700 focus-visible:outline-2 focus-visible:outline-white lg:hidden"
           aria-label={menuAbierto ? 'Cerrar menú' : 'Abrir menú'}
           aria-expanded={menuAbierto}
           aria-controls="menu-principal"
@@ -42,34 +42,39 @@ export function Layout() {
       </header>
 
       {menuAbierto && (
-        <>
-          <div className="fixed inset-0 z-30 bg-black/40" aria-hidden="true" onClick={() => setMenuAbierto(false)} />
-          <nav
-            id="menu-principal"
-            aria-label="Menú principal"
-            className="fixed inset-y-0 left-0 z-40 w-72 max-w-[85vw] overflow-y-auto bg-white p-2 shadow-xl"
-          >
-            <ul className="flex flex-col gap-1">
-              {ENTRADAS_MENU.map(({ ruta, texto }) => (
-                <li key={ruta}>
-                  <NavLink
-                    to={ruta}
-                    className={({ isActive }) =>
-                      `flex min-h-11 items-center rounded-md px-3 text-base ${
-                        isActive ? 'bg-marca-100 font-semibold text-marca-700' : 'hover:bg-gray-100'
-                      }`
-                    }
-                  >
-                    {texto}
-                  </NavLink>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        </>
+        <div
+          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+          aria-hidden="true"
+          onClick={() => setMenuAbierto(false)}
+        />
       )}
+      {/* Celular: panel que abre ☰. Computador (lg): menú fijo a la izquierda, siempre visible (D-24). */}
+      <nav
+        id="menu-principal"
+        aria-label="Menú principal"
+        className={`${
+          menuAbierto ? 'fixed inset-y-0 left-0 z-40 w-72 max-w-[85vw] shadow-xl' : 'hidden'
+        } overflow-y-auto bg-white p-2 lg:fixed lg:top-14 lg:bottom-0 lg:left-0 lg:z-10 lg:block lg:w-60 lg:max-w-none lg:border-r lg:border-gray-200 lg:shadow-none`}
+      >
+        <ul className="flex flex-col gap-1">
+          {ENTRADAS_MENU.map(({ ruta, texto }) => (
+            <li key={ruta}>
+              <NavLink
+                to={ruta}
+                className={({ isActive }) =>
+                  `flex min-h-11 items-center rounded-md px-3 text-base ${
+                    isActive ? 'bg-marca-100 font-semibold text-marca-700' : 'hover:bg-gray-100'
+                  }`
+                }
+              >
+                {texto}
+              </NavLink>
+            </li>
+          ))}
+        </ul>
+      </nav>
 
-      <main className="pt-14">
+      <main className="pt-14 lg:pl-60">
         <Outlet />
       </main>
     </div>

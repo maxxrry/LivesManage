@@ -29,11 +29,11 @@ test('tras anotar, cancelar y pagar, el total es la suma de las líneas visibles
   await expect(page.getByTestId('total-clientas')).toHaveText('6');
   await verificarSuma(page);
 
-  await linea(page, 'Gabriela Peña').getByRole('button', { name: 'Cancelar prenda de $6.000' }).first().tap();
+  await linea(page, 'Gabriela Peña').getByRole('button', { name: 'Cancelar prenda de $6.000' }).first().click();
   await expect(page.getByTestId('total-live')).toHaveText('$57.000');
   await verificarSuma(page);
 
-  await page.getByRole('button', { name: 'Pagado: Gabriela Peña' }).tap();
+  await page.getByRole('button', { name: 'Pagado: Gabriela Peña' }).click();
   await expect(page.getByTestId('total-pagado')).toHaveText('$24.000');
   await expect(page.getByTestId('total-pendiente')).toHaveText('$33.000');
   await verificarSuma(page);
@@ -48,9 +48,8 @@ test('la búsqueda filtra la hoja sin cambiar los totales del live', { tag: '@RF
 });
 
 test.describe('en computador', () => {
-  test.use({ viewport: { width: 1280, height: 800 }, isMobile: false, hasTouch: false });
-
-  test('totales en una fila, hoja en dos columnas y sin scroll horizontal', { tag: '@RF-08' }, async ({ page }) => {
+  test('totales en una fila, hoja en dos columnas y sin scroll horizontal', { tag: '@RF-08' }, async ({ page, isMobile }) => {
+    test.skip(isMobile, 'Solo en el proyecto escritorio');
     const [primera, segunda] = await hoja(page).getByRole('listitem').all();
     const a = (await primera!.boundingBox())!;
     const b = (await segunda!.boundingBox())!;

@@ -39,6 +39,19 @@ describe('Pantalla Lives (RF-04)', () => {
     expect(enlaces.map((a) => a.getAttribute('href'))).toEqual(['/lives/s-2', '/lives/s-1']);
   });
 
+  it('en computador muestra una tabla con una fila por live y columnas de totales (D-24)', async () => {
+    abrirLista();
+
+    const tabla = await screen.findByRole('table', { name: 'Lista de lives' });
+    const encabezados = within(tabla).getAllByRole('columnheader').map((th) => th.textContent);
+    expect(encabezados).toEqual(['Live', 'Inicio', 'Estado', 'Clientas', 'Total', 'Pagado']);
+
+    const [, martes] = within(tabla).getAllByRole('row');
+    const celdas = within(martes!).getAllByRole('cell').map((td) => td.textContent);
+    expect(celdas).toEqual(['Live martes', '29/09/2026 20:30', 'Abierta', '5', '$58.000', '$13.000']);
+    expect(within(martes!).getByRole('link', { name: 'Live martes' })).toHaveAttribute('href', '/lives/s-2');
+  });
+
   it('con un live Abierto ofrece continuar en él y no permite abrir otro', async () => {
     abrirLista();
 

@@ -16,7 +16,8 @@ Proyecto del ramo Desarrollo FullStack 2 (Duoc UC) y para un cliente real.
 - Hecho: RF-07. Botón Pagado por línea (aria-pressed), línea pagada en rosado, "Pagado" en la cabecera; fecha y usuario guardados sin mostrar (D-21). Agregar o restaurar una prenda en una línea Pagada la vuelve a Pendiente (D-20).
 - Hecho: RF-08. Totales del live (total, pagado, pendiente, clientas) con una sola fórmula `totalesDeLineas` (D-23), búsqueda en la hoja y versión de computador de la pantalla de live (totales en una fila, hoja en dos columnas). Pantalla de live completa (RF-05 a RF-08).
 - Decisiones D-01 a D-23 en `docs/decisiones.md`.
-- Siguiente: tarea de escritorio sin RF (lista de lives y menú en computador, proyecto Playwright de escritorio cambiando `tap()` por `click()`), luego RF-09 (terminar live y revisar bolsas).
+- Hecho: versión de computador (D-24). Menú fijo a la izquierda desde 1024 px, lista de lives en tabla, y E2E en los proyectos `celular` y `escritorio` (usar `click()`, no `tap()`).
+- Siguiente: RF-09 (terminar live y revisar bolsas).
 
 ## Estructura
 
@@ -42,7 +43,7 @@ Cada microservicio tiene su propia base MySQL (`livesmanage_auth`, `livesmanage_
 npm run dev                       # http://localhost:5173
 npm test                          # Vitest
 npm run coverage                  # Vitest + cobertura (coverage/index.html)
-npx playwright test               # E2E, viewport de celular
+npx playwright test               # E2E en celular (360×740) y escritorio (1280×800)
 npx playwright test --grep @RF-05 # solo un requisito
 npm run lint
 

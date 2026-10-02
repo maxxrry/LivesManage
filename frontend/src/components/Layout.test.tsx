@@ -27,6 +27,8 @@ describe('Layout (humo)', () => {
 
     await usuario.click(within(menu).getByRole('link', { name: 'Clientas' }));
     expect(await screen.findByRole('heading', { name: 'Clientas' })).toBeInTheDocument();
-    expect(screen.queryByRole('navigation', { name: 'Menú principal' })).not.toBeInTheDocument();
+    // El panel de celular se cierra al navegar (en computador el menú queda fijo, D-24).
+    expect(screen.getByRole('button', { name: 'Abrir menú' })).toHaveAttribute('aria-expanded', 'false');
+    expect(menu).toHaveClass('hidden');
   });
 });

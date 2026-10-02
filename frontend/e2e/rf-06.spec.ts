@@ -16,12 +16,12 @@ test('quitar una prenda de $6.000 y restaurarla', { tag: '@RF-06' }, async ({ pa
   const gabriela = linea(page, 'Gabriela Peña');
   await expect(gabriela).toContainText('= $17.000');
 
-  await gabriela.getByRole('button', { name: 'Cancelar prenda de $6.000' }).first().tap();
+  await gabriela.getByRole('button', { name: 'Cancelar prenda de $6.000' }).first().click();
 
   await expect(gabriela).toContainText('= $11.000');
   await expect(totalLive(page)).toHaveText('$52.000');
 
-  await gabriela.getByRole('button', { name: 'Restaurar prenda de $6.000' }).tap();
+  await gabriela.getByRole('button', { name: 'Restaurar prenda de $6.000' }).click();
 
   await expect(gabriela).toContainText('= $17.000');
   await expect(totalLive(page)).toHaveText('$58.000');
@@ -34,10 +34,10 @@ test('las prendas son áreas táctiles de al menos 44×44 px', { tag: '@RF-06' }
 });
 
 test('cambiar la clienta a una que ya tiene línea une ambas', { tag: '@RF-06' }, async ({ page }) => {
-  await page.getByRole('button', { name: 'Cambiar clienta de Gabriela Peña' }).tap();
+  await page.getByRole('button', { name: 'Cambiar clienta de Gabriela Peña' }).click();
   await page.getByRole('combobox', { name: 'Buscar la clienta correcta' }).fill('flo');
-  await page.getByRole('option', { name: /Florencia Ruiz/ }).tap();
-  await page.getByRole('button', { name: 'Unir' }).tap();
+  await page.getByRole('option', { name: /Florencia Ruiz/ }).click();
+  await page.getByRole('button', { name: 'Unir' }).click();
 
   await expect(linea(page, 'Florencia Ruiz')).toContainText('= $27.000');
   await expect(linea(page, 'Gabriela Peña')).toHaveCount(0);

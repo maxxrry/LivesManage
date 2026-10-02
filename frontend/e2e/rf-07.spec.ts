@@ -16,13 +16,13 @@ test('marcar Pagada una línea de $17.000 la destaca y sube el total pagado', { 
   const gabriela = linea(page, 'Gabriela Peña');
   await expect(gabriela).toContainText('= $17.000');
 
-  await page.getByRole('button', { name: 'Pagado: Gabriela Peña' }).tap();
+  await page.getByRole('button', { name: 'Pagado: Gabriela Peña' }).click();
 
   await expect(page.getByRole('button', { name: 'Pagado: Gabriela Peña' })).toHaveAttribute('aria-pressed', 'true');
   await expect(gabriela).toHaveClass(/bg-marca-50/);
   await expect(totalPagado(page)).toHaveText('$30.000');
 
-  await page.getByRole('button', { name: 'Pagado: Gabriela Peña' }).tap();
+  await page.getByRole('button', { name: 'Pagado: Gabriela Peña' }).click();
 
   await expect(page.getByRole('button', { name: 'Pagado: Gabriela Peña' })).toHaveAttribute('aria-pressed', 'false');
   await expect(totalPagado(page)).toHaveText('$13.000');
