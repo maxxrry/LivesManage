@@ -1,5 +1,5 @@
 import type { Clienta, EstadoPago, Linea, MontoClp, Prenda, Sesion, SesionDetalle, SesionResumen } from '../types/dominio';
-import { totalLinea } from '../utils/montos';
+import { totalesDeLineas } from '../utils/montos';
 import { clientas, entregas, lineas, nuevoId, sesiones, usuarios } from './mock/datos';
 
 // Simulado en memoria. Con backend:
@@ -15,14 +15,8 @@ import { clientas, entregas, lineas, nuevoId, sesiones, usuarios } from './mock/
 /** RF-04: cada live con sus totales, calculados desde las prendas vigentes (como hará ms-lives). */
 export async function listarSesiones(): Promise<SesionResumen[]> {
   return sesiones.map((sesion) => {
-    const suyas = lineas.filter((l) => l.sesionId === sesion.id);
-    const sumar = (ls: Linea[]) => ls.reduce((suma, l) => suma + totalLinea(l.prendas), 0);
-    return {
-      ...structuredClone(sesion),
-      clientas: suyas.length,
-      total: sumar(suyas),
-      totalPagado: sumar(suyas.filter((l) => l.estadoPago === 'PAGADO')),
-    };
+    const { total, pagado, clientas: numero } = totalesDeLineas(lineas.filter((l) => l.sesionId === sesion.id));
+    return { ...structuredClone(sesion), clientas: numero, total, totalPagado: pagado };
   });
 }
 

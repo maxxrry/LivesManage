@@ -26,6 +26,7 @@ Registro de decisiones de diseño que complementan o precisan el ERS (`docs/ERS.
 | D-20 | 02/10/2026 | RF-05, RF-06, RF-07 | Una línea Pagada vuelve a Pendiente si se le agrega o restaura una prenda. |
 | D-21 | 02/10/2026 | RF-07 | Marcar el pago no reordena la hoja; fecha y usuario se guardan sin mostrarse. |
 | D-22 | 02/10/2026 | RF-05, RF-06, RF-07 | Cualquier cambio en la línea recién anotada anula su Deshacer. Amplía D-11 y D-19. |
+| D-23 | 02/10/2026 | RF-04, RF-08 | Pendiente por cobrar, número de clientas y totales con búsqueda activa. |
 
 ## D-01 · Estilos con Tailwind CSS
 
@@ -149,3 +150,13 @@ RF-08 muestra la última línea modificada arriba. Cancelar o restaurar una pren
 Deshacer (D-11) devuelve la línea a como estaba antes de anotar, incluido su estado de pago (D-20). Si después de anotar la línea cambió (cancelar o restaurar una prenda, marcar el pago o cambiar la clienta), Deshacer ya no aplica: el aviso se cierra y el servicio rechaza deshacer. Así Deshacer nunca deja como Pagado un monto que nadie cobró. Cambios en otras líneas no afectan el aviso.
 
 Una línea "No pagó" muestra su estado como texto aunque el live sea editable; qué se puede hacer con ella al reabrir un cierre se define en RF-11.
+
+## D-23 · Totales del live
+
+- **Total del live:** suma de las prendas vigentes de todas las líneas.
+- **Pagado:** suma de las líneas Pagadas.
+- **Pendiente por cobrar:** suma de las líneas Pendientes. Lo "No pagó" no es pendiente (ya no se cobrará); aparece en el resumen del cierre (RF-11).
+- **Número de clientas:** todas las líneas del live, aunque una tenga todas sus prendas canceladas: cada clienta que compró queda registrada y su bolsa se revisa en el cierre. Es la misma cuenta de la lista de lives (RF-04).
+- Un solo cálculo (`totalesDeLineas`) para la pantalla de live y la lista de lives.
+- Los totales son siempre del live completo, también con la búsqueda activa. El criterio de RF-08 ("el total del live es igual a la suma de las líneas visibles") se verifica sin búsqueda; con búsqueda se indica "Mostrando N de M clientas".
+- La versión de escritorio de la pantalla de live se hace en RF-08. La lista de lives, el menú y el proyecto de Playwright de escritorio quedan para una tarea aparte.

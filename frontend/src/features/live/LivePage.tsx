@@ -13,11 +13,12 @@ import {
 } from '../../services/sesionesService';
 import type { Clienta, MontoClp, SesionDetalle } from '../../types/dominio';
 import { ETIQUETAS_ESTADO_SESION } from '../../types/etiquetas';
-import { formatearClp, totalLinea } from '../../utils/montos';
+import { formatearClp, totalesDeLineas } from '../../utils/montos';
 import { nombreSesion } from '../../utils/sesion';
 import { Aviso } from './Aviso';
 import { CampoAnotacion } from './CampoAnotacion';
 import { HojaLive } from './HojaLive';
+import { TotalesLive } from './TotalesLive';
 
 const cargar = (id: string) => Promise.all([obtenerSesion(id), listarClientas()]);
 
@@ -132,30 +133,11 @@ export function LivePage() {
   }
 
   const { sesion, lineas } = detalle;
-  const sumar = (ls: typeof lineas) => ls.reduce((suma, l) => suma + totalLinea(l.prendas), 0);
-  const totalLive = sumar(lineas);
-  const totalPagado = sumar(lineas.filter((l) => l.estadoPago === 'PAGADO'));
-
   return (
-    <>
-      <div className="sticky top-14 z-10 space-y-2 border-b border-gray-200 bg-gray-50 px-4 py-3">
-        <div className="flex items-start justify-between gap-2">
-          <h1 className="truncate font-semibold">{nombreSesion(sesion)}</h1>
-          <dl className="shrink-0 text-right text-sm">
-            <div>
-              <dt className="inline">Total del live </dt>
-              <dd className="inline text-base font-bold tabular-nums" data-testid="total-live">
-                {formatearClp(totalLive)}
-              </dd>
-            </div>
-            <div className="text-marca-700">
-              <dt className="inline">Pagado </dt>
-              <dd className="inline font-semibold tabular-nums" data-testid="total-pagado">
-                {formatearClp(totalPagado)}
-              </dd>
-            </div>
-          </dl>
-        </div>
+    <div className="mx-auto max-w-6xl">
+      <div className="sticky top-14 z-10 space-y-3 border-b border-gray-200 bg-gray-50 px-4 py-3">
+        <h1 className="truncate font-semibold">{nombreSesion(sesion)}</h1>
+        <TotalesLive totales={totalesDeLineas(lineas)} />
         {sesion.estado === 'ABIERTA' ? (
           <CampoAnotacion clientas={clientas} idsConLinea={new Set(lineas.map((l) => l.clientaId))} onAnotar={alAnotar} />
         ) : (
@@ -180,6 +162,6 @@ export function LivePage() {
       />
 
       {aviso && <Aviso texto={aviso.texto} onDeshacer={() => void alDeshacer()} onCerrar={cerrarAviso} />}
-    </>
+    </div>
   );
 }

@@ -4,6 +4,7 @@ import type { Clienta, Linea, Prenda } from '../../types/dominio';
 import { ETIQUETAS_ESTADO_PAGO } from '../../types/etiquetas';
 import { formatearClp, totalLinea } from '../../utils/montos';
 import { CambiarClienta } from './CambiarClienta';
+import { coincideNombre } from './sugerirClientas';
 
 interface HojaLiveProps {
   lineas: Linea[];
@@ -64,6 +65,7 @@ function EstadoPagoLinea({ linea, editable, onAlternar }: { linea: Linea; editab
  */
 export function HojaLive({ lineas, editable, clientas, onAlternarPrenda, onCambiarClienta, onAlternarPago }: HojaLiveProps) {
   const [editando, setEditando] = useState<string | null>(null);
+  const [busqueda, setBusqueda] = useState('');
 
   if (lineas.length === 0) {
     return <p className="p-4 text-sm text-gray-500">Aún no hay anotaciones en este live.</p>;
@@ -71,13 +73,38 @@ export function HojaLive({ lineas, editable, clientas, onAlternarPrenda, onCambi
 
   const ordenadas = [...lineas].sort((a, b) => Date.parse(b.actualizada) - Date.parse(a.actualizada));
   const idsConLinea = new Set(lineas.map((l) => l.clientaId));
+  const visibles = ordenadas.filter((l) => coincideNombre(l.clientaNombre, busqueda));
+  const buscando = busqueda.trim() !== '';
 
   return (
-    <ul aria-label="Hoja del live" className="divide-y divide-gray-200 bg-white">
-      {ordenadas.map((linea) => (
+    <>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2">
+        <input
+          type="search"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          aria-label="Buscar en la hoja"
+          placeholder="Buscar clienta en la hoja"
+          autoComplete="off"
+          className="min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 text-base focus:border-marca-600 focus:outline-none sm:max-w-xs"
+        />
+        {buscando && (
+          <p role="status" className="text-sm text-gray-600">
+            {visibles.length === 0
+              ? `Ninguna clienta coincide con "${busqueda.trim()}".`
+              : `Mostrando ${visibles.length} de ${lineas.length} clientas`}
+          </p>
+        )}
+      </div>
+
+      {/* Una columna en celular, dos en computador. */}
+      <ul aria-label="Hoja del live" className="grid border-t border-gray-200 bg-white lg:grid-cols-2">
+      {visibles.map((linea) => (
         <li
           key={linea.id}
-          className={`border-l-4 py-2 pr-4 pl-3 ${linea.estadoPago === 'PAGADO' ? 'border-marca-600 bg-marca-50' : 'border-transparent'}`}
+          className={`border-b border-l-4 border-b-gray-200 py-2 pr-4 pl-3 lg:odd:border-r lg:odd:border-r-gray-200 ${
+            linea.estadoPago === 'PAGADO' ? 'border-l-marca-600 bg-marca-50' : 'border-l-transparent'
+          }`}
         >
           <div className="flex min-h-11 flex-wrap items-center gap-x-2">
             <span className="font-medium">{linea.clientaNombre}</span>
@@ -123,6 +150,7 @@ export function HojaLive({ lineas, editable, clientas, onAlternarPrenda, onCambi
           )}
         </li>
       ))}
-    </ul>
+      </ul>
+    </>
   );
 }

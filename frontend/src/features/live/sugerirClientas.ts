@@ -11,6 +11,12 @@ function coincide(nombre: string, buscado: string): boolean {
   return nombre.startsWith(buscado) || nombre.split(' ').some((palabra) => palabra.startsWith(buscado));
 }
 
+/** El nombre (o alguna de sus palabras) empieza con lo escrito, sin distinguir mayúsculas ni tildes. */
+export function coincideNombre(nombre: string, texto: string): boolean {
+  const buscado = normalizar(texto);
+  return buscado === '' || coincide(normalizar(nombre), buscado);
+}
+
 const fecha = (iso?: string) => (iso ? Date.parse(iso) : 0);
 
 /**

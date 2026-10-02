@@ -10,7 +10,7 @@ interface PantallaProps {
 /** Contenedor común de pantalla. Mientras no tenga contenido, indica qué RF la implementa. */
 export function Pantalla({ titulo, requisitos, children }: PantallaProps) {
   return (
-    <section className="p-4">
+    <section className="mx-auto max-w-3xl p-4">
       <h1 className="text-xl font-semibold text-gray-900">{titulo}</h1>
       {children ?? (
         <p className="mt-2 text-sm text-gray-500">
