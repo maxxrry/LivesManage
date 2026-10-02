@@ -9,14 +9,17 @@ Proyecto del ramo Desarrollo FullStack 2 (Duoc UC) y para un cliente real.
 ## Estado actual
 
 - Fase: frontend primero, con datos simulados. El backend aún no existe.
-- Hecho: base del frontend (Vite + React + TS 6, Tailwind 4, React Router, Vitest, Playwright en Chromium 360×740). Tipos del dominio en `src/types/` (textos visibles solo en `etiquetas.ts`), servicios simulados en `src/services/` (live Abierto con 5 líneas, live Cerrado, usuario ADMIN), router con pantallas vacías de 3.1.1 y layout con menú. Decisiones D-01 a D-09 en `docs/decisiones.md`.
-- Siguiente: RF-05 (parser de la sintaxis + pantalla de live). Al hacerlo, agregar el proyecto WebKit (iPhone) a Playwright (D-09).
+- Hecho: base del frontend (Vite + React + TS 6, Tailwind 4, React Router, Vitest, Playwright en Chromium 360×740). Tipos del dominio en `src/types/` (textos visibles solo en `etiquetas.ts`), servicios simulados en `src/services/` (live Abierto con 5 líneas, live Cerrado, usuario ADMIN), router con pantallas vacías de 3.1.1 y layout con menú.
+- Hecho: RF-05. Parser (`features/live/parseAnotacion.ts`), sugerencias, `anotar()`/`deshacerAnotacion()` simulados, pantalla de live con total del live, hoja en formato cuaderno y aviso con Deshacer. Cobertura con `npm run coverage`. Guía de pruebas en `docs/pruebas.md`.
+- Decisiones D-01 a D-16 en `docs/decisiones.md` (las de RF-05: D-11 a D-16).
+- Siguiente: RF-06 (corregir línea), RF-07 (pago) y RF-08 (totales completos y búsqueda), que completan la pantalla de live.
 
 ## Estructura
 
 ```
 docs/ERS.md            requisitos (RF-01 a RF-15, RNF, matriz de trazabilidad)
 docs/decisiones.md     decisiones que precisan el ERS (D-01, D-02, ...)
+docs/pruebas.md        cómo se organizan y corren las pruebas del frontend
 frontend/              React + Vite + TypeScript, Vitest, Playwright
 backend/
   api-gateway/         Spring Cloud Gateway, valida JWT       :8080
@@ -34,6 +37,7 @@ Cada microservicio tiene su propia base MySQL (`livesmanage_auth`, `livesmanage_
 # frontend/
 npm run dev                       # http://localhost:5173
 npm test                          # Vitest
+npm run coverage                  # Vitest + cobertura (coverage/index.html)
 npx playwright test               # E2E, viewport de celular
 npx playwright test --grep @RF-05 # solo un requisito
 npm run lint
@@ -95,6 +99,7 @@ Precios: enteros de 1 a 999 (miles). Los decimales (3,5) están pendientes de co
 - Un RF por sesión. Primero un plan corto; espera mi OK antes de tocar código.
 - Commits con el ID del requisito: `feat(live): RF-05 anotación rápida`.
 - No hagas commit ni push sin que te lo pida.
+- Sin línea `Co-Authored-By` ni otra mención a Claude en commits ni PRs.
 - No agregues dependencias sin preguntar.
 - Si algo del código contradice el ERS, avísame en vez de elegir por tu cuenta.
 

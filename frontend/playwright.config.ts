@@ -1,6 +1,6 @@
-import { defineConfig } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test';
 
-// D-09: por ahora solo Chromium en viewport de celular.
+// D-09: Chromium a 360 px (mobile-first) y WebKit como iPhone.
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
@@ -23,6 +23,9 @@ export default defineConfig({
         hasTouch: true,
       },
     },
+    // Safari en celular (ERS 3.1.3). El WebKit de Playwright para Windows no trae
+    // jxl.dll ni libsharpyuv.dll y no arranca, así que este proyecto corre en Linux/macOS.
+    ...(process.platform === 'win32' ? [] : [{ name: 'iphone', use: { ...devices['iPhone 13'] } }]),
   ],
   webServer: {
     command: 'npm run dev',

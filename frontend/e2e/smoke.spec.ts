@@ -15,6 +15,9 @@ test('abre la app, navega por el menú y no hay scroll horizontal', { tag: '@smo
   await expect(page).toHaveURL(/\/clientas$/);
   await expect(page.getByRole('heading', { name: 'Clientas' })).toBeVisible();
 
-  const anchoDocumento = await page.evaluate(() => document.documentElement.scrollWidth);
-  expect(anchoDocumento).toBeLessThanOrEqual(360);
+  const { documento, pantalla } = await page.evaluate(() => ({
+    documento: document.documentElement.scrollWidth,
+    pantalla: window.innerWidth,
+  }));
+  expect(documento).toBeLessThanOrEqual(pantalla);
 });

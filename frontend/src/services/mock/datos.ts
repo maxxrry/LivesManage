@@ -33,12 +33,13 @@ export const clientas: Clienta[] = [
       region: 'Metropolitana',
       referencia: 'Portón verde',
     },
+    ultimaCompra: '2026-09-24T21:00:00-03:00',
     activa: true,
   },
   { id: 'c-4', nombre: 'Camila Rojas', activa: true },
   { id: 'c-5', nombre: 'Antonia Muñoz', usuarioTiktok: '@anto.munoz', activa: true },
   // Hermana de Javiera: comparten despacho en el live anterior.
-  { id: 'c-6', nombre: 'Valentina Soto', activa: true },
+  { id: 'c-6', nombre: 'Valentina Soto', ultimaCompra: '2026-09-24T21:00:00-03:00', activa: true },
 ];
 
 export const sesiones: Sesion[] = [
@@ -160,3 +161,19 @@ const lineasLiveAbierto: Linea[] = [
 ];
 
 export const lineas: Linea[] = [...lineasLiveAnterior, ...lineasLiveAbierto];
+
+const iniciales = structuredClone({ clientas, sesiones, entregas, lineas });
+
+/** Vuelve los datos a su estado inicial, para que cada test parta igual. */
+export function reiniciarDatos(): void {
+  clientas.splice(0, clientas.length, ...structuredClone(iniciales.clientas));
+  sesiones.splice(0, sesiones.length, ...structuredClone(iniciales.sesiones));
+  entregas.splice(0, entregas.length, ...structuredClone(iniciales.entregas));
+  lineas.splice(0, lineas.length, ...structuredClone(iniciales.lineas));
+}
+
+let siguienteId = 1000;
+/** Id nuevo para lo que se crea en memoria (ej: nuevoId('c') → "c-1000"). */
+export function nuevoId(prefijo: string): string {
+  return `${prefijo}-${siguienteId++}`;
+}

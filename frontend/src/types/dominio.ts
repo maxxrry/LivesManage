@@ -102,6 +102,8 @@ export interface Clienta {
   usuarioTiktok?: string;
   telefono?: string;
   direccion?: Direccion;
+  /** Fecha de la última compra (línea Pagada en un live Cerrado). La calcula ms-clientas (D-15). */
+  ultimaCompra?: FechaIso;
   /** Baja lógica (RF-12). */
   activa: boolean;
 }
