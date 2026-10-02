@@ -105,6 +105,19 @@ Precios: enteros de 1 a 999 (miles). Los decimales (3,5) están pendientes de co
 - No agregues dependencias sin preguntar.
 - Si algo del código contradice el ERS, avísame en vez de elegir por tu cuenta.
 
+## Skills por etapa
+
+| **Etapa** | **Skill** |
+| --- | --- |
+| Lógica de un RF (parser, totales, reglas de servicio) | `agent-skills:test-driven-development`: test rojo → verde → refactor |
+| Pantallas y componentes | `agent-skills:frontend-ui-engineering`: accesible, 360 px, áreas de 44 px |
+| Antes de proponer el commit de un RF | `code-review` (nivel medium) sobre el diff; corregir lo confirmado |
+| Al cerrar cada entrega del ramo | `agent-skills:test-engineer`: revisar estrategia y cobertura de pruebas (pauta IE2.3) |
+| Decisiones nuevas en `docs/decisiones.md` | `agent-skills:documentation-and-adrs` |
+| Backend: contratos REST y DTOs | `agent-skills:api-and-interface-design` |
+| Backend: login, JWT, roles, datos personales | `agent-skills:security-and-hardening` (Ley 19.628 / 21.719) |
+| `ms-importacion` (RF-15) | `claude-api` |
+
 ## Límites
 
 - Nunca subir `.env` ni secretos.
