@@ -116,6 +116,7 @@ Precios: enteros de 1 a 999 (miles). Los decimales (3,5) están pendientes de co
 | --- | --- |
 | Lógica de un RF (parser, totales, reglas de servicio) | `agent-skills:test-driven-development`: test rojo → verde → refactor |
 | Pantallas y componentes | `agent-skills:frontend-ui-engineering`: accesible, 360 px, áreas de 44 px |
+| Diseño visual y revisión de UX de pantallas | `ui-ux-pro-max` (script en `~/.claude/skills/ui-ux-pro-max/scripts/search.py`, stack `react` o `html-tailwind`). Complementa a `frontend-ui-engineering`; mandan el ERS y estas reglas (360 px, 44 px, sin scroll horizontal) |
 | Antes de proponer el commit de un RF | `code-review` (nivel medium) sobre el diff; corregir lo confirmado |
 | Al cerrar cada entrega del ramo | `agent-skills:test-engineer`: revisar estrategia y cobertura de pruebas (pauta IE2.3) |
 | Decisiones nuevas en `docs/decisiones.md` | `agent-skills:documentation-and-adrs` |
