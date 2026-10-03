@@ -6,7 +6,7 @@ import type { EstadoSesion, SesionResumen } from '../../types/dominio';
 import { ETIQUETAS_ESTADO_SESION } from '../../types/etiquetas';
 import { formatearFechaHora } from '../../utils/fechas';
 import { formatearClp } from '../../utils/montos';
-import { nombreSesion } from '../../utils/sesion';
+import { nombreSesion, rutaDeSesion } from '../../utils/sesion';
 
 const COLOR_ESTADO: Record<EstadoSesion, string> = {
   ABIERTA: 'bg-marca-100 text-marca-700',
@@ -151,7 +151,7 @@ export function LivesPage() {
                 {ordenada.map((s) => (
                   <tr key={s.id} className="relative hover:bg-marca-50 focus-within:bg-marca-50">
                     <td className="px-3 py-3 font-medium">
-                      <Link to={`/lives/${s.id}`} className="after:absolute after:inset-0 focus-visible:outline-none">
+                      <Link to={rutaDeSesion(s)} className="after:absolute after:inset-0 focus-visible:outline-none">
                         {nombreSesion(s)}
                       </Link>
                     </td>
@@ -174,7 +174,7 @@ export function LivesPage() {
               {ordenada.map((s) => (
                 <li key={s.id}>
                   <Link
-                    to={`/lives/${s.id}`}
+                    to={rutaDeSesion(s)}
                     className="block rounded-lg border border-gray-200 bg-white p-3 hover:border-marca-600"
                   >
                     <div className="flex items-center justify-between gap-2">

@@ -15,9 +15,10 @@ Proyecto del ramo Desarrollo FullStack 2 (Duoc UC) y para un cliente real.
 - Hecho: RF-06. Prendas como botones de 44 px que cancelan o restauran (sin reordenar, D-18) y "Cambiar clienta" por línea, con unión confirmada (D-19). Disponible En cierre; en Cerrada es solo lectura.
 - Hecho: RF-07. Botón Pagado por línea (aria-pressed), línea pagada en rosado, "Pagado" en la cabecera; fecha y usuario guardados sin mostrar (D-21). Agregar o restaurar una prenda en una línea Pagada la vuelve a Pendiente (D-20).
 - Hecho: RF-08. Totales del live (total, pagado, pendiente, clientas) con una sola fórmula `totalesDeLineas` (D-23), búsqueda en la hoja y versión de computador de la pantalla de live (totales en una fila, hoja en dos columnas). Pantalla de live completa (RF-05 a RF-08).
-- Decisiones D-01 a D-23 en `docs/decisiones.md`.
 - Hecho: versión de computador (D-24). Menú fijo a la izquierda desde 1024 px, lista de lives en tabla, y E2E en los proyectos `celular` y `escritorio` (usar `click()`, no `tap()`).
-- Siguiente: RF-09 (terminar live y revisar bolsas).
+- Hecho: RF-09. "Terminar live" con confirmación (Abierta → En cierre) y pantalla de cierre `/lives/:id/cierre` con avance y check de bolsa por línea (D-25). Las pantallas de live y cierre comparten `useSesionLive` y `HojaLive`.
+- Decisiones D-01 a D-25 en `docs/decisiones.md`.
+- Siguiente: RF-10 (forma de entrega y dirección).
 
 ## Estructura
 

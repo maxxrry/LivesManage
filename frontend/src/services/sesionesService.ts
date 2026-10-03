@@ -11,6 +11,8 @@ import { clientas, entregas, lineas, nuevoId, sesiones, usuarios } from './mock/
 //   PATCH  /api/lives/{id}/lineas/{lid}/prendas/{pid}   alternarPrenda
 //   PATCH  /api/lives/{id}/lineas/{lid}/clienta         cambiarClienta
 //   PATCH  /api/lives/{id}/lineas/{lid}/pago            alternarPago
+//   POST   /api/lives/{id}/terminar                     terminarSesion
+//   PATCH  /api/lives/{id}/lineas/{lid}/bolsa           alternarBolsa
 
 /** RF-04: cada live con sus totales, calculados desde las prendas vigentes (como hará ms-lives). */
 export async function listarSesiones(): Promise<SesionResumen[]> {
@@ -226,4 +228,22 @@ export async function cambiarClienta(sesionId: string, lineaId: string, destino:
   otra.actualizada = ahora;
   lineas.splice(lineas.indexOf(linea), 1);
   return structuredClone(otra);
+}
+
+/** RF-09: termina el live. Pasa de Abierta a En cierre; desde ahí se puede abrir otro live. */
+export async function terminarSesion(sesionId: string): Promise<Sesion> {
+  const sesion = sesiones.find((s) => s.id === sesionId);
+  if (!sesion) throw new Error('Live no encontrado');
+  if (sesion.estado !== 'ABIERTA') throw new Error('Solo se puede terminar un live abierto.');
+  sesion.estado = 'EN_CIERRE';
+  return structuredClone(sesion);
+}
+
+/** RF-09: marca o desmarca la bolsa revisada. Solo En cierre (D-25); no reordena la hoja. */
+export async function alternarBolsa(sesionId: string, lineaId: string): Promise<Linea> {
+  const sesion = sesiones.find((s) => s.id === sesionId);
+  if (sesion?.estado !== 'EN_CIERRE') throw new Error('Las bolsas se revisan en el cierre del live.');
+  const linea = lineaEditable(sesionId, lineaId);
+  linea.bolsaRevisada = !linea.bolsaRevisada;
+  return structuredClone(linea);
 }

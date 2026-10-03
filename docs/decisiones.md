@@ -28,6 +28,7 @@ Registro de decisiones de diseño que complementan o precisan el ERS (`docs/ERS.
 | D-22 | 02/10/2026 | RF-05, RF-06, RF-07 | Cualquier cambio en la línea recién anotada anula su Deshacer. Amplía D-11 y D-19. |
 | D-23 | 02/10/2026 | RF-04, RF-08 | Pendiente por cobrar, número de clientas y totales con búsqueda activa. |
 | D-24 | 02/10/2026 | Todos (3.1.3, RNF-25) | Versión de computador: menú fijo, lista de lives en tabla y E2E también en escritorio. Complementa D-09 y D-16. |
+| D-25 | 02/10/2026 | RF-09 | Terminar live con confirmación; bolsa revisada solo En cierre; orden de la hoja en el cierre. |
 
 ## D-01 · Estilos con Tailwind CSS
 
@@ -170,3 +171,11 @@ La app es mobile-first, pero también se usa en PC (Chrome, Edge y Firefox; ERS 
 - **Ancho:** cada pantalla define el suyo. Las pantallas comunes (`Pantalla`) llegan a ~1024 px; la pantalla de live a ~1150 px, con la hoja en dos columnas (RF-08).
 - **Lista de lives:** tabla con columnas Live, Inicio, Estado, Clientas, Total y Pagado, para comparar montos en columna. La fila completa abre el live. En celular siguen las tarjetas.
 - **Pruebas:** Playwright tiene el proyecto `escritorio` (Chromium 1280×800, mouse y teclado) además de `celular` (y `iphone` fuera de Windows, D-16). Todos los E2E corren en ambos; usan `click()`, que funciona con y sin pantalla táctil. Las pruebas que dependen del ancho usan `isMobile` (por ejemplo, el menú en la prueba de humo).
+
+## D-25 · Terminar live y revisar bolsas
+
+- "Terminar live" pide confirmación en la misma pantalla (como D-19) y pasa la sesión de Abierta a En cierre. No se registra la hora de término: el ERS no la pide.
+- El check de bolsa revisada solo existe En cierre; durante el live las bolsas aún se arman.
+- Corregir una línea (RF-06) con la bolsa ya marcada no la desmarca: si la bolsa no cuadraba, se corrige la línea para que coincida con la bolsa.
+- La pantalla de cierre usa el mismo orden de la hoja del live (última modificada arriba), con la búsqueda de RF-08.
+- Un live En cierre se abre directamente en su cierre, desde la lista de lives y desde `/lives/:id` (redirige). Reemplaza el último punto de D-17.

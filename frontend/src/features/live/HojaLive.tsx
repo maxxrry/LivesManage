@@ -17,6 +17,8 @@ interface HojaLiveProps {
   /** Texto de búsqueda (RF-08). Lo controla LivePage, que lo borra al anotar. */
   busqueda: string;
   onBuscar: (texto: string) => void;
+  /** RF-09: si se entrega, cada línea muestra el check de bolsa revisada (solo en el cierre). */
+  onAlternarBolsa?: (lineaId: string) => void;
 }
 
 function PrendaHoja({ prenda, editable, onAlternar }: { prenda: Prenda; editable: boolean; onAlternar: () => void }) {
@@ -75,6 +77,7 @@ export function HojaLive({
   onAlternarPago,
   busqueda,
   onBuscar,
+  onAlternarBolsa,
 }: HojaLiveProps) {
   const [editando, setEditando] = useState<string | null>(null);
 
@@ -142,6 +145,18 @@ export function HojaLive({
               ))}
             </span>
             <span className="ml-auto font-semibold tabular-nums">= {formatearClp(totalLinea(linea.prendas))}</span>
+            {onAlternarBolsa && (
+              <label className="order-last flex min-h-11 cursor-pointer items-center gap-2 rounded-md border border-gray-300 bg-white px-3 text-sm font-semibold has-checked:border-green-700 has-checked:bg-green-50 has-checked:text-green-800">
+                <input
+                  type="checkbox"
+                  checked={linea.bolsaRevisada}
+                  onChange={() => onAlternarBolsa(linea.id)}
+                  aria-label={`Bolsa revisada: ${linea.clientaNombre}`}
+                  className="size-5 accent-green-700"
+                />
+                Bolsa
+              </label>
+            )}
             <EstadoPagoLinea linea={linea} editable={editable} onAlternar={() => onAlternarPago(linea.id)} />
           </div>
 
