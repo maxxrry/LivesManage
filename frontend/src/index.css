@@ -12,3 +12,26 @@ html,
 body {
   overflow-x: hidden;
 }
+
+@layer base {
+  /* Respuesta visible al hover y al tocar, sin animar el layout. */
+  a,
+  button,
+  label,
+  input {
+    transition-property: color, background-color, border-color, box-shadow;
+    transition-duration: 150ms;
+  }
+  button:not(:disabled),
+  [role='button'] {
+    cursor: pointer;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+  }
+}

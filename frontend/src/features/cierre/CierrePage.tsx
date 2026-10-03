@@ -30,24 +30,33 @@ export function CierrePage() {
   if (sesion.estado !== 'EN_CIERRE') return <Navigate to={`/lives/${id}`} replace />;
 
   const revisadas = lineas.filter((l) => l.bolsaRevisada).length;
+  const completas = lineas.length > 0 && revisadas === lineas.length;
 
   return (
     <div className="mx-auto max-w-6xl">
       <div className="sticky top-14 z-10 space-y-3 border-b border-gray-200 bg-gray-50 px-4 py-3">
         <h1 className="truncate font-semibold">Cierre: {nombreSesion(sesion)}</h1>
-        <TotalesLive totales={totalesDeLineas(lineas)} />
-        <div className="space-y-1">
-          <p className="text-sm">
-            Bolsas revisadas:{' '}
-            <strong className="tabular-nums" data-testid="avance-bolsas">
+        <TotalesLive totales={totalesDeLineas(lineas)} destacar="pendiente" />
+        <div className="space-y-1.5">
+          <p className="flex items-baseline justify-between text-sm text-gray-600">
+            Bolsas revisadas
+            <strong
+              className={`text-base tabular-nums ${completas ? 'text-green-800' : 'text-gray-900'}`}
+              data-testid="avance-bolsas"
+            >
               {revisadas} de {lineas.length}
             </strong>
           </p>
+          {/* <progress> nativo con estilo propio: el riel gris y el avance en rosado, verde al completar. */}
           <progress
             value={revisadas}
             max={Math.max(lineas.length, 1)}
             aria-label="Avance de bolsas revisadas"
-            className="h-2 w-full accent-green-700"
+            className={`block h-2 w-full appearance-none overflow-hidden rounded-full bg-gray-200 [&::-webkit-progress-bar]:bg-gray-200 ${
+              completas
+                ? '[&::-moz-progress-bar]:bg-green-700 [&::-webkit-progress-value]:bg-green-700'
+                : '[&::-moz-progress-bar]:bg-marca-600 [&::-webkit-progress-value]:bg-marca-600'
+            } [&::-webkit-progress-value]:rounded-full [&::-webkit-progress-value]:transition-[width]`}
           />
         </div>
         {errorAccion && (

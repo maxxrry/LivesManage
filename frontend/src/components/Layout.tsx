@@ -25,10 +25,10 @@ export function Layout() {
 
   return (
     <div className="min-h-dvh bg-gray-50 text-gray-900">
-      <header className="fixed inset-x-0 top-0 z-20 flex h-14 items-center gap-2 bg-marca-600 px-2 text-white shadow lg:px-5">
+      <header className="fixed inset-x-0 top-0 z-20 flex h-14 items-center gap-2 border-b border-gray-200 bg-white px-2 lg:px-5">
         <button
           type="button"
-          className="flex size-11 items-center justify-center rounded-md hover:bg-marca-700 focus-visible:outline-2 focus-visible:outline-white lg:hidden"
+          className="flex size-11 items-center justify-center rounded-md text-gray-700 hover:bg-gray-100 focus-visible:outline-2 focus-visible:outline-marca-600 lg:hidden"
           aria-label={menuAbierto ? 'Cerrar menú' : 'Abrir menú'}
           aria-expanded={menuAbierto}
           aria-controls="menu-principal"
@@ -38,7 +38,7 @@ export function Layout() {
             <path strokeLinecap="round" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
-        <span className="text-lg font-semibold">LivesManage</span>
+        <span className="text-lg font-bold text-marca-700">LivesManage</span>
       </header>
 
       {menuAbierto && (

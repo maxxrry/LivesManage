@@ -53,7 +53,7 @@ function EstadoPagoLinea({ linea, editable, onAlternar }: { linea: Linea; editab
       onClick={onAlternar}
       aria-pressed={pagado}
       aria-label={`Pagado: ${linea.clientaNombre}`}
-      className={`order-last flex min-h-11 items-center gap-1 rounded-md border px-3 text-sm font-semibold ${
+      className={`flex min-h-11 items-center gap-1 rounded-md border px-3 text-sm font-semibold ${
         pagado ? 'border-marca-600 bg-marca-600 text-white' : 'border-gray-300 bg-white text-gray-700 hover:border-marca-600'
       }`}
     >
@@ -112,12 +112,12 @@ export function HojaLive({
       </div>
 
       {/* Una columna en celular, dos en computador. */}
-      <ul aria-label="Hoja del live" className="grid border-t border-gray-200 bg-white lg:grid-cols-2">
+      <ul aria-label="Hoja del live" className="grid gap-2 px-4 pb-4 lg:grid-cols-2">
       {visibles.map((linea) => (
         <li
           key={linea.id}
-          className={`border-b border-l-4 border-b-gray-200 py-2 pr-4 pl-3 lg:odd:border-r lg:odd:border-r-gray-200 ${
-            linea.estadoPago === 'PAGADO' ? 'border-l-marca-600 bg-marca-50' : 'border-l-transparent'
+          className={`rounded-lg border border-gray-200 py-2 pr-4 shadow-sm ${
+            linea.estadoPago === 'PAGADO' ? 'border-l-4 border-l-marca-600 bg-marca-50 pl-3' : 'bg-white pl-4'
           }`}
         >
           <div className="flex min-h-11 flex-wrap items-center gap-x-2">
@@ -136,7 +136,7 @@ export function HojaLive({
               </button>
             )}
             {editable && <span className="order-last basis-full" aria-hidden="true" />}
-            <span className={`tabular-nums ${editable ? 'order-last flex flex-1 flex-wrap items-center gap-1' : ''}`}>
+            <span className={`tabular-nums ${editable ? 'order-last flex max-w-full shrink-0 flex-wrap items-center gap-1' : ''}`}>
               {linea.prendas.map((p, i) => (
                 <Fragment key={p.id}>
                   {i > 0 && <span className={editable ? 'text-gray-400' : ''}>-</span>}
@@ -145,19 +145,22 @@ export function HojaLive({
               ))}
             </span>
             <span className="ml-auto font-semibold tabular-nums">= {formatearClp(totalLinea(linea.prendas))}</span>
-            {onAlternarBolsa && (
-              <label className="order-last flex min-h-11 cursor-pointer items-center gap-2 rounded-md border border-gray-300 bg-white px-3 text-sm font-semibold has-checked:border-green-700 has-checked:bg-green-50 has-checked:text-green-800">
-                <input
-                  type="checkbox"
-                  checked={linea.bolsaRevisada}
-                  onChange={() => onAlternarBolsa(linea.id)}
-                  aria-label={`Bolsa revisada: ${linea.clientaNombre}`}
-                  className="size-5 accent-green-700"
-                />
-                Bolsa
-              </label>
-            )}
-            <EstadoPagoLinea linea={linea} editable={editable} onAlternar={() => onAlternarPago(linea.id)} />
+            {/* Las prendas no se encogen: si no caben con los botones, bajan los botones y no se parten las prendas. */}
+            <div className={`flex gap-2 ${editable ? 'order-last ml-auto' : ''}`}>
+              {onAlternarBolsa && (
+                <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-md border border-gray-300 bg-white px-3 text-sm font-semibold has-checked:border-green-700 has-checked:bg-green-50 has-checked:text-green-800">
+                  <input
+                    type="checkbox"
+                    checked={linea.bolsaRevisada}
+                    onChange={() => onAlternarBolsa(linea.id)}
+                    aria-label={`Bolsa revisada: ${linea.clientaNombre}`}
+                    className="size-5 accent-green-700"
+                  />
+                  Bolsa
+                </label>
+              )}
+              <EstadoPagoLinea linea={linea} editable={editable} onAlternar={() => onAlternarPago(linea.id)} />
+            </div>
           </div>
 
           {editando === linea.id && (
