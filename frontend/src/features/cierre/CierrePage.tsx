@@ -1,15 +1,24 @@
 import { useState } from 'react';
 import { Navigate, useParams } from 'react-router';
 import { Pantalla } from '../../components/Pantalla';
-import { alternarBolsa, alternarPago, alternarPrenda, cambiarClienta } from '../../services/sesionesService';
+import {
+  agruparEntrega,
+  alternarBolsa,
+  alternarPago,
+  alternarPrenda,
+  cambiarClienta,
+  registrarEntrega,
+} from '../../services/sesionesService';
 import { totalesDeLineas } from '../../utils/montos';
 import { nombreSesion } from '../../utils/sesion';
 import { HojaLive } from '../live/HojaLive';
 import { TotalesLive } from '../live/TotalesLive';
 import { useSesionLive } from '../live/useSesionLive';
+import { EntregaLinea, type DespachoAgrupable } from './EntregaLinea';
 
 /**
  * Cierre del live (RF-09 a RF-11). RF-09: avance de bolsas revisadas y check por clienta.
+ * RF-10: forma de entrega por clienta, con dirección si es despacho.
  * Las correcciones (RF-06) y el cobro (RF-07) siguen disponibles en cada línea.
  */
 export function CierrePage() {
@@ -25,12 +34,17 @@ export function CierrePage() {
     );
   }
 
-  const { sesion, lineas } = detalle;
+  const { sesion, lineas, entregas } = detalle;
   // Solo un live En cierre tiene pantalla de cierre; el resto se ve en su pantalla de live.
   if (sesion.estado !== 'EN_CIERRE') return <Navigate to={`/lives/${id}`} replace />;
 
   const revisadas = lineas.filter((l) => l.bolsaRevisada).length;
   const completas = lineas.length > 0 && revisadas === lineas.length;
+
+  const nombresEn = (entregaId: string) => lineas.filter((l) => l.entregaId === entregaId).map((l) => l.clientaNombre);
+  const despachos: DespachoAgrupable[] = entregas
+    .filter((e) => e.tipo === 'DESPACHO')
+    .map((e) => ({ entregaId: e.id, nombres: nombresEn(e.id), direccion: e.direccion }));
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -82,6 +96,27 @@ export function CierrePage() {
         onAlternarBolsa={(lineaId) => void ejecutar(() => alternarBolsa(id, lineaId), 'No se pudo marcar la bolsa.')}
         busqueda={busqueda}
         onBuscar={setBusqueda}
+        pieLinea={(linea) => {
+          const entrega = entregas.find((e) => e.id === linea.entregaId);
+          return (
+            <EntregaLinea
+              key={entrega?.id ?? 'sin-entrega'}
+              clientaNombre={linea.clientaNombre}
+              entrega={entrega}
+              junto={lineas.filter((l) => entrega && l.entregaId === entrega.id && l.id !== linea.id).map((l) => l.clientaNombre)}
+              direccionFicha={clientas.find((c) => c.id === linea.clientaId)?.direccion}
+              despachos={despachos.filter((d) => d.entregaId !== entrega?.id)}
+              onRegistrar={async (datos) => {
+                await registrarEntrega(id, linea.id, datos);
+                await recargar();
+              }}
+              onAgrupar={async (entregaId) => {
+                await agruparEntrega(id, linea.id, entregaId);
+                await recargar();
+              }}
+            />
+          );
+        }}
       />
     </div>
   );

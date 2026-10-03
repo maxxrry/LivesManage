@@ -1,4 +1,17 @@
-import type { Clienta, EstadoPago, Linea, MontoClp, Prenda, Sesion, SesionDetalle, SesionResumen } from '../types/dominio';
+import {
+  REGION_POR_DEFECTO,
+  type Clienta,
+  type Direccion,
+  type Entrega,
+  type EstadoPago,
+  type Linea,
+  type MontoClp,
+  type Prenda,
+  type Sesion,
+  type SesionDetalle,
+  type SesionResumen,
+  type TipoEntrega,
+} from '../types/dominio';
 import { totalesDeLineas } from '../utils/montos';
 import { clientas, entregas, lineas, nuevoId, sesiones, usuarios } from './mock/datos';
 
@@ -13,6 +26,8 @@ import { clientas, entregas, lineas, nuevoId, sesiones, usuarios } from './mock/
 //   PATCH  /api/lives/{id}/lineas/{lid}/pago            alternarPago
 //   POST   /api/lives/{id}/terminar                     terminarSesion
 //   PATCH  /api/lives/{id}/lineas/{lid}/bolsa           alternarBolsa
+//   PUT    /api/lives/{id}/lineas/{lid}/entrega         registrarEntrega
+//   PATCH  /api/lives/{id}/lineas/{lid}/entrega         agruparEntrega
 
 /** RF-04: cada live con sus totales, calculados desde las prendas vigentes (como hará ms-lives). */
 export async function listarSesiones(): Promise<SesionResumen[]> {
@@ -227,6 +242,7 @@ export async function cambiarClienta(sesionId: string, lineaId: string, destino:
   otra.entregaId = otra.entregaId ?? linea.entregaId;
   otra.actualizada = ahora;
   lineas.splice(lineas.indexOf(linea), 1);
+  quitarEntregasVacias(sesionId); // la entrega de la línea unida pudo quedar sin líneas
   return structuredClone(otra);
 }
 
@@ -246,4 +262,80 @@ export async function alternarBolsa(sesionId: string, lineaId: string): Promise<
   const linea = lineaEditable(sesionId, lineaId);
   linea.bolsaRevisada = !linea.bolsaRevisada;
   return structuredClone(linea);
+}
+
+/** Lo que se elige para una clienta en el cierre (RF-10). La dirección solo cuenta para Despacho. */
+export interface DatosEntrega {
+  tipo: TipoEntrega;
+  direccion?: Direccion;
+}
+
+/** Línea de un live En cierre: solo ahí se registran entregas (RF-10). */
+function lineaEnCierre(sesionId: string, lineaId: string): Linea {
+  const sesion = sesiones.find((s) => s.id === sesionId);
+  if (sesion?.estado !== 'EN_CIERRE') throw new Error('La entrega se registra en el cierre del live.');
+  return lineaEditable(sesionId, lineaId);
+}
+
+/** Despacho exige calle y comuna; la región es Metropolitana si no se indica (D-04). */
+function direccionValida(direccion?: Direccion): Direccion {
+  if (!direccion) throw new Error('El despacho necesita una dirección.');
+  const calle = direccion.calle.trim();
+  const comuna = direccion.comuna.trim();
+  if (!calle) throw new Error('Falta la calle de la dirección.');
+  if (!comuna) throw new Error('Falta la comuna de la dirección.');
+  const valida: Direccion = { calle, comuna, region: direccion.region.trim() || REGION_POR_DEFECTO };
+  const referencia = direccion.referencia?.trim();
+  if (referencia) valida.referencia = referencia;
+  return valida;
+}
+
+/** Quita las entregas del live que ya no tienen líneas (D-05: la entrega no existe sin líneas). */
+function quitarEntregasVacias(sesionId: string): void {
+  for (let i = entregas.length - 1; i >= 0; i--) {
+    const entrega = entregas[i]!;
+    if (entrega.sesionId === sesionId && !lineas.some((l) => l.entregaId === entrega.id)) entregas.splice(i, 1);
+  }
+}
+
+/**
+ * RF-10: registra la forma de entrega de una clienta. Despacho exige dirección, que queda en su ficha.
+ * Si la clienta compartía la entrega con otras, sale del grupo y las demás no cambian (D-26).
+ * No reordena la hoja.
+ */
+export async function registrarEntrega(sesionId: string, lineaId: string, datos: DatosEntrega): Promise<Entrega> {
+  const linea = lineaEnCierre(sesionId, lineaId);
+  const direccion = datos.tipo === 'DESPACHO' ? direccionValida(datos.direccion) : undefined;
+
+  const actual = entregas.find((e) => e.id === linea.entregaId);
+  const compartida = lineas.some((l) => l.id !== linea.id && l.entregaId === actual?.id);
+  let entrega: Entrega;
+  if (actual && !compartida) {
+    entrega = actual;
+  } else {
+    entrega = { id: nuevoId('e'), sesionId, tipo: datos.tipo };
+    entregas.push(entrega);
+    linea.entregaId = entrega.id;
+  }
+  entrega.tipo = datos.tipo;
+  if (direccion) {
+    entrega.direccion = direccion;
+    // Con backend, ms-lives pide a ms-clientas que guarde la dirección en la ficha.
+    const clienta = clientas.find((c) => c.id === linea.clientaId);
+    if (clienta) clienta.direccion = structuredClone(direccion);
+  } else {
+    delete entrega.direccion;
+  }
+  return structuredClone(entrega);
+}
+
+/** RF-10: suma la clienta al despacho de otra del mismo live (ej: hermanas). Cada una conserva su línea. */
+export async function agruparEntrega(sesionId: string, lineaId: string, entregaId: string): Promise<Entrega> {
+  const linea = lineaEnCierre(sesionId, lineaId);
+  const entrega = entregas.find((e) => e.id === entregaId && e.sesionId === sesionId);
+  if (!entrega) throw new Error('Entrega no encontrada');
+  if (entrega.tipo !== 'DESPACHO') throw new Error('Solo se puede agrupar con un despacho.');
+  linea.entregaId = entrega.id;
+  quitarEntregasVacias(sesionId);
+  return structuredClone(entrega);
 }

@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
 import type { DestinoAnotacion } from '../../services/sesionesService';
 import type { Clienta, Linea, Prenda } from '../../types/dominio';
 import { ETIQUETAS_ESTADO_PAGO } from '../../types/etiquetas';
@@ -19,6 +19,8 @@ interface HojaLiveProps {
   onBuscar: (texto: string) => void;
   /** RF-09: si se entrega, cada línea muestra el check de bolsa revisada (solo en el cierre). */
   onAlternarBolsa?: (lineaId: string) => void;
+  /** Contenido extra al pie de cada línea; el cierre muestra ahí la entrega (RF-10). */
+  pieLinea?: (linea: Linea) => ReactNode;
 }
 
 function PrendaHoja({ prenda, editable, onAlternar }: { prenda: Prenda; editable: boolean; onAlternar: () => void }) {
@@ -78,6 +80,7 @@ export function HojaLive({
   busqueda,
   onBuscar,
   onAlternarBolsa,
+  pieLinea,
 }: HojaLiveProps) {
   const [editando, setEditando] = useState<string | null>(null);
 
@@ -162,6 +165,8 @@ export function HojaLive({
               <EstadoPagoLinea linea={linea} editable={editable} onAlternar={() => onAlternarPago(linea.id)} />
             </div>
           </div>
+
+          {pieLinea?.(linea)}
 
           {editando === linea.id && (
             <div className="mt-2">

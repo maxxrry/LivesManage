@@ -29,6 +29,7 @@ Registro de decisiones de diseño que complementan o precisan el ERS (`docs/ERS.
 | D-23 | 02/10/2026 | RF-04, RF-08 | Pendiente por cobrar, número de clientas y totales con búsqueda activa. |
 | D-24 | 02/10/2026 | Todos (3.1.3, RNF-25) | Versión de computador: menú fijo, lista de lives en tabla y E2E también en escritorio. Complementa D-09 y D-16. |
 | D-25 | 02/10/2026 | RF-09 | Terminar live con confirmación; bolsa revisada solo En cierre; orden de la hoja en el cierre. |
+| D-26 | 03/10/2026 | RF-10 | Forma de entrega en el cierre: grupos, dirección en la ficha y Feria sin detalle. |
 
 ## D-01 · Estilos con Tailwind CSS
 
@@ -179,3 +180,12 @@ La app es mobile-first, pero también se usa en PC (Chrome, Edge y Firefox; ERS 
 - Corregir una línea (RF-06) con la bolsa ya marcada no la desmarca: si la bolsa no cuadraba, se corrige la línea para que coincida con la bolsa.
 - La pantalla de cierre usa el mismo orden de la hoja del live (última modificada arriba), con la búsqueda de RF-08.
 - Un live En cierre se abre directamente en su cierre, desde la lista de lives y desde `/lives/:id` (redirige). Reemplaza el último punto de D-17.
+
+## D-26 · Forma de entrega en el cierre
+
+- La entrega se registra solo En cierre, en la misma tarjeta de cada clienta. Retiro y Feria se guardan con un toque; Despacho pide confirmar la dirección de la ficha, ingresar otra o enviar junto con otra clienta del live que ya tenga despacho.
+- Despacho exige calle y comuna; la región es Metropolitana si se deja vacía (D-04) y la referencia es opcional.
+- Una dirección ingresada o confirmada reemplaza la de la ficha de la clienta: la ficha guarda una sola dirección, sin historial. Sumarse al despacho de otra clienta no cambia la ficha de quien se suma.
+- Cambiar la forma de entrega o la dirección de una clienta agrupada la saca del grupo; las demás conservan su entrega. Una entrega que queda sin líneas se elimina (D-05).
+- Feria registra solo el tipo. Qué feria y qué día sigue como pregunta abierta del ERS.
+- Registrar la entrega no reordena la hoja.

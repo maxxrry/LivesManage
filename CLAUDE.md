@@ -17,8 +17,10 @@ Proyecto del ramo Desarrollo FullStack 2 (Duoc UC) y para un cliente real.
 - Hecho: RF-08. Totales del live (total, pagado, pendiente, clientas) con una sola fórmula `totalesDeLineas` (D-23), búsqueda en la hoja y versión de computador de la pantalla de live (totales en una fila, hoja en dos columnas). Pantalla de live completa (RF-05 a RF-08).
 - Hecho: versión de computador (D-24). Menú fijo a la izquierda desde 1024 px, lista de lives en tabla, y E2E en los proyectos `celular` y `escritorio` (usar `click()`, no `tap()`).
 - Hecho: RF-09. "Terminar live" con confirmación (Abierta → En cierre) y pantalla de cierre `/lives/:id/cierre` con avance y check de bolsa por línea (D-25). Las pantallas de live y cierre comparten `useSesionLive` y `HojaLive`.
-- Decisiones D-01 a D-25 en `docs/decisiones.md`.
-- Siguiente: RF-10 (forma de entrega y dirección).
+- Hecho: pulido visual (cabecera blanca, tarjetas, barra de avance, totales parejos).
+- Hecho: RF-10. Forma de entrega por clienta en el cierre (Despacho, Retiro, Feria), dirección de la ficha o nueva (queda en la ficha) y "Enviar junto con" para agrupar despachos (D-26). `registrarEntrega` y `agruparEntrega` en `sesionesService`.
+- Decisiones D-01 a D-26 en `docs/decisiones.md`.
+- Siguiente: RF-11 (finalizar cierre).
 
 ## Estructura
 
