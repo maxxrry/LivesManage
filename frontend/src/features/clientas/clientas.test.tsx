@@ -1,0 +1,156 @@
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { createMemoryRouter, RouterProvider } from 'react-router';
+import { describe, expect, it } from 'vitest';
+import { rutas } from '../../app/router';
+import { clientas, lineas, usuarios } from '../../services/mock/datos';
+
+function abrir(ruta: string) {
+  const router = createMemoryRouter(rutas, { initialEntries: [ruta] });
+  render(<RouterProvider router={router} />);
+  return { usuario: userEvent.setup(), router };
+}
+
+const nombresEnLista = async () =>
+  within(await screen.findByRole('list', { name: 'Lista de clientas' }))
+    .getAllByRole('link')
+    .map((a) => a.textContent?.split(/Desactivada|@|\+/)[0]?.trim());
+
+describe('Clientas (RF-12)', () => {
+  it('crear una clienta con un usuario de TikTok ya registrado muestra aviso de duplicado', async () => {
+    const { usuario } = abrir('/clientas');
+    await usuario.click(await screen.findByRole('button', { name: 'Nueva clienta' }));
+
+    await usuario.type(screen.getByLabelText('Nombre'), 'Gabi');
+    await usuario.type(screen.getByLabelText(/Usuario de TikTok/), 'Gabi.Pena');
+    await usuario.tab(); // al salir del campo se revisa
+
+    expect(await screen.findByText(/Ese usuario de TikTok ya es de/)).toHaveTextContent('Gabriela Peña');
+    const formulario = screen.getByRole('form', { name: 'Nueva clienta' });
+    expect(within(formulario).getByRole('link', { name: 'Gabriela Peña' })).toHaveAttribute('href', '/clientas/c-1');
+  });
+
+  it('el aviso no bloquea: pide confirmar y "Guardar igual" crea la clienta (D-28)', async () => {
+    const { usuario, router } = abrir('/clientas');
+    await usuario.click(await screen.findByRole('button', { name: 'Nueva clienta' }));
+    await usuario.type(screen.getByLabelText('Nombre'), 'Gabi');
+    await usuario.type(screen.getByLabelText(/Usuario de TikTok/), '@gabi.pena');
+
+    await usuario.click(screen.getByRole('button', { name: 'Guardar' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('ya tiene otra clienta');
+    await usuario.click(screen.getByRole('button', { name: 'Guardar igual' }));
+
+    expect(await screen.findByRole('heading', { name: 'Gabi' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toMatch(/^\/clientas\/c-\d+$/);
+  });
+
+  it('si tras confirmar se cambia el teléfono por otro duplicado, vuelve a avisar antes de guardar', async () => {
+    const { usuario, router } = abrir('/clientas');
+    await usuario.click(await screen.findByRole('button', { name: 'Nueva clienta' }));
+    await usuario.type(screen.getByLabelText('Nombre'), 'Gabi');
+    await usuario.type(screen.getByLabelText(/Usuario de TikTok/), '@gabi.pena');
+    await usuario.click(screen.getByRole('button', { name: 'Guardar' }));
+    expect(await screen.findByRole('button', { name: 'Guardar igual' })).toBeInTheDocument();
+
+    // Cambia el teléfono al de Javiera y presiona Enter sin salir del campo.
+    await usuario.type(screen.getByLabelText(/Teléfono/), '912345678{Enter}');
+
+    expect(await screen.findByText(/Ese teléfono ya es de/)).toHaveTextContent('Javiera Soto');
+    expect(router.state.location.pathname).toBe('/clientas');
+    expect(clientas.filter((c) => c.nombre === 'Gabi')).toHaveLength(0);
+  });
+
+  it('una clienta sin duplicados se crea con un solo Guardar', async () => {
+    const { usuario } = abrir('/clientas');
+    await usuario.click(await screen.findByRole('button', { name: 'Nueva clienta' }));
+    await usuario.type(screen.getByLabelText('Nombre'), 'Ana Rojas');
+    await usuario.type(screen.getByLabelText(/Teléfono/), '+56 9 5555 4444');
+
+    await usuario.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    expect(await screen.findByRole('heading', { name: 'Ana Rojas' })).toBeInTheDocument();
+    expect(screen.getByText('+56 9 5555 4444')).toBeInTheDocument();
+  });
+
+  it('busca por nombre, usuario de TikTok o teléfono', async () => {
+    const { usuario } = abrir('/clientas');
+    const buscar = await screen.findByRole('searchbox', { name: 'Buscar clientas' });
+
+    await usuario.type(buscar, 'pena');
+    expect(await nombresEnLista()).toEqual(['Gabriela Peña']);
+
+    await usuario.clear(buscar);
+    await usuario.type(buscar, '@javi');
+    expect(await nombresEnLista()).toEqual(['Javiera Soto']);
+
+    await usuario.clear(buscar);
+    await usuario.type(buscar, '8765');
+    expect(await nombresEnLista()).toEqual(['Florencia Ruiz']);
+  });
+
+  it('las desactivadas se ocultan salvo con "Mostrar desactivadas"', async () => {
+    clientas.find((c) => c.id === 'c-4')!.activa = false;
+    const { usuario } = abrir('/clientas');
+
+    expect(await nombresEnLista()).not.toContain('Camila Rojas');
+    await usuario.click(screen.getByRole('checkbox', { name: 'Mostrar desactivadas' }));
+    expect(await nombresEnLista()).toContain('Camila Rojas');
+  });
+});
+
+describe('Ficha: editar y desactivar (RF-12)', () => {
+  it('editar completa los datos y renombrar actualiza sus líneas (D-28)', async () => {
+    const { usuario } = abrir('/clientas/c-4');
+    await usuario.click(await screen.findByRole('button', { name: 'Editar' }));
+
+    const nombre = screen.getByLabelText('Nombre');
+    await usuario.clear(nombre);
+    await usuario.type(nombre, 'Camila Rojas Díaz');
+    await usuario.type(screen.getByLabelText(/Teléfono/), '+56 9 1111 2222');
+    await usuario.type(screen.getByLabelText(/Calle y número/), 'Av. Central 100');
+    await usuario.type(screen.getByLabelText(/^Comuna/), 'Ñuñoa');
+    await usuario.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    expect(await screen.findByRole('heading', { name: 'Camila Rojas Díaz' })).toBeInTheDocument();
+    expect(screen.getByText('Av. Central 100, Ñuñoa')).toBeInTheDocument();
+    expect(lineas.filter((l) => l.clientaId === 'c-4').every((l) => l.clientaNombre === 'Camila Rojas Díaz')).toBe(true);
+  });
+
+  it('seguir el enlace del aviso abre la otra ficha sin el formulario de la anterior', async () => {
+    const { usuario } = abrir('/clientas/c-1');
+    await usuario.click(await screen.findByRole('button', { name: 'Editar' }));
+    await usuario.type(screen.getByLabelText(/Teléfono/), '912345678');
+    await usuario.tab();
+
+    await usuario.click(await screen.findByRole('link', { name: 'Javiera Soto' }));
+
+    expect(await screen.findByRole('heading', { name: 'Javiera Soto' })).toBeInTheDocument();
+    expect(screen.queryByRole('form', { name: 'Editar clienta' })).not.toBeInTheDocument();
+    expect(screen.getByText('@javisoto')).toBeInTheDocument();
+  });
+
+  it('la administradora desactiva con confirmación y puede reactivar', async () => {
+    const { usuario } = abrir('/clientas/c-1');
+
+    await usuario.click(await screen.findByRole('button', { name: 'Desactivar' }));
+    const confirmar = screen.getByRole('group', { name: 'Confirmar desactivación' });
+    await usuario.click(within(confirmar).getByRole('button', { name: 'Desactivar' }));
+
+    expect(await screen.findByText(/Clienta desactivada/)).toBeInTheDocument();
+    expect(clientas.find((c) => c.id === 'c-1')!.activa).toBe(false);
+
+    await usuario.click(screen.getByRole('button', { name: 'Reactivar' }));
+    expect(await screen.findByRole('button', { name: 'Desactivar' })).toBeInTheDocument();
+  });
+
+  it('una vendedora no ve Desactivar', async () => {
+    usuarios[0]!.rol = 'VENDEDOR';
+    try {
+      abrir('/clientas/c-1');
+      expect(await screen.findByRole('button', { name: 'Editar' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Desactivar' })).not.toBeInTheDocument();
+    } finally {
+      usuarios[0]!.rol = 'ADMIN';
+    }
+  });
+});

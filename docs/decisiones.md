@@ -31,6 +31,7 @@ Registro de decisiones de diseño que complementan o precisan el ERS (`docs/ERS.
 | D-25 | 02/10/2026 | RF-09 | Terminar live con confirmación; bolsa revisada solo En cierre; orden de la hoja en el cierre. |
 | D-26 | 03/10/2026 | RF-10 | Forma de entrega en el cierre: grupos, dirección en la ficha y Feria sin detalle. |
 | D-27 | 03/10/2026 | RF-11 | Finalizar cierre: líneas de $0, conteo por entrega, No pagó reversible y reabrir. |
+| D-28 | 04/10/2026 | RF-12 | Duplicados avisan sin bloquear, renombrar actualiza las líneas, desactivar y reactivar (Admin). |
 
 ## D-01 · Estilos con Tailwind CSS
 
@@ -199,3 +200,13 @@ La app es mobile-first, pero también se usa en PC (Chrome, Edge y Firefox; ERS 
 - "No pagó" se marca desde el resumen de finalizar, solo En cierre y solo sobre líneas Pendientes. Se deshace con "Deshacer" en la línea (vuelve a Pendiente), por ejemplo si la clienta pagó días después. Completa D-21.
 - Reabrir: solo Admin, desde la pantalla del live Cerrado y con confirmación. El live vuelve a En cierre con sus líneas tal como estaban, incluidas las No pagó.
 - No se registra la hora de cierre ni de reapertura: el ERS no las pide.
+
+## D-28 · Registrar y buscar clientas
+
+- **Duplicados:** si el usuario de TikTok o el teléfono ya pertenecen a otra clienta, se avisa quién lo tiene (con enlace a su ficha) y se puede "Guardar igual". No bloquea: unas hermanas pueden compartir teléfono.
+- **Comparación:** el usuario de TikTok se compara sin `@`, espacios ni mayúsculas, y se guarda como `@usuario` en minúsculas. El teléfono se compara por sus últimos 9 dígitos (`+56 9 1234 5678` = `912345678`) y se guarda como se escribió.
+- **Búsqueda:** por nombre (sin tildes ni mayúsculas, como RF-05), por usuario de TikTok o por teléfono (dígitos).
+- **Renombrar:** al cambiar el nombre en la ficha se actualiza la copia `clientaNombre` de todas sus líneas, también en lives Cerrados. Cierra el pendiente de D-03; con backend, `ms-clientas` avisa a `ms-lives`.
+- **Desactivar (baja lógica):** solo Admin y con confirmación. La clienta conserva su historial, no aparece en las sugerencias al anotar y se oculta de la lista salvo con "Mostrar desactivadas". La administradora puede reactivarla.
+- **Dirección:** opcional; si se ingresa, exige calle y comuna, y la región es Metropolitana por defecto (D-04). La misma validación que el despacho de RF-10.
+- **Anonimizar** (3.4, Ley 21.719) queda para una tarea aparte, junto con el backend.

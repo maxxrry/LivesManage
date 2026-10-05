@@ -1,5 +1,4 @@
 import {
-  REGION_POR_DEFECTO,
   type Clienta,
   type Direccion,
   type Entrega,
@@ -13,6 +12,7 @@ import {
   type TipoEntrega,
 } from '../types/dominio';
 import { revisarCierre } from '../utils/cierre';
+import { normalizarDireccion } from '../utils/clientas';
 import { totalesDeLineas } from '../utils/montos';
 import { clientas, entregas, lineas, nuevoId, sesiones, usuarios } from './mock/datos';
 
@@ -284,14 +284,7 @@ function lineaEnCierre(sesionId: string, lineaId: string): Linea {
 /** Despacho exige calle y comuna; la región es Metropolitana si no se indica (D-04). */
 function direccionValida(direccion?: Direccion): Direccion {
   if (!direccion) throw new Error('El despacho necesita una dirección.');
-  const calle = direccion.calle.trim();
-  const comuna = direccion.comuna.trim();
-  if (!calle) throw new Error('Falta la calle de la dirección.');
-  if (!comuna) throw new Error('Falta la comuna de la dirección.');
-  const valida: Direccion = { calle, comuna, region: direccion.region.trim() || REGION_POR_DEFECTO };
-  const referencia = direccion.referencia?.trim();
-  if (referencia) valida.referencia = referencia;
-  return valida;
+  return normalizarDireccion(direccion);
 }
 
 /** Quita las entregas del live que ya no tienen líneas (D-05: la entrega no existe sin líneas). */

@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from 'react';
+import { CamposDireccion } from '../../components/CamposDireccion';
 import type { DatosEntrega } from '../../services/sesionesService';
-import { REGION_POR_DEFECTO, TIPOS_ENTREGA, type Direccion, type Entrega } from '../../types/dominio';
+import { TIPOS_ENTREGA, type Direccion, type Entrega } from '../../types/dominio';
 import { ETIQUETAS_TIPO_ENTREGA } from '../../types/etiquetas';
+import { DIRECCION_VACIA as VACIA, textoDireccion } from '../../utils/clientas';
 
 /** Un despacho del live al que se puede sumar la clienta (ej: su hermana). */
 export interface DespachoAgrupable {
@@ -20,9 +22,6 @@ interface EntregaLineaProps {
   onRegistrar: (datos: DatosEntrega) => Promise<void>;
   onAgrupar: (entregaId: string) => Promise<void>;
 }
-
-const textoDireccion = (d: Direccion) => `${d.calle}, ${d.comuna}`;
-const VACIA: Direccion = { calle: '', comuna: '', region: REGION_POR_DEFECTO, referencia: '' };
 
 /**
  * RF-10: forma de entrega de una clienta en el cierre. Retiro y Feria se registran con un toque;
@@ -65,20 +64,6 @@ export function EntregaLinea({
     e.preventDefault();
     void guardar(() => onRegistrar({ tipo: 'DESPACHO', direccion }));
   }
-
-  const campo = (clave: keyof Direccion, etiqueta: string, opcional = false) => (
-    <label className="block text-sm font-medium">
-      {etiqueta}
-      {opcional && <span className="font-normal text-gray-500"> (opcional)</span>}
-      <input
-        value={direccion[clave] ?? ''}
-        onChange={(e) => setDireccion({ ...direccion, [clave]: e.target.value })}
-        required={!opcional}
-        autoComplete="off"
-        className="mt-1 min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 text-base font-normal focus:border-marca-600 focus:outline-none"
-      />
-    </label>
-  );
 
   return (
     <div role="group" aria-label={`Entrega de ${clientaNombre}`} className="mt-2 border-t border-gray-100 pt-2">
@@ -179,12 +164,7 @@ export function EntregaLinea({
 
           {formulario && (
             <form onSubmit={alEnviarFormulario} aria-label={`Dirección de ${clientaNombre}`} className="space-y-2">
-              {campo('calle', 'Calle y número')}
-              <div className="grid grid-cols-2 gap-2">
-                {campo('comuna', 'Comuna')}
-                {campo('region', 'Región')}
-              </div>
-              {campo('referencia', 'Referencia', true)}
+              <CamposDireccion direccion={direccion} onCambiar={setDireccion} obligatoria />
               <p className="text-xs text-gray-500">Queda guardada en la ficha de la clienta.</p>
               <div className="flex gap-2">
                 <button
