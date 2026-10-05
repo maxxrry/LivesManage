@@ -19,6 +19,8 @@ interface HojaLiveProps {
   onBuscar: (texto: string) => void;
   /** RF-09: si se entrega, cada línea muestra el check de bolsa revisada (solo en el cierre). */
   onAlternarBolsa?: (lineaId: string) => void;
+  /** RF-11: si se entrega, una línea No pagó muestra Deshacer para volverla a Pendiente (solo en el cierre). */
+  onQuitarNoPago?: (lineaId: string) => void;
   /** Contenido extra al pie de cada línea; el cierre muestra ahí la entrega (RF-10). */
   pieLinea?: (linea: Linea) => ReactNode;
 }
@@ -42,12 +44,36 @@ function PrendaHoja({ prenda, editable, onAlternar }: { prenda: Prenda; editable
 }
 
 /** RF-07: interruptor de pago (o solo el estado, si el live está Cerrado). No depende solo del color: ✓ y aria-pressed. */
-function EstadoPagoLinea({ linea, editable, onAlternar }: { linea: Linea; editable: boolean; onAlternar: () => void }) {
+function EstadoPagoLinea({
+  linea,
+  editable,
+  onAlternar,
+  onQuitarNoPago,
+}: {
+  linea: Linea;
+  editable: boolean;
+  onAlternar: () => void;
+  onQuitarNoPago?: () => void;
+}) {
   const pagado = linea.estadoPago === 'PAGADO';
-  // "No pagó" no se cambia con este botón: se revisa en el cierre (RF-11).
+  // "No pagó" no se cambia con este botón: se marca en el resumen del cierre y se deshace con Deshacer (RF-11).
   if (!editable || linea.estadoPago === 'NO_PAGO') {
     const color = linea.estadoPago === 'NO_PAGO' ? 'text-red-700' : 'text-marca-700';
-    return <span className={`text-sm font-semibold ${color}`}>{ETIQUETAS_ESTADO_PAGO[linea.estadoPago]}</span>;
+    const estado = <span className={`text-sm font-semibold ${color}`}>{ETIQUETAS_ESTADO_PAGO[linea.estadoPago]}</span>;
+    if (!editable || !onQuitarNoPago) return estado;
+    return (
+      <span className="flex items-center gap-1">
+        {estado}
+        <button
+          type="button"
+          onClick={onQuitarNoPago}
+          aria-label={`Deshacer ${ETIQUETAS_ESTADO_PAGO.NO_PAGO}: ${linea.clientaNombre}`}
+          className="min-h-11 rounded-md px-2 text-sm font-semibold text-gray-600 underline-offset-2 hover:underline"
+        >
+          Deshacer
+        </button>
+      </span>
+    );
   }
   return (
     <button
@@ -80,6 +106,7 @@ export function HojaLive({
   busqueda,
   onBuscar,
   onAlternarBolsa,
+  onQuitarNoPago,
   pieLinea,
 }: HojaLiveProps) {
   const [editando, setEditando] = useState<string | null>(null);
@@ -162,7 +189,12 @@ export function HojaLive({
                   Bolsa
                 </label>
               )}
-              <EstadoPagoLinea linea={linea} editable={editable} onAlternar={() => onAlternarPago(linea.id)} />
+              <EstadoPagoLinea
+                linea={linea}
+                editable={editable}
+                onAlternar={() => onAlternarPago(linea.id)}
+                onQuitarNoPago={onQuitarNoPago && (() => onQuitarNoPago(linea.id))}
+              />
             </div>
           </div>
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navigate, useParams } from 'react-router';
+import { Navigate, useNavigate, useParams } from 'react-router';
 import { Pantalla } from '../../components/Pantalla';
 import {
   agruparEntrega,
@@ -7,24 +7,30 @@ import {
   alternarPago,
   alternarPrenda,
   cambiarClienta,
+  finalizarCierre,
+  marcarNoPago,
   registrarEntrega,
 } from '../../services/sesionesService';
+import { revisarCierre } from '../../utils/cierre';
 import { totalesDeLineas } from '../../utils/montos';
 import { nombreSesion } from '../../utils/sesion';
 import { HojaLive } from '../live/HojaLive';
 import { TotalesLive } from '../live/TotalesLive';
 import { useSesionLive } from '../live/useSesionLive';
 import { EntregaLinea, type DespachoAgrupable } from './EntregaLinea';
+import { FinalizarCierre } from './FinalizarCierre';
 
 /**
  * Cierre del live (RF-09 a RF-11). RF-09: avance de bolsas revisadas y check por clienta.
- * RF-10: forma de entrega por clienta, con dirección si es despacho.
+ * RF-10: forma de entrega por clienta, con dirección si es despacho. RF-11: resumen y finalizar.
  * Las correcciones (RF-06) y el cobro (RF-07) siguen disponibles en cada línea.
  */
 export function CierrePage() {
   const { id = '' } = useParams();
   const { detalle, clientas, errorCarga, errorAccion, setErrorAccion, recargar, ejecutar } = useSesionLive(id);
+  const navigate = useNavigate();
   const [busqueda, setBusqueda] = useState('');
+  const [finalizando, setFinalizando] = useState(false);
 
   if (errorCarga || !detalle) {
     return (
@@ -46,10 +52,27 @@ export function CierrePage() {
     .filter((e) => e.tipo === 'DESPACHO')
     .map((e) => ({ entregaId: e.id, nombres: nombresEn(e.id), direccion: e.direccion }));
 
+  const alMarcarNoPago = (lineaId: string, noPago: boolean) =>
+    void ejecutar(() => marcarNoPago(id, lineaId, noPago), 'No se pudo cambiar el estado de pago.');
+
   return (
     <div className="mx-auto max-w-6xl">
       <div className="sticky top-14 z-10 space-y-3 border-b border-gray-200 bg-gray-50 px-4 py-3">
-        <h1 className="truncate font-semibold">Cierre: {nombreSesion(sesion)}</h1>
+        <div className="flex items-center justify-between gap-2">
+          <h1 className="truncate font-semibold">Cierre: {nombreSesion(sesion)}</h1>
+          {!finalizando && (
+            <button
+              type="button"
+              onClick={() => {
+                setFinalizando(true);
+                window.scrollTo({ top: 0 });
+              }}
+              className="min-h-11 shrink-0 rounded-md border border-gray-300 bg-white px-3 text-sm font-semibold hover:border-marca-600"
+            >
+              Finalizar cierre
+            </button>
+          )}
+        </div>
         <TotalesLive totales={totalesDeLineas(lineas)} destacar="pendiente" />
         <div className="space-y-1.5">
           <p className="flex items-baseline justify-between text-sm text-gray-600">
@@ -80,6 +103,18 @@ export function CierrePage() {
         )}
       </div>
 
+      {finalizando && (
+        <FinalizarCierre
+          revision={revisarCierre(lineas, entregas)}
+          onNoPago={(lineaId) => alMarcarNoPago(lineaId, true)}
+          onConfirmar={async () => {
+            await finalizarCierre(id);
+            await navigate(`/lives/${id}`);
+          }}
+          onVolver={() => setFinalizando(false)}
+        />
+      )}
+
       <HojaLive
         lineas={lineas}
         editable
@@ -93,6 +128,7 @@ export function CierrePage() {
           await recargar();
         }}
         onAlternarPago={(lineaId) => void ejecutar(() => alternarPago(id, lineaId), 'No se pudo cambiar el pago.')}
+        onQuitarNoPago={(lineaId) => alMarcarNoPago(lineaId, false)}
         onAlternarBolsa={(lineaId) => void ejecutar(() => alternarBolsa(id, lineaId), 'No se pudo marcar la bolsa.')}
         busqueda={busqueda}
         onBuscar={setBusqueda}

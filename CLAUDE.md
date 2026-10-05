@@ -19,8 +19,9 @@ Proyecto del ramo Desarrollo FullStack 2 (Duoc UC) y para un cliente real.
 - Hecho: RF-09. "Terminar live" con confirmación (Abierta → En cierre) y pantalla de cierre `/lives/:id/cierre` con avance y check de bolsa por línea (D-25). Las pantallas de live y cierre comparten `useSesionLive` y `HojaLive`.
 - Hecho: pulido visual (cabecera blanca, tarjetas, barra de avance, totales parejos).
 - Hecho: RF-10. Forma de entrega por clienta en el cierre (Despacho, Retiro, Feria), dirección de la ficha o nueva (queda en la ficha) y "Enviar junto con" para agrupar despachos (D-26). `registrarEntrega` y `agruparEntrega` en `sesionesService`.
-- Decisiones D-01 a D-26 en `docs/decisiones.md`.
-- Siguiente: RF-11 (finalizar cierre).
+- Hecho: RF-11. "Finalizar cierre" con resumen (montos y entregas por tipo), lista de lo que falta, "No pagó" por línea Pendiente con Deshacer, y "Reabrir cierre" solo Admin. Reglas en `utils/cierre.ts` (`revisarCierre`); líneas de $0 fuera de pago y entrega (D-27). Cierre completo (RF-09 a RF-11).
+- Decisiones D-01 a D-27 en `docs/decisiones.md`.
+- Siguiente: RF-12 (clientas).
 
 ## Estructura
 

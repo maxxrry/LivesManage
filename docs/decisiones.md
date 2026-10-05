@@ -30,6 +30,7 @@ Registro de decisiones de diseño que complementan o precisan el ERS (`docs/ERS.
 | D-24 | 02/10/2026 | Todos (3.1.3, RNF-25) | Versión de computador: menú fijo, lista de lives en tabla y E2E también en escritorio. Complementa D-09 y D-16. |
 | D-25 | 02/10/2026 | RF-09 | Terminar live con confirmación; bolsa revisada solo En cierre; orden de la hoja en el cierre. |
 | D-26 | 03/10/2026 | RF-10 | Forma de entrega en el cierre: grupos, dirección en la ficha y Feria sin detalle. |
+| D-27 | 03/10/2026 | RF-11 | Finalizar cierre: líneas de $0, conteo por entrega, No pagó reversible y reabrir. |
 
 ## D-01 · Estilos con Tailwind CSS
 
@@ -189,3 +190,12 @@ La app es mobile-first, pero también se usa en PC (Chrome, Edge y Firefox; ERS 
 - Cambiar la forma de entrega o la dirección de una clienta agrupada la saca del grupo; las demás conservan su entrega. Una entrega que queda sin líneas se elimina (D-05).
 - Feria registra solo el tipo. Qué feria y qué día sigue como pregunta abierta del ERS.
 - Registrar la entrega no reordena la hoja.
+
+## D-27 · Finalizar cierre y reabrir
+
+- Las reglas de cierre viven en una función pura, `revisarCierre` (`utils/cierre.ts`), que usan la pantalla (para mostrar qué falta) y el servicio (para validar al finalizar). Con backend, la validación y el paso a Cerrada van en una transacción.
+- Las líneas de $0 (todas sus prendas canceladas) quedan fuera de las reglas de pago y entrega: no se cobran ni se marcan No pagó, y no ensucian las estadísticas de la clienta. Su bolsa sí debe marcarse revisada, como todas.
+- El resumen cuenta despachos, retiros y ferias por entrega, no por clienta: dos hermanas agrupadas son un despacho. Solo cuentan las entregas con al menos una línea Pagada (las que efectivamente se harán).
+- "No pagó" se marca desde el resumen de finalizar, solo En cierre y solo sobre líneas Pendientes. Se deshace con "Deshacer" en la línea (vuelve a Pendiente), por ejemplo si la clienta pagó días después. Completa D-21.
+- Reabrir: solo Admin, desde la pantalla del live Cerrado y con confirmación. El live vuelve a En cierre con sus líneas tal como estaban, incluidas las No pagó.
+- No se registra la hora de cierre ni de reapertura: el ERS no las pide.

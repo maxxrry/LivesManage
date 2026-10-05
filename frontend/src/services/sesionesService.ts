@@ -12,6 +12,7 @@ import {
   type SesionResumen,
   type TipoEntrega,
 } from '../types/dominio';
+import { revisarCierre } from '../utils/cierre';
 import { totalesDeLineas } from '../utils/montos';
 import { clientas, entregas, lineas, nuevoId, sesiones, usuarios } from './mock/datos';
 
@@ -28,6 +29,9 @@ import { clientas, entregas, lineas, nuevoId, sesiones, usuarios } from './mock/
 //   PATCH  /api/lives/{id}/lineas/{lid}/bolsa           alternarBolsa
 //   PUT    /api/lives/{id}/lineas/{lid}/entrega         registrarEntrega
 //   PATCH  /api/lives/{id}/lineas/{lid}/entrega         agruparEntrega
+//   PUT    /api/lives/{id}/lineas/{lid}/no-pago         marcarNoPago
+//   POST   /api/lives/{id}/finalizar                    finalizarCierre
+//   POST   /api/lives/{id}/reabrir                      reabrirSesion
 
 /** RF-04: cada live con sus totales, calculados desde las prendas vigentes (como hará ms-lives). */
 export async function listarSesiones(): Promise<SesionResumen[]> {
@@ -338,4 +342,44 @@ export async function agruparEntrega(sesionId: string, lineaId: string, entregaI
   linea.entregaId = entrega.id;
   quitarEntregasVacias(sesionId);
   return structuredClone(entrega);
+}
+
+/**
+ * RF-11: marca una línea Pendiente como No pagó (noPago = true) o la devuelve a Pendiente (si pagó después).
+ * Fija el estado en vez de alternarlo: repetir la llamada (doble toque) no la deshace. Solo En cierre.
+ */
+export async function marcarNoPago(sesionId: string, lineaId: string, noPago: boolean): Promise<Linea> {
+  const sesion = sesiones.find((s) => s.id === sesionId);
+  if (sesion?.estado !== 'EN_CIERRE') throw new Error('"No pagó" se marca en el cierre del live.');
+  const linea = lineaEditable(sesionId, lineaId);
+  if (linea.estadoPago === 'PAGADO') throw new Error('La línea está Pagada.');
+  const estado = noPago ? 'NO_PAGO' : 'PENDIENTE';
+  if (linea.estadoPago !== estado) registrarPago(linea, estado);
+  return structuredClone(linea);
+}
+
+/**
+ * RF-11: finaliza el cierre. Exige bolsas revisadas, ninguna línea Pendiente y entrega en toda línea Pagada.
+ * Con backend, la validación y el cambio de estado van en una transacción.
+ */
+export async function finalizarCierre(sesionId: string): Promise<Sesion> {
+  const sesion = sesiones.find((s) => s.id === sesionId);
+  if (sesion?.estado !== 'EN_CIERRE') throw new Error('Solo se finaliza un live En cierre.');
+  const delLive = lineas.filter((l) => l.sesionId === sesionId);
+  const { faltan } = revisarCierre(delLive, entregas.filter((e) => e.sesionId === sesionId));
+  if (faltan.bolsas.length) throw new Error(`Falta revisar ${faltan.bolsas.length} bolsa(s).`);
+  if (faltan.pendientes.length) throw new Error(`Hay ${faltan.pendientes.length} línea(s) Pendiente(s): cóbralas o márcalas No pagó.`);
+  if (faltan.sinEntrega.length) throw new Error(`Falta la forma de entrega de ${faltan.sinEntrega.length} clienta(s) que pagaron.`);
+  sesion.estado = 'CERRADA';
+  return structuredClone(sesion);
+}
+
+/** RF-11: solo la administradora reabre un live Cerrado; vuelve a En cierre. */
+export async function reabrirSesion(sesionId: string): Promise<Sesion> {
+  // Simulado: con backend, el rol sale del JWT.
+  if (usuarios[0]?.rol !== 'ADMIN') throw new Error('Solo un administrador puede reabrir un live.');
+  const sesion = sesiones.find((s) => s.id === sesionId);
+  if (sesion?.estado !== 'CERRADA') throw new Error('Solo se reabre un live Cerrado.');
+  sesion.estado = 'EN_CIERRE';
+  return structuredClone(sesion);
 }

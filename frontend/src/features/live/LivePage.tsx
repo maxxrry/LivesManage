@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router';
 import { Pantalla } from '../../components/Pantalla';
 import {
@@ -7,10 +7,12 @@ import {
   anotar,
   cambiarClienta,
   deshacerAnotacion,
+  reabrirSesion,
   terminarSesion,
   type DestinoAnotacion,
 } from '../../services/sesionesService';
-import type { MontoClp } from '../../types/dominio';
+import { usuarioActual } from '../../services/usuariosService';
+import type { MontoClp, Rol } from '../../types/dominio';
 import { ETIQUETAS_ESTADO_SESION } from '../../types/etiquetas';
 import { formatearClp, totalesDeLineas } from '../../utils/montos';
 import { nombreSesion } from '../../utils/sesion';
@@ -29,6 +31,15 @@ export function LivePage() {
   const [busqueda, setBusqueda] = useState('');
   const [confirmarTermino, setConfirmarTermino] = useState(false);
   const [terminando, setTerminando] = useState(false);
+  const [rol, setRol] = useState<Rol | null>(null);
+  const [confirmarReapertura, setConfirmarReapertura] = useState(false);
+
+  useEffect(() => {
+    usuarioActual().then(
+      (u) => setRol(u.rol),
+      () => setRol(null), // sin usuario no se ofrece reabrir
+    );
+  }, []);
 
   const cerrarAviso = useCallback(() => setAviso(null), []);
 
@@ -79,6 +90,20 @@ export function LivePage() {
     }
   }
 
+  // RF-11: solo la administradora reabre un live Cerrado; vuelve a En cierre y se abre su cierre.
+  async function alReabrir() {
+    setErrorAccion('');
+    setTerminando(true);
+    try {
+      await reabrirSesion(id);
+      await navigate(`/lives/${id}/cierre`);
+    } catch (e) {
+      setErrorAccion(e instanceof Error ? e.message : 'No se pudo reabrir el live.');
+      setConfirmarReapertura(false);
+      setTerminando(false);
+    }
+  }
+
   if (errorCarga || !detalle) {
     return (
       <Pantalla titulo="Pantalla de live">
@@ -105,7 +130,38 @@ export function LivePage() {
               Terminar live
             </button>
           )}
+          {sesion.estado === 'CERRADA' && rol === 'ADMIN' && !confirmarReapertura && (
+            <button
+              type="button"
+              onClick={() => setConfirmarReapertura(true)}
+              className="min-h-11 shrink-0 rounded-md border border-gray-300 bg-white px-3 text-sm font-semibold hover:border-marca-600"
+            >
+              Reabrir cierre
+            </button>
+          )}
         </div>
+        {confirmarReapertura && (
+          <div role="group" aria-label="Confirmar reapertura" className="space-y-2 rounded-md border border-amber-300 bg-amber-50 p-3">
+            <p className="text-sm">¿Reabrir el cierre? El live vuelve a En cierre y se puede corregir.</p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => void alReabrir()}
+                disabled={terminando}
+                className="min-h-11 flex-1 rounded-md bg-marca-600 px-4 font-semibold text-white hover:bg-marca-700 disabled:opacity-50"
+              >
+                Reabrir
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmarReapertura(false)}
+                className="min-h-11 flex-1 rounded-md border border-gray-300 px-4 font-semibold hover:bg-gray-100"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
         {confirmarTermino && (
           <div role="group" aria-label="Confirmar término" className="space-y-2 rounded-md border border-amber-300 bg-amber-50 p-3">
             <p className="text-sm">¿Terminar el live? Ya no se podrá anotar; seguirás con el cierre.</p>
