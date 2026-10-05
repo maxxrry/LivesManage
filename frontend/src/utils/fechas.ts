@@ -26,3 +26,9 @@ export function formatearDiaMes(iso: FechaIso): string {
   const { day, month } = partes(iso);
   return `${day}/${month}`;
 }
+
+/** "2026-09-24T21:00:00-03:00" → "24/09/2026", en hora de Chile. */
+export function formatearFecha(iso: FechaIso): string {
+  const { day, month, year } = partes(iso);
+  return `${day}/${month}/${year}`;
+}

@@ -2,14 +2,16 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { Pantalla } from '../../components/Pantalla';
 import { actualizarClienta, cambiarActiva, obtenerClienta } from '../../services/clientasService';
+import { historialDeClienta } from '../../services/sesionesService';
 import { usuarioActual } from '../../services/usuariosService';
-import type { Clienta, Rol } from '../../types/dominio';
+import type { Clienta, CompraClienta, Rol } from '../../types/dominio';
 import { textoDireccion } from '../../utils/clientas';
 import { FormularioClienta } from './FormularioClienta';
+import { HistorialClienta } from './HistorialClienta';
 
 /**
  * Ficha de la clienta. RF-12: datos de contacto, Editar (D-14) y desactivar o reactivar (Admin, D-28).
- * El historial por live y los indicadores llegan con RF-13.
+ * RF-13: indicadores e historial por live (D-29).
  */
 export function FichaClientaPage() {
   const { id = '' } = useParams();
@@ -21,6 +23,8 @@ export function FichaClientaPage() {
 function Ficha({ id }: { id: string }) {
   const [clienta, setClienta] = useState<Clienta | null>(null);
   const [rol, setRol] = useState<Rol | null>(null);
+  const [historial, setHistorial] = useState<CompraClienta[] | null>(null);
+  const [errorHistorial, setErrorHistorial] = useState('');
   const [error, setError] = useState('');
   const [editando, setEditando] = useState(false);
   const [confirmarBaja, setConfirmarBaja] = useState(false);
@@ -30,6 +34,10 @@ function Ficha({ id }: { id: string }) {
     obtenerClienta(id).then(
       (c) => vigente && setClienta(c),
       (e: Error) => vigente && setError(e.message),
+    );
+    historialDeClienta(id).then(
+      (h) => vigente && setHistorial(h),
+      (e: Error) => vigente && setErrorHistorial(e.message),
     );
     usuarioActual().then(
       (u) => vigente && setRol(u.rol),
@@ -160,7 +168,17 @@ function Ficha({ id }: { id: string }) {
           )}
         </section>
 
-        <p className="text-sm text-gray-500">El historial por live y los indicadores se agregan con RF-13.</p>
+        {errorHistorial ? (
+          <section aria-label="Historial por live">
+            <p role="alert" className="text-sm text-red-700">
+              No se pudo cargar el historial: {errorHistorial}
+            </p>
+          </section>
+        ) : historial ? (
+          <HistorialClienta historial={historial} />
+        ) : (
+          <p className="text-sm text-gray-500">Cargando historial…</p>
+        )}
       </div>
     </Pantalla>
   );

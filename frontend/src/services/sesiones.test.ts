@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { sesiones } from './mock/datos';
-import { abrirSesion, listarSesiones } from './sesionesService';
+import { abrirSesion, historialDeClienta, listarSesiones } from './sesionesService';
 
 describe('listarSesiones (RF-04)', () => {
   it('trae cada live con su número de clientas, total y total pagado', async () => {
@@ -41,5 +41,21 @@ describe('abrirSesion (RF-04)', () => {
     expect((await abrirSesion()).nombre).toBeUndefined();
     sesiones.find((s) => s.estado === 'ABIERTA')!.estado = 'CERRADA';
     expect((await abrirSesion('   ')).nombre).toBeUndefined();
+  });
+});
+
+describe('historialDeClienta (RF-13)', () => {
+  it('devuelve sus líneas con el live y la entrega, el live más reciente primero', async () => {
+    const historial = await historialDeClienta('c-3'); // Javiera: s-1 Cerrado (despacho e-1) y s-2 Abierto (retiro e-2)
+    expect(historial.map((c) => [c.sesion.id, c.linea.id, c.entrega?.tipo])).toEqual([
+      ['s-2', 'l-6', 'RETIRO'],
+      ['s-1', 'l-1', 'DESPACHO'],
+    ]);
+  });
+
+  it('sin entrega no trae entrega, y una clienta sin líneas tiene historial vacío', async () => {
+    const [enCurso] = await historialDeClienta('c-1');
+    expect(enCurso?.entrega).toBeUndefined();
+    expect(await historialDeClienta('c-sin-lineas')).toEqual([]);
   });
 });

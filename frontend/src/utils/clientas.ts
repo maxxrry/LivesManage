@@ -1,5 +1,6 @@
 import { coincideNombre } from '../features/live/sugerirClientas';
-import { REGION_POR_DEFECTO, type Clienta, type Direccion } from '../types/dominio';
+import { REGION_POR_DEFECTO, type Clienta, type CompraClienta, type Direccion, type FechaIso, type MontoClp } from '../types/dominio';
+import { totalLinea, totalesDeLineas } from './montos';
 
 /** "  @Gabi.Pena " → "@gabi.pena". Vacío si no hay usuario (D-28). */
 export function normalizarTiktok(texto: string): string {
@@ -61,4 +62,33 @@ export function buscarClientas(texto: string, clientas: Clienta[]): Clienta[] {
     (tiktok !== '' && normalizarTiktok(c.usuarioTiktok ?? '').includes(tiktok)) ||
     (digitos.length >= 3 && (c.telefono ?? '').replace(/\D/g, '').includes(digitos));
   return clientas.filter(coincide).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+}
+
+export interface IndicadoresClienta {
+  totalGastado: MontoClp;
+  compras: number;
+  ticketPromedio: MontoClp;
+  ultimaCompra?: FechaIso;
+  prendasCanceladas: number;
+  livesSinPago: number;
+}
+
+/**
+ * RF-13: indicadores de la ficha. Solo cuentan los lives Cerrados (D-29).
+ * Una compra es una línea Pagada con monto; las de $0 no cuentan (D-27).
+ */
+export function indicadoresDeClienta(historial: CompraClienta[]): IndicadoresClienta {
+  const cerradas = historial.filter((c) => c.sesion.estado === 'CERRADA');
+  const compras = cerradas.filter((c) => c.linea.estadoPago === 'PAGADO' && totalLinea(c.linea.prendas) > 0);
+  const totalGastado = totalesDeLineas(compras.map((c) => c.linea)).pagado;
+  const indicadores: IndicadoresClienta = {
+    totalGastado,
+    compras: compras.length,
+    ticketPromedio: compras.length ? Math.round(totalGastado / compras.length) : 0,
+    prendasCanceladas: cerradas.flatMap((c) => c.linea.prendas).filter((p) => p.estado === 'CANCELADA').length,
+    livesSinPago: cerradas.filter((c) => c.linea.estadoPago === 'NO_PAGO').length,
+  };
+  const ultima = compras.map((c) => c.sesion.inicio).sort((a, b) => Date.parse(b) - Date.parse(a))[0];
+  if (ultima) indicadores.ultimaCompra = ultima;
+  return indicadores;
 }

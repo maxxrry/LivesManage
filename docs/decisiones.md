@@ -32,6 +32,7 @@ Registro de decisiones de diseño que complementan o precisan el ERS (`docs/ERS.
 | D-26 | 03/10/2026 | RF-10 | Forma de entrega en el cierre: grupos, dirección en la ficha y Feria sin detalle. |
 | D-27 | 03/10/2026 | RF-11 | Finalizar cierre: líneas de $0, conteo por entrega, No pagó reversible y reabrir. |
 | D-28 | 04/10/2026 | RF-12 | Duplicados avisan sin bloquear, renombrar actualiza las líneas, desactivar y reactivar (Admin). |
+| D-29 | 04/10/2026 | RF-13 | Indicadores de la ficha: solo lives Cerrados; una compra es una línea Pagada con monto. |
 
 ## D-01 · Estilos con Tailwind CSS
 
@@ -210,3 +211,13 @@ La app es mobile-first, pero también se usa en PC (Chrome, Edge y Firefox; ERS 
 - **Desactivar (baja lógica):** solo Admin y con confirmación. La clienta conserva su historial, no aparece en las sugerencias al anotar y se oculta de la lista salvo con "Mostrar desactivadas". La administradora puede reactivarla.
 - **Dirección:** opcional; si se ingresa, exige calle y comuna, y la región es Metropolitana por defecto (D-04). La misma validación que el despacho de RF-10.
 - **Anonimizar** (3.4, Ley 21.719) queda para una tarea aparte, junto con el backend.
+
+## D-29 · Indicadores e historial de la ficha
+
+- **Base de los indicadores:** solo los lives Cerrados. Un live Abierto o En cierre todavía puede cambiar, así que no suma.
+- **Total gastado** (criterio de aceptación del ERS): suma de las líneas Pagadas en lives Cerrados, con la fórmula de `totalesDeLineas` (D-23).
+- **Compras:** líneas Pagadas en lives Cerrados con monto mayor a $0 (las de $0 no cuentan, D-27). **Ticket promedio** = total gastado ÷ compras, redondeado a pesos enteros; $0 si no hay compras.
+- **Última compra:** fecha del último live Cerrado con una línea Pagada, calculada desde el historial. El campo `ultimaCompra` de la clienta (D-15) se sigue usando para ordenar las sugerencias al anotar; con backend, `ms-clientas` lo calcula con esta misma regla.
+- **Prendas canceladas** y **lives sin pago** (líneas No pagó): también solo en lives Cerrados.
+- **Historial:** todas sus líneas, también de lives Abiertos o En cierre (con su estado a la vista), el live más reciente primero. Cada fila enlaza al live. Las prendas se muestran como en el cuaderno (`8-5`), con las canceladas tachadas.
+- Con backend, el historial lo entrega `ms-lives` (`GET /api/lives/lineas?clientaId=`) y los indicadores se calculan en `ms-clientas` (prueba JUnit según la matriz del ERS).

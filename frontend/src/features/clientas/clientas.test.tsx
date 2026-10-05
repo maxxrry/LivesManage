@@ -1,9 +1,16 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { rutas } from '../../app/router';
-import { clientas, lineas, usuarios } from '../../services/mock/datos';
+import { clientas, lineas, sesiones, usuarios } from '../../services/mock/datos';
+import { historialDeClienta } from '../../services/sesionesService';
+
+// El historial real, salvo en el test que simula una falla.
+vi.mock('../../services/sesionesService', async (original) => {
+  const real = await original<typeof import('../../services/sesionesService')>();
+  return { ...real, historialDeClienta: vi.fn(real.historialDeClienta) };
+});
 
 function abrir(ruta: string) {
   const router = createMemoryRouter(rutas, { initialEntries: [ruta] });
@@ -152,5 +159,81 @@ describe('Ficha: editar y desactivar (RF-12)', () => {
     } finally {
       usuarios[0]!.rol = 'ADMIN';
     }
+  });
+});
+
+/** Valor de un indicador de la ficha (dt → dd). */
+const indicador = (nombre: string) =>
+  within(screen.getByRole('region', { name: 'Indicadores' })).getByText(nombre).nextElementSibling?.textContent;
+
+const filasHistorial = async () =>
+  within(await screen.findByRole('list', { name: 'Historial por live' }))
+    .getAllByRole('listitem')
+    .map((li) => li.textContent);
+
+describe('Ficha: historial e indicadores (RF-13)', () => {
+  it('muestra el historial por live, el más reciente primero, con prendas, total, pago y entrega', async () => {
+    abrir('/clientas/c-3'); // Javiera: live martes (Abierto, retiro) y live jueves (Cerrado, despacho)
+
+    const [martes, jueves] = await filasHistorial();
+    expect(martes).toMatch(/29\/09\/2026.*Live martes.*Abierta.*8-5.*\$13\.000.*Pagado.*Retiro/);
+    expect(jueves).toMatch(/24\/09\/2026.*Live jueves noche.*7-5.*\$12\.000.*Pagado.*Despacho/);
+    expect(jueves).not.toMatch(/Cerrada/);
+  });
+
+  it('los indicadores cuentan solo los lives cerrados (D-29)', async () => {
+    abrir('/clientas/c-3');
+    await filasHistorial();
+
+    expect(indicador('Total gastado')).toBe('$12.000'); // los $13.000 del live Abierto no cuentan
+    expect(indicador('Compras')).toBe('1');
+    expect(indicador('Ticket promedio')).toBe('$12.000');
+    expect(indicador('Última compra')).toBe('24/09/2026');
+  });
+
+  it('criterio de aceptación: al cerrar el live, su línea Pagada suma al total gastado', async () => {
+    sesiones.find((s) => s.id === 's-2')!.estado = 'CERRADA';
+    abrir('/clientas/c-3');
+    await filasHistorial();
+
+    expect(indicador('Total gastado')).toBe('$25.000');
+    expect(indicador('Compras')).toBe('2');
+    expect(indicador('Ticket promedio')).toBe('$12.500');
+    expect(indicador('Última compra')).toBe('29/09/2026');
+  });
+
+  it('una clienta que no pagó: lives sin pago y sin total gastado', async () => {
+    abrir('/clientas/c-1'); // Gabriela: No pagó en el live jueves
+
+    expect((await filasHistorial())[1]).toMatch(/No pagó/);
+    expect(indicador('Lives sin pago')).toBe('1');
+    expect(indicador('Total gastado')).toBe('$0');
+    expect(indicador('Última compra')).toBe('—');
+  });
+
+  it('las prendas canceladas se ven tachadas', async () => {
+    sesiones.find((s) => s.id === 's-2')!.estado = 'CERRADA';
+    abrir('/clientas/c-4'); // Camila 5-7-3, con el 7 cancelado
+
+    expect((await filasHistorial())[0]).toMatch(/5-7 \(cancelada\)-3.*\$8\.000/);
+    expect(indicador('Prendas canceladas')).toBe('1');
+  });
+
+  it('una clienta sin compras', async () => {
+    clientas.push({ id: 'c-nueva', nombre: 'Ana Rojas', activa: true });
+    abrir('/clientas/c-nueva');
+
+    expect(await screen.findByText('Aún no tiene compras.')).toBeInTheDocument();
+    expect(indicador('Compras')).toBe('0');
+  });
+
+  it('si el historial no carga, lo dice en su sección y no bajo Desactivar', async () => {
+    vi.mocked(historialDeClienta).mockRejectedValueOnce(new Error('Sin conexión'));
+    abrir('/clientas/c-1');
+
+    const seccion = await screen.findByRole('region', { name: 'Historial por live' });
+    expect(await within(seccion).findByRole('alert')).toHaveTextContent('Sin conexión');
+    expect(screen.queryByText('Cargando historial…')).not.toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Datos de contacto' })).queryByRole('alert')).not.toBeInTheDocument();
   });
 });

@@ -131,3 +131,10 @@ export interface SesionDetalle {
   lineas: Linea[];
   entregas: Entrega[];
 }
+
+/** RF-13: una línea de la clienta con su live y su entrega, para el historial de la ficha. */
+export interface CompraClienta {
+  sesion: Sesion;
+  linea: Linea;
+  entrega?: Entrega;
+}

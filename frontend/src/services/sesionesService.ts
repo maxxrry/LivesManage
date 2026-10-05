@@ -1,5 +1,6 @@
 import {
   type Clienta,
+  type CompraClienta,
   type Direccion,
   type Entrega,
   type EstadoPago,
@@ -32,6 +33,7 @@ import { clientas, entregas, lineas, nuevoId, sesiones, usuarios } from './mock/
 //   PUT    /api/lives/{id}/lineas/{lid}/no-pago         marcarNoPago
 //   POST   /api/lives/{id}/finalizar                    finalizarCierre
 //   POST   /api/lives/{id}/reabrir                      reabrirSesion
+//   GET    /api/lives/lineas?clientaId={cid}           historialDeClienta
 
 /** RF-04: cada live con sus totales, calculados desde las prendas vigentes (como hará ms-lives). */
 export async function listarSesiones(): Promise<SesionResumen[]> {
@@ -375,4 +377,16 @@ export async function reabrirSesion(sesionId: string): Promise<Sesion> {
   if (sesion?.estado !== 'CERRADA') throw new Error('Solo se reabre un live Cerrado.');
   sesion.estado = 'EN_CIERRE';
   return structuredClone(sesion);
+}
+
+/** RF-13: las líneas de una clienta en todos los lives, con su live y su entrega. El más reciente primero. */
+export async function historialDeClienta(clientaId: string): Promise<CompraClienta[]> {
+  const historial: CompraClienta[] = [];
+  for (const linea of lineas.filter((l) => l.clientaId === clientaId)) {
+    const sesion = sesiones.find((s) => s.id === linea.sesionId);
+    if (!sesion) continue;
+    const entrega = entregas.find((e) => e.id === linea.entregaId);
+    historial.push(structuredClone(entrega ? { sesion, linea, entrega } : { sesion, linea }));
+  }
+  return historial.sort((a, b) => Date.parse(b.sesion.inicio) - Date.parse(a.sesion.inicio));
 }

@@ -22,8 +22,9 @@ Proyecto del ramo Desarrollo FullStack 2 (Duoc UC) y para un cliente real.
 - Hecho: RF-11. "Finalizar cierre" con resumen (montos y entregas por tipo), lista de lo que falta, "No pagó" por línea Pendiente con Deshacer, y "Reabrir cierre" solo Admin. Reglas en `utils/cierre.ts` (`revisarCierre`); líneas de $0 fuera de pago y entrega (D-27). Cierre completo (RF-09 a RF-11).
 - Hecho: RF-12. Pantalla Clientas con búsqueda (nombre, TikTok, teléfono), "Nueva clienta" y lista en tarjetas o tabla; ficha con Editar y Desactivar/Reactivar (Admin). Duplicados de TikTok o teléfono avisan sin bloquear; renombrar actualiza las líneas (D-28). Reglas en `utils/clientas.ts`; campos de dirección compartidos en `components/CamposDireccion.tsx`.
 - Hecho: README de instalación (RNF-21).
-- Decisiones D-01 a D-28 en `docs/decisiones.md`.
-- Siguiente: RF-13 (ficha: historial e indicadores).
+- Hecho: RF-13. Ficha con indicadores (total gastado, compras, ticket promedio, última compra, prendas canceladas, lives sin pago; solo lives Cerrados, D-29) e historial por live en tarjetas o tabla. Reglas en `indicadoresDeClienta` (`utils/clientas.ts`); `historialDeClienta` en `sesionesService`.
+- Decisiones D-01 a D-29 en `docs/decisiones.md`.
+- Siguiente: RF-14 (ranking e inactivas).
 
 ## Estructura
 
