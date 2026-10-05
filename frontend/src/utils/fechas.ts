@@ -32,3 +32,29 @@ export function formatearFecha(iso: FechaIso): string {
   const { day, month, year } = partes(iso);
   return `${day}/${month}/${year}`;
 }
+
+const formatoDia = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/Santiago',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+/** Día de calendario en Chile, "aaaa-mm-dd" (el formato de <input type="date">). */
+export function diaChile(fecha: FechaIso | Date): string {
+  return formatoDia.format(new Date(fecha));
+}
+
+const utc = (dia: string) => Date.UTC(Number(dia.slice(0, 4)), Number(dia.slice(5, 7)) - 1, Number(dia.slice(8, 10)));
+
+/** Días de calendario entre dos días "aaaa-mm-dd" (ej: 24/09 → 24/11 = 61). */
+export function diasEntre(desde: string, hasta: string): number {
+  return Math.round((utc(hasta) - utc(desde)) / 86_400_000);
+}
+
+/** "2026-10-04" menos 3 meses → "2026-07-04". Si el día no existe en ese mes, el último del mes. */
+export function restarMeses(dia: string, meses: number): string {
+  const [anio = 0, mes = 1, d = 1] = dia.split('-').map(Number);
+  const ultimoDelMes = new Date(Date.UTC(anio, mes - meses, 0)).getUTCDate();
+  return new Date(Date.UTC(anio, mes - 1 - meses, Math.min(d, ultimoDelMes))).toISOString().slice(0, 10);
+}

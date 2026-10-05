@@ -162,7 +162,10 @@ const lineasLiveAbierto: Linea[] = [
 
 export const lineas: Linea[] = [...lineasLiveAnterior, ...lineasLiveAbierto];
 
-const iniciales = structuredClone({ clientas, sesiones, entregas, lineas });
+/** Configuración de la tienda (RF-14). La cambia la administradora. */
+export const configuracion = { diasInactividad: 60 };
+
+const iniciales = structuredClone({ clientas, sesiones, entregas, lineas, configuracion });
 
 /** Vuelve los datos a su estado inicial, para que cada test parta igual. */
 export function reiniciarDatos(): void {
@@ -170,6 +173,7 @@ export function reiniciarDatos(): void {
   sesiones.splice(0, sesiones.length, ...structuredClone(iniciales.sesiones));
   entregas.splice(0, entregas.length, ...structuredClone(iniciales.entregas));
   lineas.splice(0, lineas.length, ...structuredClone(iniciales.lineas));
+  Object.assign(configuracion, iniciales.configuracion);
 }
 
 let siguienteId = 1000;

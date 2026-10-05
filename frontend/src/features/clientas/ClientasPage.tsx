@@ -6,7 +6,7 @@ import type { Clienta } from '../../types/dominio';
 import { buscarClientas } from '../../utils/clientas';
 import { FormularioClienta } from './FormularioClienta';
 
-const Desactivada = () => (
+export const Desactivada = () => (
   <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-700">Desactivada</span>
 );
 

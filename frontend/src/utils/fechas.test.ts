@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatearDiaMes, formatearFechaHora } from './fechas';
+import { diaChile, diasEntre, formatearDiaMes, formatearFechaHora, restarMeses } from './fechas';
 
 describe('formatearFechaHora', () => {
   it('usa dd/mm/aaaa hh:mm', () => {
@@ -17,5 +17,23 @@ describe('formatearFechaHora', () => {
 describe('formatearDiaMes', () => {
   it('usa dd/mm en la hora de Chile', () => {
     expect(formatearDiaMes('2026-10-02T01:30:00Z')).toBe('01/10');
+  });
+});
+
+describe('fechas de calendario en Chile (RF-14)', () => {
+  it('diaChile usa la zona de Chile', () => {
+    expect(diaChile('2026-09-30T22:00:00-03:00')).toBe('2026-09-30');
+    expect(diaChile('2026-10-01T02:00:00Z')).toBe('2026-09-30');
+  });
+
+  it('diasEntre cuenta días de calendario', () => {
+    expect(diasEntre('2026-09-24', '2026-11-24')).toBe(61);
+    expect(diasEntre('2026-09-24', '2026-09-24')).toBe(0);
+  });
+
+  it('restarMeses ajusta el fin de mes', () => {
+    expect(restarMeses('2026-10-04', 3)).toBe('2026-07-04');
+    expect(restarMeses('2026-03-31', 1)).toBe('2026-02-28');
+    expect(restarMeses('2026-01-15', 12)).toBe('2025-01-15');
   });
 });

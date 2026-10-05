@@ -11,7 +11,7 @@ Proyecto del ramo Desarrollo FullStack 2 (Duoc UC), para un cliente real.
 | Frontend (React) | En desarrollo, con **datos simulados en memoria**: cada recarga de página vuelve a los datos iniciales. |
 | Backend (Spring Boot, microservicios) | Aún no implementado. |
 
-Requisitos implementados en el frontend: RF-04 a RF-13 (lives, pantalla de live, cierre, clientas y su ficha). El detalle está en [docs/ERS.md](docs/ERS.md) y en la sección "Estado actual" de [CLAUDE.md](CLAUDE.md).
+Requisitos implementados en el frontend: RF-04 a RF-14 (lives, pantalla de live, cierre, clientas, ficha, ranking e inactivas). El detalle está en [docs/ERS.md](docs/ERS.md) y en la sección "Estado actual" de [CLAUDE.md](CLAUDE.md).
 
 ## Requisitos
 

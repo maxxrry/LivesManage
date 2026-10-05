@@ -33,6 +33,7 @@ Registro de decisiones de diseño que complementan o precisan el ERS (`docs/ERS.
 | D-27 | 03/10/2026 | RF-11 | Finalizar cierre: líneas de $0, conteo por entrega, No pagó reversible y reabrir. |
 | D-28 | 04/10/2026 | RF-12 | Duplicados avisan sin bloquear, renombrar actualiza las líneas, desactivar y reactivar (Admin). |
 | D-29 | 04/10/2026 | RF-13 | Indicadores de la ficha: solo lives Cerrados; una compra es una línea Pagada con monto. |
+| D-30 | 04/10/2026 | RF-14 | Ranking de los últimos 3 meses por defecto, desempates, inactivas sin desactivadas, contacto por teléfono y WhatsApp. |
 
 ## D-01 · Estilos con Tailwind CSS
 
@@ -221,3 +222,13 @@ La app es mobile-first, pero también se usa en PC (Chrome, Edge y Firefox; ERS 
 - **Prendas canceladas** y **lives sin pago** (líneas No pagó): también solo en lives Cerrados.
 - **Historial:** todas sus líneas, también de lives Abiertos o En cierre (con su estado a la vista), el live más reciente primero. Cada fila enlaza al live. Las prendas se muestran como en el cuaderno (`8-5`), con las canceladas tachadas.
 - Con backend, el historial lo entrega `ms-lives` (`GET /api/lives/lineas?clientaId=`) y los indicadores se calculan en `ms-clientas` (prueba JUnit según la matriz del ERS).
+
+## D-30 · Ranking y clientas inactivas
+
+- **Compra:** la misma definición de la ficha (D-29): línea Pagada, en un live Cerrado, de más de $0.
+- **Ranking:** por total gastado o por número de compras, en un período de días de calendario en hora de Chile, con ambos extremos incluidos (el día del live es el de su inicio). Por defecto, los últimos 3 meses; atajos "Este mes", "3 meses" y "12 meses", además de las fechas "Desde" y "Hasta".
+- **Empates:** por total, desempata el número de compras y luego el nombre; por compras, desempata el total y luego el nombre.
+- **Desactivadas:** aparecen en el ranking (marcadas "Desactivada"), porque sus compras fueron reales; no aparecen en inactivas, porque no se las va a contactar.
+- **Inactiva:** al menos una compra y ninguna en los últimos N días; es decir, más de N días de calendario desde su última compra (con N = 60, a los 60 días todavía no es inactiva y a los 61 sí). Se ordena por más días sin comprar.
+- **Días de inactividad (N):** configuración de toda la tienda, 60 por defecto. Solo la administradora la cambia, con un entero de 1 a 365. Con backend, la guarda `ms-clientas`.
+- **Contacto:** usuario de TikTok, teléfono como enlace `tel:` y enlace a WhatsApp (`wa.me/56` + los 9 dígitos del teléfono, D-28) cuando el teléfono tiene 9 dígitos.

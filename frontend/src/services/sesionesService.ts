@@ -34,6 +34,7 @@ import { clientas, entregas, lineas, nuevoId, sesiones, usuarios } from './mock/
 //   POST   /api/lives/{id}/finalizar                    finalizarCierre
 //   POST   /api/lives/{id}/reabrir                      reabrirSesion
 //   GET    /api/lives/lineas?clientaId={cid}           historialDeClienta
+//   GET    /api/lives/lineas                           listarCompras
 
 /** RF-04: cada live con sus totales, calculados desde las prendas vigentes (como hará ms-lives). */
 export async function listarSesiones(): Promise<SesionResumen[]> {
@@ -381,8 +382,17 @@ export async function reabrirSesion(sesionId: string): Promise<Sesion> {
 
 /** RF-13: las líneas de una clienta en todos los lives, con su live y su entrega. El más reciente primero. */
 export async function historialDeClienta(clientaId: string): Promise<CompraClienta[]> {
+  return comprasDe(lineas.filter((l) => l.clientaId === clientaId));
+}
+
+/** RF-14: las líneas de todas las clientas, para el ranking y las inactivas (las consulta ms-clientas). */
+export async function listarCompras(): Promise<CompraClienta[]> {
+  return comprasDe(lineas);
+}
+
+function comprasDe(deLineas: Linea[]): CompraClienta[] {
   const historial: CompraClienta[] = [];
-  for (const linea of lineas.filter((l) => l.clientaId === clientaId)) {
+  for (const linea of deLineas) {
     const sesion = sesiones.find((s) => s.id === linea.sesionId);
     if (!sesion) continue;
     const entrega = entregas.find((e) => e.id === linea.entregaId);

@@ -1,5 +1,6 @@
 import { coincideNombre } from '../features/live/sugerirClientas';
 import { REGION_POR_DEFECTO, type Clienta, type CompraClienta, type Direccion, type FechaIso, type MontoClp } from '../types/dominio';
+import { diaChile, diasEntre } from './fechas';
 import { totalLinea, totalesDeLineas } from './montos';
 
 /** "  @Gabi.Pena " → "@gabi.pena". Vacío si no hay usuario (D-28). */
@@ -91,4 +92,68 @@ export function indicadoresDeClienta(historial: CompraClienta[]): IndicadoresCli
   const ultima = compras.map((c) => c.sesion.inicio).sort((a, b) => Date.parse(b) - Date.parse(a))[0];
   if (ultima) indicadores.ultimaCompra = ultima;
   return indicadores;
+}
+
+export type CriterioRanking = 'TOTAL' | 'COMPRAS';
+
+export interface PosicionRanking {
+  clienta: Clienta;
+  totalGastado: MontoClp;
+  compras: number;
+}
+
+/** Compras de una clienta, con la definición de la ficha (D-29). */
+const indicadoresDe = (clienta: Clienta, historial: CompraClienta[]) =>
+  indicadoresDeClienta(historial.filter((c) => c.linea.clientaId === clienta.id));
+
+/**
+ * RF-14: ranking por total gastado o por número de compras en un rango de días "aaaa-mm-dd" (ambos incluidos,
+ * en hora de Chile). Incluye a las desactivadas. Empates: el otro criterio y luego el nombre (D-30).
+ */
+export function rankingDeClientas(
+  clientas: Clienta[],
+  historial: CompraClienta[],
+  criterio: CriterioRanking,
+  rango: { desde: string; hasta: string },
+): PosicionRanking[] {
+  const enRango = historial.filter((c) => {
+    const dia = diaChile(c.sesion.inicio);
+    return dia >= rango.desde && dia <= rango.hasta;
+  });
+  const [primero, segundo] = criterio === 'TOTAL' ? (['totalGastado', 'compras'] as const) : (['compras', 'totalGastado'] as const);
+  return clientas
+    .map((clienta) => {
+      const { totalGastado, compras } = indicadoresDe(clienta, enRango);
+      return { clienta, totalGastado, compras };
+    })
+    .filter((p) => p.compras > 0)
+    .sort((a, b) => b[primero] - a[primero] || b[segundo] - a[segundo] || a.clienta.nombre.localeCompare(b.clienta.nombre, 'es'));
+}
+
+export interface ClientaInactiva {
+  clienta: Clienta;
+  ultimaCompra: FechaIso;
+  diasSinComprar: number;
+}
+
+/**
+ * RF-14: clientas con al menos una compra y ninguna en los últimos `dias` días (ERS: 60 por defecto).
+ * Sin las desactivadas (D-30). Primero las que llevan más tiempo sin comprar.
+ */
+export function clientasInactivas(
+  clientas: Clienta[],
+  historial: CompraClienta[],
+  hoy: FechaIso | Date,
+  dias: number,
+): ClientaInactiva[] {
+  const diaHoy = diaChile(hoy);
+  return clientas
+    .filter((c) => c.activa)
+    .flatMap((clienta) => {
+      const { ultimaCompra } = indicadoresDe(clienta, historial);
+      if (!ultimaCompra) return [];
+      const diasSinComprar = diasEntre(diaChile(ultimaCompra), diaHoy);
+      return diasSinComprar > dias ? [{ clienta, ultimaCompra, diasSinComprar }] : [];
+    })
+    .sort((a, b) => b.diasSinComprar - a.diasSinComprar || a.clienta.nombre.localeCompare(b.clienta.nombre, 'es'));
 }

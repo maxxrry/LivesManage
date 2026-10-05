@@ -1,12 +1,16 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { lineas, usuarios } from './mock/datos';
 import {
   actualizarClienta,
   buscarDuplicados,
   cambiarActiva,
+  cambiarDiasInactividad,
   crearClienta,
   listarClientas,
+  listarInactivas,
   obtenerClienta,
+  obtenerDiasInactividad,
+  rankingClientas,
 } from './clientasService';
 
 // Datos simulados: c-1 Gabriela (@gabi.pena), c-3 Javiera (@javisoto, +56 9 1234 5678).
@@ -104,5 +108,46 @@ describe('cambiarActiva (RF-12)', () => {
     } finally {
       usuarios[0]!.rol = 'ADMIN';
     }
+  });
+});
+
+describe('ranking e inactivas (RF-14)', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // Live jueves (24/09, Cerrado): Javiera pagó $12.000 y Valentina $4.000; Gabriela no pagó.
+  it('el ranking usa los lives Cerrados del rango', async () => {
+    const ranking = await rankingClientas('TOTAL', { desde: '2026-09-01', hasta: '2026-09-30' });
+    expect(ranking.map((p) => [p.clienta.nombre, p.totalGastado])).toEqual([
+      ['Javiera Soto', 12000],
+      ['Valentina Soto', 4000],
+    ]);
+    expect(await rankingClientas('TOTAL', { desde: '2026-09-25', hasta: '2026-09-30' })).toEqual([]);
+  });
+
+  it('las inactivas se cuentan hasta hoy con los días configurados', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-24T12:00:00-03:00')); // 61 días después del live jueves
+
+    expect((await listarInactivas()).map((i) => [i.clienta.nombre, i.diasSinComprar])).toEqual([
+      ['Javiera Soto', 61],
+      ['Valentina Soto', 61],
+    ]);
+    await cambiarDiasInactividad(61);
+    expect(await listarInactivas()).toEqual([]);
+  });
+
+  it('solo la administradora cambia los días, entre 1 y 365', async () => {
+    expect(await obtenerDiasInactividad()).toBe(60);
+    await expect(cambiarDiasInactividad(0)).rejects.toThrow('entre 1 y 365');
+    await expect(cambiarDiasInactividad(2.5)).rejects.toThrow('entre 1 y 365');
+    usuarios[0]!.rol = 'VENDEDOR';
+    try {
+      await expect(cambiarDiasInactividad(30)).rejects.toThrow('Solo un administrador');
+    } finally {
+      usuarios[0]!.rol = 'ADMIN';
+    }
+    expect(await obtenerDiasInactividad()).toBe(60);
   });
 });

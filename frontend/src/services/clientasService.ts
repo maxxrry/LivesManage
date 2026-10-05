@@ -1,6 +1,17 @@
 import type { Clienta, Direccion } from '../types/dominio';
-import { duplicadosDe, normalizarDireccion, normalizarTiktok, type Duplicados } from '../utils/clientas';
-import { clientas, lineas, nuevoId, usuarios } from './mock/datos';
+import {
+  clientasInactivas,
+  duplicadosDe,
+  normalizarDireccion,
+  normalizarTiktok,
+  rankingDeClientas,
+  type ClientaInactiva,
+  type CriterioRanking,
+  type Duplicados,
+  type PosicionRanking,
+} from '../utils/clientas';
+import { clientas, configuracion, lineas, nuevoId, usuarios } from './mock/datos';
+import { listarCompras } from './sesionesService';
 
 // Simulado en memoria. Con backend (ms-clientas):
 //   GET   /api/clientas                    listarClientas
@@ -9,6 +20,10 @@ import { clientas, lineas, nuevoId, usuarios } from './mock/datos';
 //   PUT   /api/clientas/{id}               actualizarClienta
 //   GET   /api/clientas/duplicados?...     buscarDuplicados
 //   PATCH /api/clientas/{id}/activa        cambiarActiva
+//   GET   /api/clientas/ranking?criterio=&desde=&hasta=   rankingClientas
+//   GET   /api/clientas/inactivas          listarInactivas
+//   GET   /api/configuracion/dias-inactividad   obtenerDiasInactividad
+//   PUT   /api/configuracion/dias-inactividad   cambiarDiasInactividad
 
 export async function listarClientas(): Promise<Clienta[]> {
   return structuredClone(clientas);
@@ -83,4 +98,30 @@ export async function cambiarActiva(id: string, activa: boolean): Promise<Client
   const clienta = buscar(id);
   clienta.activa = activa;
   return structuredClone(clienta);
+}
+
+/** RF-14: ranking en un rango de días "aaaa-mm-dd". Con backend, ms-clientas pide las líneas a ms-lives. */
+export async function rankingClientas(
+  criterio: CriterioRanking,
+  rango: { desde: string; hasta: string },
+): Promise<PosicionRanking[]> {
+  return structuredClone(rankingDeClientas(clientas, await listarCompras(), criterio, rango));
+}
+
+/** RF-14: clientas inactivas según los días configurados, contados hasta hoy. */
+export async function listarInactivas(): Promise<ClientaInactiva[]> {
+  return structuredClone(clientasInactivas(clientas, await listarCompras(), new Date(), configuracion.diasInactividad));
+}
+
+export async function obtenerDiasInactividad(): Promise<number> {
+  return configuracion.diasInactividad;
+}
+
+/** RF-14: solo la administradora cambia los días sin comprar que definen a una inactiva (1 a 365). */
+export async function cambiarDiasInactividad(dias: number): Promise<number> {
+  // Simulado: con backend, el rol sale del JWT.
+  if (usuarios[0]?.rol !== 'ADMIN') throw new Error('Solo un administrador puede cambiar los días de inactividad.');
+  if (!Number.isInteger(dias) || dias < 1 || dias > 365) throw new Error('Los días deben ser un número entero entre 1 y 365.');
+  configuracion.diasInactividad = dias;
+  return dias;
 }
