@@ -1,5 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
 
+// RF-01: cada E2E parte con la Admin conectada (misma forma que guarda usuariosService). rf-01.spec.ts parte sin sesión.
+const sesionAdmin = {
+  token: 'simulado-u-1',
+  usuario: { id: 'u-1', nombre: 'Administradora', correo: 'admin@livesmanage.cl', rol: 'ADMIN', activo: true },
+};
+
 // D-09: Chromium a 360 px (mobile-first) y WebKit como iPhone.
 export default defineConfig({
   testDir: './e2e',
@@ -12,6 +18,15 @@ export default defineConfig({
     locale: 'es-CL',
     timezoneId: 'America/Santiago',
     trace: 'on-first-retry',
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: 'http://localhost:5173',
+          localStorage: [{ name: 'livesmanage.sesion', value: JSON.stringify(sesionAdmin) }],
+        },
+      ],
+    },
   },
   projects: [
     {

@@ -34,6 +34,7 @@ Registro de decisiones de diseño que complementan o precisan el ERS (`docs/ERS.
 | D-28 | 04/10/2026 | RF-12 | Duplicados avisan sin bloquear, renombrar actualiza las líneas, desactivar y reactivar (Admin). |
 | D-29 | 04/10/2026 | RF-13 | Indicadores de la ficha: solo lives Cerrados; una compra es una línea Pagada con monto. |
 | D-30 | 04/10/2026 | RF-14 | Ranking de los últimos 3 meses por defecto, desempates, inactivas sin desactivadas, contacto por teléfono y WhatsApp. |
+| D-31 | 08/10/2026 | RF-01 | Contrato del login, sesión en `localStorage` y mensaje genérico también para usuarios desactivados. |
 
 ## D-01 · Estilos con Tailwind CSS
 
@@ -232,3 +233,20 @@ La app es mobile-first, pero también se usa en PC (Chrome, Edge y Firefox; ERS 
 - **Inactiva:** al menos una compra y ninguna en los últimos N días; es decir, más de N días de calendario desde su última compra (con N = 60, a los 60 días todavía no es inactiva y a los 61 sí). Se ordena por más días sin comprar.
 - **Días de inactividad (N):** configuración de toda la tienda, 60 por defecto. Solo la administradora la cambia, con un entero de 1 a 365. Con backend, la guarda `ms-clientas`.
 - **Contacto:** usuario de TikTok, teléfono como enlace `tel:` y enlace a WhatsApp (`wa.me/56` + los 9 dígitos del teléfono, D-28) cuando el teléfono tiene 9 dígitos.
+
+## D-31 · Login: contrato y sesión en el navegador
+
+- **Contrato con `ms-auth`** (pasando por el API Gateway):
+
+  ```
+  POST /api/auth/login   { correo, contrasena }
+  200 → { token, usuario: { id, nombre, correo, rol, activo } }   (usuario con la forma de D-07)
+  401 → correo inexistente, contraseña incorrecta o usuario desactivado
+  ```
+
+- **Mensaje genérico:** "Correo o contraseña incorrectos." en los tres casos, también para un usuario desactivado, para no revelar qué correos existen (RF-01).
+- **Sesión:** la respuesta se guarda tal cual en `localStorage` (clave `livesmanage.sesion`), para que cerrar la pestaña en pleno live no obligue a volver a entrar. Cerrar sesión borra la clave.
+- **Datos al día:** `usuarioActual()` no confía en la copia guardada: hoy lee el usuario de los datos simulados y, con backend, lo pide a `ms-auth`. Así un cambio de rol se nota sin volver a entrar.
+- **Conexión con el backend:** solo cambian `iniciarSesion` y `usuarioActual` en `usuariosService.ts`. `tokenActual()` entrega el JWT para el header `Authorization: Bearer`. El manejo de un token vencido (401 en otra llamada → volver al login) se agrega al conectar.
+- **Usuarios de prueba** (solo en el mock, listados en el README): Administradora, Vendedora y una ex vendedora desactivada. Las contraseñas viven en un mapa aparte; el tipo `Usuario` no tiene contraseña, porque la API nunca la devuelve.
+- **Pruebas:** Vitest y Playwright parten con la Admin conectada (`src/test/setup.ts` y `storageState` en `playwright.config.ts`); las pruebas de RF-01 parten sin sesión.

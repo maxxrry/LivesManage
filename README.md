@@ -11,7 +11,7 @@ Proyecto del ramo Desarrollo FullStack 2 (Duoc UC), para un cliente real.
 | Frontend (React) | En desarrollo, con **datos simulados en memoria**: cada recarga de página vuelve a los datos iniciales. |
 | Backend (Spring Boot, microservicios) | Aún no implementado. |
 
-Requisitos implementados en el frontend: RF-04 a RF-14 (lives, pantalla de live, cierre, clientas, ficha, ranking e inactivas). El detalle está en [docs/ERS.md](docs/ERS.md) y en la sección "Estado actual" de [CLAUDE.md](CLAUDE.md).
+Requisitos implementados en el frontend: RF-01 (login simulado) y RF-04 a RF-14 (lives, pantalla de live, cierre, clientas, ficha, ranking e inactivas). El detalle está en [docs/ERS.md](docs/ERS.md) y en la sección "Estado actual" de [CLAUDE.md](CLAUDE.md).
 
 ## Requisitos
 
@@ -35,7 +35,15 @@ cd frontend
 npm run dev
 ```
 
-Abrir http://localhost:5173. La app parte en la lista de lives; "Continuar" entra al live abierto de los datos simulados.
+Abrir http://localhost:5173 e ingresar con un usuario de prueba (solo existen en los datos simulados):
+
+| Correo | Contraseña | Rol |
+| --- | --- | --- |
+| admin@livesmanage.cl | admin123 | Administradora |
+| vendedora@livesmanage.cl | vende123 | Vendedora |
+| antigua@livesmanage.cl | antigua123 | Desactivada (no puede entrar) |
+
+La app parte en la lista de lives; "Continuar" entra al live abierto de los datos simulados.
 
 Para verla desde un celular en la misma red Wi-Fi: `npm run dev -- --host` y abrir en el celular la dirección "Network" que muestra Vite.
 

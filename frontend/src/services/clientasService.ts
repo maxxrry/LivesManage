@@ -10,7 +10,8 @@ import {
   type Duplicados,
   type PosicionRanking,
 } from '../utils/clientas';
-import { clientas, configuracion, lineas, nuevoId, usuarios } from './mock/datos';
+import { clientas, configuracion, lineas, nuevoId } from './mock/datos';
+import { usuarioConectado } from './usuariosService';
 import { listarCompras } from './sesionesService';
 
 // Simulado en memoria. Con backend (ms-clientas):
@@ -94,7 +95,7 @@ export async function buscarDuplicados(
 
 /** RF-12: baja lógica o reactivación. Solo la administradora (D-28); conserva el historial. */
 export async function cambiarActiva(id: string, activa: boolean): Promise<Clienta> {
-  if (usuarios[0]?.rol !== 'ADMIN') throw new Error('Solo un administrador puede desactivar o reactivar clientas.');
+  if (usuarioConectado()?.rol !== 'ADMIN') throw new Error('Solo un administrador puede desactivar o reactivar clientas.');
   const clienta = buscar(id);
   clienta.activa = activa;
   return structuredClone(clienta);
@@ -120,7 +121,7 @@ export async function obtenerDiasInactividad(): Promise<number> {
 /** RF-14: solo la administradora cambia los días sin comprar que definen a una inactiva (1 a 365). */
 export async function cambiarDiasInactividad(dias: number): Promise<number> {
   // Simulado: con backend, el rol sale del JWT.
-  if (usuarios[0]?.rol !== 'ADMIN') throw new Error('Solo un administrador puede cambiar los días de inactividad.');
+  if (usuarioConectado()?.rol !== 'ADMIN') throw new Error('Solo un administrador puede cambiar los días de inactividad.');
   if (!Number.isInteger(dias) || dias < 1 || dias > 365) throw new Error('Los días deben ser un número entero entre 1 y 365.');
   configuracion.diasInactividad = dias;
   return dias;

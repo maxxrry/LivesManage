@@ -24,8 +24,9 @@ Proyecto del ramo Desarrollo FullStack 2 (Duoc UC) y para un cliente real.
 - Hecho: README de instalación (RNF-21).
 - Hecho: RF-13. Ficha con indicadores (total gastado, compras, ticket promedio, última compra, prendas canceladas, lives sin pago; solo lives Cerrados, D-29) e historial por live en tarjetas o tabla. Reglas en `indicadoresDeClienta` (`utils/clientas.ts`); `historialDeClienta` en `sesionesService`.
 - Hecho: RF-14. Pantalla "Ranking e inactivas": ranking por total gastado o compras en un período (3 meses por defecto, atajos y fechas) y clientas inactivas con días sin comprar y contacto (TikTok, teléfono, WhatsApp); la Admin cambia los días (60 por defecto). Reglas en `rankingDeClientas` y `clientasInactivas` (`utils/clientas.ts`), con "hoy" como parámetro (D-30). Clientas completo (RF-12 a RF-14).
-- Decisiones D-01 a D-30 en `docs/decisiones.md`.
-- Siguiente: RF-15 (importar cuaderno, necesita `ms-importacion`) o empezar el backend (RF-01 a RF-03).
+- Hecho: RF-01 (frontend, simulado). Login con mensaje genérico, sesión en `localStorage`, rutas protegidas en el Layout y "Cerrar sesión" en el menú. Contrato `POST /api/auth/login` en D-31: al conectar `ms-auth` solo cambian `iniciarSesion` y `usuarioActual` (`usuariosService`). Los servicios simulados revisan el rol y registran pagos con `usuarioConectado()`. Vitest y Playwright parten con la Admin conectada; usuarios de prueba en el README.
+- Decisiones D-01 a D-31 en `docs/decisiones.md`.
+- Siguiente: RF-02 (menú y pantallas según el rol), RF-15 (importar cuaderno, necesita `ms-importacion`) o empezar el backend.
 
 ## Estructura
 

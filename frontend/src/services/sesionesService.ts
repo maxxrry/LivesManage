@@ -15,7 +15,8 @@ import {
 import { revisarCierre } from '../utils/cierre';
 import { normalizarDireccion } from '../utils/clientas';
 import { totalesDeLineas } from '../utils/montos';
-import { clientas, entregas, lineas, nuevoId, sesiones, usuarios } from './mock/datos';
+import { clientas, entregas, lineas, nuevoId, sesiones } from './mock/datos';
+import { usuarioConectado } from './usuariosService';
 
 // Simulado en memoria. Con backend:
 //   GET    /api/lives                          listarSesiones
@@ -87,8 +88,8 @@ interface Anotacion {
 }
 const anotaciones = new Map<string, Anotacion>();
 
-// Usuario autenticado. Simulado: la administradora; con backend sale del JWT.
-const usuarioSesionId = () => usuarios[0]?.id ?? 'desconocido';
+// Usuario autenticado (RF-01); con backend sale del JWT.
+const usuarioSesionId = () => usuarioConectado()?.id ?? 'desconocido';
 
 /** Cambia el estado de pago y registra fecha, hora y usuario (RF-07). */
 function registrarPago(linea: Linea, estado: EstadoPago): void {
@@ -373,7 +374,7 @@ export async function finalizarCierre(sesionId: string): Promise<Sesion> {
 /** RF-11: solo la administradora reabre un live Cerrado; vuelve a En cierre. */
 export async function reabrirSesion(sesionId: string): Promise<Sesion> {
   // Simulado: con backend, el rol sale del JWT.
-  if (usuarios[0]?.rol !== 'ADMIN') throw new Error('Solo un administrador puede reabrir un live.');
+  if (usuarioConectado()?.rol !== 'ADMIN') throw new Error('Solo un administrador puede reabrir un live.');
   const sesion = sesiones.find((s) => s.id === sesionId);
   if (sesion?.estado !== 'CERRADA') throw new Error('Solo se reabre un live Cerrado.');
   sesion.estado = 'EN_CIERRE';

@@ -17,7 +17,19 @@ function prendas(...miles: number[]): Prenda[] {
 
 export const usuarios: Usuario[] = [
   { id: 'u-1', nombre: 'Administradora', correo: 'admin@livesmanage.cl', rol: 'ADMIN', activo: true },
+  { id: 'u-2', nombre: 'Vendedora', correo: 'vendedora@livesmanage.cl', rol: 'VENDEDOR', activo: true },
+  { id: 'u-3', nombre: 'Ex vendedora', correo: 'antigua@livesmanage.cl', rol: 'VENDEDOR', activo: false },
 ];
+
+/**
+ * Contraseñas de prueba por correo. Solo existen en el mock: la API nunca devuelve contraseñas.
+ * shortcut: quedan en el JS del navegador; no desplegar este build con datos reales, se borran al conectar ms-auth.
+ */
+export const contrasenas: Record<string, string> = {
+  'admin@livesmanage.cl': 'admin123',
+  'vendedora@livesmanage.cl': 'vende123',
+  'antigua@livesmanage.cl': 'antigua123',
+};
 
 export const clientas: Clienta[] = [
   { id: 'c-1', nombre: 'Gabriela Peña', usuarioTiktok: '@gabi.pena', activa: true },

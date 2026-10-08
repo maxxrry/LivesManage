@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Link, NavLink, Outlet, useLocation } from 'react-router';
+import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router';
+import { cerrarSesion, usuarioDeLaSesion } from '../services/usuariosService';
 import { ENTRADAS_MENU } from './menu';
 
 /** Layout: cabecera fija; menú como panel en celular y fijo a la izquierda en computador (D-24). */
 export function Layout() {
   const [menuAbierto, setMenuAbierto] = useState(false);
   const { pathname } = useLocation();
+  const navegar = useNavigate();
+  const usuario = usuarioDeLaSesion();
 
   // Al cambiar de ruta, el panel se cierra.
   const [rutaAnterior, setRutaAnterior] = useState(pathname);
@@ -22,6 +25,14 @@ export function Layout() {
     document.addEventListener('keydown', alPresionarTecla);
     return () => document.removeEventListener('keydown', alPresionarTecla);
   }, [menuAbierto]);
+
+  // RF-01: sin sesión no se entra a ninguna pantalla.
+  if (!usuario) return <Navigate to="/login" replace />;
+
+  function salir() {
+    cerrarSesion();
+    void navegar('/login', { replace: true });
+  }
 
   return (
     <div className="min-h-dvh bg-gray-50 text-gray-900">
@@ -75,6 +86,16 @@ export function Layout() {
             </li>
           ))}
         </ul>
+        <div className="mt-2 border-t border-gray-200 pt-2">
+          <p className="truncate px-3 py-1 text-sm text-gray-500">{usuario.nombre}</p>
+          <button
+            type="button"
+            onClick={salir}
+            className="flex min-h-11 w-full items-center rounded-md px-3 text-base hover:bg-gray-100 focus-visible:outline-2 focus-visible:outline-marca-600"
+          >
+            Cerrar sesión
+          </button>
+        </div>
       </nav>
 
       <main className="pt-14 lg:pl-60">

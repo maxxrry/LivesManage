@@ -6,9 +6,9 @@ Una prueba automática es un programa que usa la app y revisa que el resultado s
 
 | | |
 | --- | --- |
-| Pruebas | **269** unitarias y de componentes (Vitest) + **31** escenarios E2E (Playwright), cada uno en celular y computador |
-| Cobertura | **94,7 %** de las líneas del frontend (el ERS pide 60 % en la lógica, RNF-22) |
-| Trazabilidad | Cada requisito RF-04 a RF-14 tiene su prueba E2E con el criterio de aceptación del ERS |
+| Pruebas | **287** unitarias y de componentes (Vitest) + **34** escenarios E2E (Playwright), cada uno en celular y computador |
+| Cobertura | **95,2 %** de las líneas del frontend (el ERS pide 60 % en la lógica, RNF-22) |
+| Trazabilidad | Cada requisito RF-01 y RF-04 a RF-14 tiene su prueba E2E con el criterio de aceptación del ERS |
 | Comando | `npm test` (unitarias) y `npm run e2e` (E2E), desde `frontend/` |
 
 ## 1. Los cuatro tipos de prueba
@@ -147,19 +147,19 @@ La configuración está en `vite.config.ts` (bloque `test`), `src/test/setup.ts`
 
 ## 5. Cómo leer los resultados
 
-- **Todo verde:** `Tests 269 passed`. El nombre de cada prueba es una frase del comportamiento esperado, así que con `--reporter=verbose` el reporte se lee como una lista de lo que la app hace.
+- **Todo verde:** `Tests 287 passed`. El nombre de cada prueba es una frase del comportamiento esperado, así que con `--reporter=verbose` el reporte se lee como una lista de lo que la app hace.
 - **Una prueba falla:** Vitest muestra lo esperado (`Expected`) y lo obtenido (`Received`). Hay que decidir si el error está en el código o en la prueba; nunca se borra ni se salta una prueba para que pase.
 - **Desconfiar del verde fácil:** si una prueba nueva pasa a la primera, se revisa que de verdad esté probando algo (por eso TDD empieza en rojo).
 
 ### Cobertura
 
-`npm run coverage` mide qué parte del código se ejecutó durante las pruebas. Resultado al terminar RF-14:
+`npm run coverage` mide qué parte del código se ejecutó durante las pruebas. Resultado al terminar RF-01 (frontend):
 
 | Instrucciones | Ramas (`if`, `? :`) | Funciones | Líneas |
 | --- | --- | --- | --- |
-| 93,6 % | 87,8 % | 92,8 % | 94,7 % |
+| 94,0 % | 88,2 % | 93,3 % | 95,2 % |
 
-La cobertura dice qué código **no** se probó; no dice que el código probado sea correcto. Por eso las pruebas revisan resultados concretos (montos, textos, estados) y no solo que el código se ejecute. Lo que queda sin cubrir son sobre todo las pantallas aún vacías (Login, Usuarios, Importar).
+La cobertura dice qué código **no** se probó; no dice que el código probado sea correcto. Por eso las pruebas revisan resultados concretos (montos, textos, estados) y no solo que el código se ejecute. Lo que queda sin cubrir son sobre todo las pantallas aún vacías (Usuarios, Importar).
 
 ## 6. Trazabilidad: requisito → pruebas
 
@@ -167,6 +167,7 @@ Cada E2E lleva la etiqueta de su requisito (`{ tag: '@RF-05' }`) y prueba su cri
 
 | RF | Criterio de aceptación (ERS) | E2E | Pruebas unitarias y de componente |
 | --- | --- | --- | --- |
+| RF-01 | Con credenciales válidas entra; con inválidas ve un mensaje genérico; un usuario desactivado no entra. | `rf-01.spec.ts` | `usuarios.test.ts`, `LoginPage.test.tsx` |
 | RF-04 | Con un live Abierto no se puede abrir otro; la lista muestra los totales. | `rf-04.spec.ts` | `sesiones.test.ts`, `fechas.test.ts`, `LivesPage.test.tsx` |
 | RF-05 | "flo 6-4" suma $10.000 a Florencia; "ana 5" crea clienta; "flo 6-" muestra error y conserva el texto. | `rf-05.spec.ts` | `parseAnotacion.test.ts`, `sugerirClientas.test.ts`, `anotar.test.ts`, `LivePage.test.tsx` |
 | RF-06 | Quitar una prenda de $6.000 baja la línea y el total en $6.000; restaurarla los repone. | `rf-06.spec.ts` | `corregir.test.ts`, `corregirLinea.test.tsx` |
@@ -185,7 +186,7 @@ Además, las E2E de las pantallas con botones (RF-06, 07, 09, 10 y 11) revisan q
 
 | Pendiente | Por qué | Cuándo |
 | --- | --- | --- |
-| Login, usuarios y roles (RF-01 a RF-03) e importar cuaderno (RF-15) | Necesitan backend. | Con cada microservicio. |
+| Login contra el backend real, usuarios y roles (RF-01 a RF-03) e importar cuaderno (RF-15) | Necesitan backend; el login ya se prueba con datos simulados. | Con cada microservicio. |
 | Pruebas del backend (JUnit) | El backend aún no existe. | Con el backend (RNF-22). |
 | Safari en iPhone (WebKit) | El navegador de prueba de Safari no arranca en Windows (D-16). | En CI con Linux (GitHub Actions). |
 | Rendimiento (RNF-01 a RNF-04) y facilidad de uso (RNF-16, RNF-17) | Se miden con el backend real y con la tienda (pruebas de aceptación con usuarias). | Al desplegar. |
