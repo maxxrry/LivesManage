@@ -31,4 +31,14 @@ describe('Layout (humo)', () => {
     expect(screen.getByRole('button', { name: 'Abrir menú' })).toHaveAttribute('aria-expanded', 'false');
     expect(menu).toHaveClass('hidden');
   });
+
+  it('el logo lleva a la página principal (Lives)', async () => {
+    const usuario = userEvent.setup();
+    renderizarEn('/clientas');
+    await screen.findByRole('heading', { name: 'Clientas' });
+
+    await usuario.click(screen.getByRole('link', { name: 'LivesManage' }));
+
+    expect(await screen.findByRole('heading', { name: 'Lives' })).toBeInTheDocument();
+  });
 });

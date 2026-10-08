@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router';
+import { Link, NavLink, Outlet, useLocation } from 'react-router';
 import { ENTRADAS_MENU } from './menu';
 
 /** Layout: cabecera fija; menú como panel en celular y fijo a la izquierda en computador (D-24). */
@@ -38,7 +38,10 @@ export function Layout() {
             <path strokeLinecap="round" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
-        <span className="text-lg font-bold text-marca-700">LivesManage</span>
+        {/* El logo vuelve a la página principal (Lives). */}
+        <Link to="/" className="inline-flex min-h-11 items-center rounded-md px-1 text-lg font-bold text-marca-700 hover:text-marca-600">
+          LivesManage
+        </Link>
       </header>
 
       {menuAbierto && (
