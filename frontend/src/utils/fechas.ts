@@ -45,6 +45,9 @@ export function diaChile(fecha: FechaIso | Date): string {
   return formatoDia.format(new Date(fecha));
 }
 
+/** Día "aaaa-mm-dd" → "24/09/2026". */
+export const textoDia = (dia: string) => dia.split('-').reverse().join('/');
+
 const utc = (dia: string) => Date.UTC(Number(dia.slice(0, 4)), Number(dia.slice(5, 7)) - 1, Number(dia.slice(8, 10)));
 
 /** Días de calendario entre dos días "aaaa-mm-dd" (ej: 24/09 → 24/11 = 61). */

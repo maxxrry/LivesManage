@@ -35,6 +35,7 @@ Registro de decisiones de diseño que complementan o precisan el ERS (`docs/ERS.
 | D-29 | 04/10/2026 | RF-13 | Indicadores de la ficha: solo lives Cerrados; una compra es una línea Pagada con monto. |
 | D-30 | 04/10/2026 | RF-14 | Ranking de los últimos 3 meses por defecto, desempates, inactivas sin desactivadas, contacto por teléfono y WhatsApp. |
 | D-31 | 08/10/2026 | RF-01 | Contrato del login, sesión en `localStorage` y mensaje genérico también para usuarios desactivados. |
+| D-32 | 08/10/2026 | RF-14 | Pantalla "Estadísticas" (antes "Ranking e inactivas") con gráfico de vendido por live, cobrado y no pagó. |
 
 ## D-01 · Estilos con Tailwind CSS
 
@@ -71,7 +72,7 @@ Direccion = {
 ## D-06 · Carpetas de features
 
 - `features/usuarios` es aparte de `features/auth`: RF-03 (gestión de usuarios) es independiente del login (RF-01).
-- Ranking e inactivas (RF-14) van en `features/clientas`.
+- Ranking e inactivas (RF-14) van en `features/clientas`. Desde D-32, la pantalla y el ranking están en `features/estadisticas`; `Inactivas` sigue en `features/clientas`.
 
 ## D-07 · Usuario y Rol
 
@@ -250,3 +251,17 @@ La app es mobile-first, pero también se usa en PC (Chrome, Edge y Firefox; ERS 
 - **Conexión con el backend:** solo cambian `iniciarSesion` y `usuarioActual` en `usuariosService.ts`. `tokenActual()` entrega el JWT para el header `Authorization: Bearer`. El manejo de un token vencido (401 en otra llamada → volver al login) se agrega al conectar.
 - **Usuarios de prueba** (solo en el mock, listados en el README): Administradora, Vendedora y una ex vendedora desactivada. Las contraseñas viven en un mapa aparte; el tipo `Usuario` no tiene contraseña, porque la API nunca la devuelve.
 - **Pruebas:** Vitest y Playwright parten con la Admin conectada (`src/test/setup.ts` y `storageState` en `playwright.config.ts`); las pruebas de RF-01 parten sin sesión.
+
+## D-32 · Pantalla Estadísticas
+
+Pedido de la tienda: ver, además del ranking, cómo le fue a cada live.
+
+- **Nombre:** "Ranking e inactivas" (ERS 3.1.1) pasa a ser **Estadísticas** (`/estadisticas`), con tres pestañas: Lives, Ranking e Inactivas. RF-14 se cumple igual; se agrega la pestaña Lives.
+- **Pestaña Lives:** cifras del período (vendido, cobrado, no pagó con su % de lo vendido, número de lives) y el gráfico "Vendido por live": una fila por live, el más reciente primero, con una barra partida en Cobrado y No pagó y las cifras escritas debajo. Cada fila abre su live.
+- **Qué cuenta:** solo lives Cerrados con inicio en el período, como D-29 y D-30. En un live Cerrado no quedan Pendientes, así que No pagó = total − pagado; no hace falta un campo nuevo en la API (`listarSesiones` ya trae total y pagado). Regla en `resumenDeLives` (`utils/sesion.ts`).
+- **Barras horizontales** sin librería de gráficos: caben a 360 px con cualquier número de lives y no agregan dependencias. Colores: rosado de marca (Cobrado) y azul `#2563eb` (No pagó), validados para daltonismo y contraste; la leyenda y las cifras escritas hacen que no dependa solo del color.
+- **Período compartido** por Lives y Ranking: Este mes, 3 meses (por defecto), 12 meses y "Otro…", que muestra Desde y Hasta. "Ordenar por" queda solo en Ranking. Inactivas no usa período.
+- **Datos simulados sin cambios:** hoy hay un solo live Cerrado, así que el gráfico muestra una barra. Se verá completo con el backend.
+- **Con backend:** hoy la pantalla pide todos los lives (`listarSesiones`) y filtra el período en el navegador. Al conectar `ms-lives`, el período va en la consulta (`GET /api/lives?estado=CERRADA&desde=&hasta=`), como en el ranking, para no traer todo el historial.
+- **Enlace antiguo:** `/ranking` redirige a `/estadisticas`.
+- **Fuera por ahora:** clientas y ticket promedio por live, prendas canceladas por live.

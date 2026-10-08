@@ -6,8 +6,8 @@ Una prueba automática es un programa que usa la app y revisa que el resultado s
 
 | | |
 | --- | --- |
-| Pruebas | **287** unitarias y de componentes (Vitest) + **34** escenarios E2E (Playwright), cada uno en celular y computador |
-| Cobertura | **95,2 %** de las líneas del frontend (el ERS pide 60 % en la lógica, RNF-22) |
+| Pruebas | **296** unitarias y de componentes (Vitest) + **35** escenarios E2E (Playwright), cada uno en celular y computador |
+| Cobertura | **95,1 %** de las líneas del frontend (el ERS pide 60 % en la lógica, RNF-22) |
 | Trazabilidad | Cada requisito RF-01 y RF-04 a RF-14 tiene su prueba E2E con el criterio de aceptación del ERS |
 | Comando | `npm test` (unitarias) y `npm run e2e` (E2E), desde `frontend/` |
 
@@ -52,7 +52,7 @@ it('sin compras hace 61 días aparece como inactiva; hace 60, no', () => {
 
 **Servicio** (`services/clientas.test.ts`): que `listarInactivas()` use los datos guardados y los días configurados.
 
-**Componente** (`features/clientas/ranking.test.tsx`): que la pantalla muestre a Javiera con "61 días", su teléfono y el enlace a WhatsApp.
+**Componente** (`features/estadisticas/estadisticas.test.tsx`): que la pantalla muestre a Javiera con "61 días", su teléfono y el enlace a WhatsApp.
 
 **E2E** (`e2e/rf-14.spec.ts`): en el navegador, con la fecha fijada en 24/11/2026, abrir "Inactivas", ver a Javiera, cambiar el criterio a 61 días y ver que desaparece.
 
@@ -147,17 +147,17 @@ La configuración está en `vite.config.ts` (bloque `test`), `src/test/setup.ts`
 
 ## 5. Cómo leer los resultados
 
-- **Todo verde:** `Tests 287 passed`. El nombre de cada prueba es una frase del comportamiento esperado, así que con `--reporter=verbose` el reporte se lee como una lista de lo que la app hace.
+- **Todo verde:** `Tests 296 passed`. El nombre de cada prueba es una frase del comportamiento esperado, así que con `--reporter=verbose` el reporte se lee como una lista de lo que la app hace.
 - **Una prueba falla:** Vitest muestra lo esperado (`Expected`) y lo obtenido (`Received`). Hay que decidir si el error está en el código o en la prueba; nunca se borra ni se salta una prueba para que pase.
 - **Desconfiar del verde fácil:** si una prueba nueva pasa a la primera, se revisa que de verdad esté probando algo (por eso TDD empieza en rojo).
 
 ### Cobertura
 
-`npm run coverage` mide qué parte del código se ejecutó durante las pruebas. Resultado al terminar RF-01 (frontend):
+`npm run coverage` mide qué parte del código se ejecutó durante las pruebas. Resultado al terminar la pantalla Estadísticas (D-32):
 
 | Instrucciones | Ramas (`if`, `? :`) | Funciones | Líneas |
 | --- | --- | --- | --- |
-| 94,0 % | 88,2 % | 93,3 % | 95,2 % |
+| 94,1 % | 88,0 % | 93,4 % | 95,1 % |
 
 La cobertura dice qué código **no** se probó; no dice que el código probado sea correcto. Por eso las pruebas revisan resultados concretos (montos, textos, estados) y no solo que el código se ejecute. Lo que queda sin cubrir son sobre todo las pantallas aún vacías (Usuarios, Importar).
 
@@ -178,7 +178,7 @@ Cada E2E lleva la etiqueta de su requisito (`{ tag: '@RF-05' }`) y prueba su cri
 | RF-11 | No se finaliza con bolsas sin revisar o líneas Pendientes; al finalizar queda de solo lectura. | `rf-11.spec.ts` | `utils/cierre.test.ts`, `services/cierre.test.ts`, `finalizarCierre.test.tsx` |
 | RF-12 | Un usuario de TikTok ya registrado muestra aviso de duplicado. | `rf-12.spec.ts` | `utils/clientas.test.ts`, `services/clientas.test.ts`, `clientas.test.tsx` |
 | RF-13 | El total gastado es la suma de sus líneas Pagadas en lives cerrados. | `rf-13.spec.ts` | `clientas.indicadores.test.ts`, `sesiones.test.ts`, `clientas.test.tsx` |
-| RF-14 | Sin compras hace 61 días aparece como inactiva; el ranking ordena por total gastado. | `rf-14.spec.ts` | `clientas.ranking.test.ts`, `fechas.test.ts`, `services/clientas.test.ts`, `ranking.test.tsx` |
+| RF-14 | Sin compras hace 61 días aparece como inactiva; el ranking ordena por total gastado. | `rf-14.spec.ts` | `clientas.ranking.test.ts`, `sesion.test.ts` (gráfico de lives, D-32), `fechas.test.ts`, `services/clientas.test.ts`, `estadisticas.test.tsx` |
 
 Además, las E2E de las pantallas con botones (RF-06, 07, 09, 10 y 11) revisan que midan al menos 44×44 px, y `smoke.spec.ts` y `rf-08.spec.ts` revisan que no haya desplazamiento horizontal (RNF-15).
 

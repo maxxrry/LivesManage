@@ -2,7 +2,7 @@
 export const ENTRADAS_MENU = [
   { ruta: '/lives', texto: 'Lives' },
   { ruta: '/clientas', texto: 'Clientas' },
-  { ruta: '/ranking', texto: 'Ranking e inactivas' },
+  { ruta: '/estadisticas', texto: 'Estadísticas' },
   { ruta: '/importar', texto: 'Importar cuaderno' },
   { ruta: '/usuarios', texto: 'Usuarios' },
 ] as const;
