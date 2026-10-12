@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
+  // GitHub Pages sirve el sitio en /LivesManage/; en local queda en /
+  base: process.env.GITHUB_PAGES ? '/LivesManage/' : '/',
   plugins: [react(), tailwindcss()],
   server: {
     port: 5173,
