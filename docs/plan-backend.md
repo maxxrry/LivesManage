@@ -85,7 +85,7 @@ Tabla `usuario`: id, nombre, correo (único), contrasena_hash (BCrypt, RNF-05), 
 
 ### 4.2 api-gateway (:8080) — RF-02, RNF-07
 
-- No tiene base de datos. Rutas: `/api/auth/**` y `/api/usuarios/**` → ms-auth; `/api/sesiones/**` y `/api/compras/**` → ms-lives; `/api/clientas/**` y `/api/estadisticas/**` → ms-clientas; `/api/importaciones/**` → ms-importacion.
+- No tiene base de datos. Rutas: `/api/auth/**` y `/api/usuarios/**` → ms-auth; `/api/sesiones/**` y `/api/compras/**` → ms-lives; `/api/clientas/**` y `/api/configuracion/**` → ms-clientas; `/api/importaciones/**` → ms-importacion.
 - Valida el JWT en todas las rutas salvo el login. Sin token o con un token vencido responde 401.
 - Configura **CORS** para que el navegador acepte las respuestas del front (`localhost:5173` y la URL de GitHub Pages).
 - Además, cada microservicio vuelve a revisar el rol (RNF-07): una Vendedora que llama directo a `/api/usuarios` recibe 403. Para eso todos comparten la clave del JWT (`JWT_SECRET`, por variable de entorno).
@@ -102,9 +102,9 @@ Tablas: `clienta` (nombre, usuario_tiktok, telefono, activa), con la dirección 
 | `PUT /api/clientas/{id}` | `actualizarClienta` | Editar ficha |
 | `GET /api/clientas/duplicados?tiktok=&telefono=` | `buscarDuplicados` | Formulario (aviso D-28) |
 | `PATCH /api/clientas/{id}/activa` | `cambiarActiva` | Ficha (Admin) |
-| `GET /api/estadisticas/ranking?desde=&hasta=&orden=` | `rankingClientas` | Estadísticas |
-| `GET /api/estadisticas/inactivas` | `listarInactivas` | Estadísticas |
-| `GET/PUT /api/estadisticas/dias-inactividad` | `obtenerDiasInactividad` / `cambiarDiasInactividad` | Estadísticas (Admin) |
+| `GET /api/clientas/ranking?criterio=&desde=&hasta=` | `rankingClientas` | Estadísticas |
+| `GET /api/clientas/inactivas` | `listarInactivas` | Estadísticas |
+| `GET/PUT /api/configuracion/dias-inactividad` | `obtenerDiasInactividad` / `cambiarDiasInactividad` | Estadísticas (Admin) |
 
 - Las reglas que hoy están en `frontend/src/utils/clientas.ts` (normalizar TikTok y teléfono, ranking, inactivas, indicadores) se pasan a Java en `ClientaService` y `EstadisticasService`, con sus pruebas JUnit.
 - `ultimaCompra` (D-15), el ranking y las inactivas necesitan las compras, que viven en ms-lives: ms-clientas las pide con `GET /api/compras` (interno).

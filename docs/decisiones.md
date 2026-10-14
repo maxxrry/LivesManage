@@ -39,6 +39,7 @@ Registro de decisiones de diseño que complementan o precisan el ERS (`docs/ERS.
 | D-33 | 14/10/2026 | RF-01, RF-02, RNF-05 a RNF-07 | `ms-auth`: stack, contenido del JWT, `GET /api/auth/yo`, formato de errores y Admin inicial. Complementa D-31. |
 | D-34 | 14/10/2026 | RF-01, RNF-07 | api-gateway (rutas, JWT, CORS, límite de intentos de login) y login del front conectado con `VITE_API_URL`. |
 | D-35 | 14/10/2026 | RF-02, RF-03 | Gestión de usuarios: contrato REST, reglas (nadie se desactiva ni se cambia el rol a sí mismo, contraseña de 8 caracteres), pantalla Usuarios y menú según el rol. Reemplaza la parte de menú de D-07. |
+| D-36 | 14/10/2026 | RF-12, RF-14 | `ms-clientas`: contrato REST de fichas y días de inactividad, reglas de D-28 en Java y conexión del front junto con `ms-lives`. |
 
 ## D-01 · Estilos con Tailwind CSS
 
@@ -331,3 +332,33 @@ Paso 3 de `docs/plan-backend.md`.
   - El front toma el rol de la sesión guardada, y `usuarioActual()` la pone al día cada vez que se llama (la pantalla Usuarios lo llama al abrirse y después de que la Admin edita sus propios datos). La protección real es el 403 de `ms-auth`.
   - Las demás acciones solo de Admin (reabrir cierre, desactivar clienta, días de inactividad) ya revisaban el rol.
 - **Datos simulados:** sin `VITE_API_URL`, `usuariosService` aplica las mismas reglas y mensajes sobre los usuarios simulados. Si se cambia el correo, la contraseña simulada pasa al correo nuevo. `reiniciarDatos()` también restaura los usuarios y las contraseñas.
+
+## D-36 · ms-clientas: fichas de clientas
+
+Paso 4 de `docs/plan-backend.md`.
+
+- **Contrato** (por el gateway; las rutas son las que ya anotaba `clientasService.ts`):
+
+  ```
+  GET   /api/clientas                         200 → Clienta[] (también las desactivadas), por nombre
+  GET   /api/clientas/{id}                    200 → Clienta   404 → "La clienta no existe."
+  POST  /api/clientas                         { nombre, usuarioTiktok?, telefono?, direccion? }  201 → Clienta
+  PUT   /api/clientas/{id}                    mismo cuerpo; un campo vacío o ausente se borra     200 → Clienta
+  GET   /api/clientas/duplicados?usuarioTiktok=&telefono=&excluirId=   200 → { tiktok?, telefono? }
+  PATCH /api/clientas/{id}/activa             { activa }   solo Admin                             200 → Clienta
+  GET   /api/configuracion/dias-inactividad   200 → { dias }
+  PUT   /api/configuracion/dias-inactividad   { dias } (1 a 365), solo Admin                      200 → { dias }
+  ```
+
+- **Forma de los datos:** la misma del tipo `Clienta` del front. Los campos opcionales vacíos no se envían. Un error de validación devuelve 400, con un error como `mensaje` (por ejemplo, "Falta la comuna de la dirección.", el mismo texto que el front) y todos en `campos`. Si fallan varios campos, el `mensaje` es el del primero en orden alfabético, para que la respuesta sea siempre la misma. Un choque en la base (dos guardados al mismo tiempo) responde 409 "Intenta de nuevo".
+- **Reglas de D-28 en Java** (`Normalizar`):
+  - El nombre pierde los espacios sobrantes, también entre palabras. Al teléfono y a la dirección solo se les quitan los espacios del inicio y del final, como en el front.
+  - El usuario de TikTok se guarda como `@usuario` en minúsculas.
+  - El teléfono se guarda como se escribió y, aparte, sus últimos 9 dígitos, para buscar duplicados con una consulta indexada.
+  - La dirección exige calle y comuna; la región es Metropolitana si viene vacía.
+  - Los duplicados avisan, no bloquean.
+- **Roles:** las dos usuarias gestionan clientas. Desactivar o reactivar y cambiar los días de inactividad son solo de la Admin, y el rol se toma del JWT. A diferencia de ms-auth (D-35), aquí no se revisa en una base de usuarios, porque ms-clientas no la tiene. Se aceptó porque son dos acciones de bajo impacto y reversibles. Si se quisiera, se puede preguntar a `GET /api/auth/yo`.
+- **Configuración:** una tabla `configuracion` de una fila. Sin fila, los días son 60.
+- **Pendiente para el paso 7** (necesita ms-lives): `ultimaCompra` (D-15), ranking, inactivas y el aviso a ms-lives al renombrar, para actualizar `clientaNombre` en las líneas (D-28).
+- **El front sigue simulado:** la pantalla de live simulada busca a las clientas en los datos simulados, así que conectar solo Clientas dejaría el modo real a medias. `clientasService` se conecta junto con `sesionesService` cuando exista ms-lives.
+- **Código repetido entre servicios:** `SeguridadConfig`, `ManejadorErrores`, `ReglaException` y `ErrorRespuesta` se copiaron de ms-auth. Se prefirió repetir unas pocas clases a mantener una librería compartida entre microservicios.

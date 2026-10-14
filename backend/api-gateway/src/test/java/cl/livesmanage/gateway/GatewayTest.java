@@ -55,6 +55,8 @@ class GatewayTest {
                     responder(intercambio, 200, "{\"token\":\"t\"}");
                 }
             });
+            servidor.createContext("/api/clientas", intercambio -> responder(intercambio, 200, "[]"));
+            servidor.createContext("/api/configuracion", intercambio -> responder(intercambio, 200, "{\"dias\":60}"));
             servidor.createContext("/api/auth/yo", intercambio ->
                     responder(intercambio, 200, "{\"recibido\":\"" + intercambio.getRequestHeaders().getFirst("Authorization") + "\"}"));
             servidor.start();
@@ -75,6 +77,7 @@ class GatewayTest {
     @DynamicPropertySource
     static void propiedades(DynamicPropertyRegistry registro) {
         registro.add("AUTH_URL", () -> "http://localhost:" + MS_AUTH_FALSO.getAddress().getPort());
+        registro.add("CLIENTAS_URL", () -> "http://localhost:" + MS_AUTH_FALSO.getAddress().getPort());
         registro.add("JWT_SECRET", () -> SECRETO);
     }
 
@@ -118,6 +121,15 @@ class GatewayTest {
         mvc.perform(get("/api/auth/yo").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.recibido").value("Bearer " + token));
+    }
+
+    @Test
+    void lasClientasVanAMsClientasConToken() throws Exception {
+        mvc.perform(get("/api/clientas").header("Authorization", "Bearer " + token("ms-auth"))).andExpect(status().isOk());
+        mvc.perform(get("/api/configuracion/dias-inactividad").header("Authorization", "Bearer " + token("ms-auth")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.dias").value(60));
+        mvc.perform(get("/api/clientas")).andExpect(status().isUnauthorized());
     }
 
     @Test
