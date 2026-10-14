@@ -8,6 +8,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -49,4 +50,8 @@ public class Clienta {
 
     @Column(nullable = false)
     private boolean activa = true;
+
+    /** Cuándo se registró: solo una clienta recién creada se puede borrar (Deshacer, D-11 y D-37). */
+    @Column(name = "creada")
+    private Instant creada;
 }

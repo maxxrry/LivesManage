@@ -9,7 +9,7 @@ Proyecto del ramo Desarrollo FullStack 2 (Duoc UC), para un cliente real.
 | Parte | Estado |
 | --- | --- |
 | Frontend (React) | En desarrollo, con **datos simulados en memoria**: cada recarga de página vuelve a los datos iniciales. |
-| Backend (Spring Boot, microservicios) | En construcción: `ms-auth` (login, JWT y usuarios), `api-gateway` y `ms-clientas` listos; el login y Usuarios del front ya pueden usarlos. Plan completo en [docs/plan-backend.md](docs/plan-backend.md). |
+| Backend (Spring Boot, microservicios) | En construcción: `ms-auth` (login, JWT y usuarios), `api-gateway`, `ms-clientas` y `ms-lives` (lives, anotación, correcciones y pagos) listos; el login y Usuarios del front ya pueden usarlos. Plan completo en [docs/plan-backend.md](docs/plan-backend.md). |
 
 Requisitos implementados en el frontend: RF-01 a RF-03 (login, acceso por rol y usuarios; con backend real o simulado) y RF-04 a RF-14 (lives, pantalla de live, cierre, clientas, ficha, ranking e inactivas). El detalle está en [docs/ERS.md](docs/ERS.md) y en la sección "Estado actual" de [CLAUDE.md](CLAUDE.md).
 
@@ -63,7 +63,7 @@ GRANT ALL PRIVILEGES ON livesmanage_clientas.* TO 'livesmanage'@'localhost';
 GRANT ALL PRIVILEGES ON livesmanage_lives.* TO 'livesmanage'@'localhost';
 ```
 
-Después, desde la carpeta de cada servicio (`backend/ms-auth`, `backend/ms-clientas` y `backend/api-gateway`; el `.env` se busca en la carpeta desde la que se arranca):
+Después, desde la carpeta de cada servicio (`backend/ms-auth`, `backend/ms-clientas`, `backend/ms-lives` y `backend/api-gateway`; el `.env` se busca en la carpeta desde la que se arranca):
 
 ```bash
 cp .env.example .env     # completar los valores; el .env nunca se sube
@@ -73,7 +73,7 @@ cp .env.example .env     # completar los valores; el .env nunca se sube
 
 `ms-auth` corre en http://localhost:8081 y su Swagger está en http://localhost:8081/swagger-ui.html. La primera vez crea la Admin definida en `ADMIN_CORREO` y `ADMIN_CONTRASENA`.
 
-`ms-clientas` corre en http://localhost:8083 (Swagger en http://localhost:8083/swagger-ui.html). El front todavía no lo usa: se conecta junto con `ms-lives`.
+`ms-clientas` corre en http://localhost:8083 y `ms-lives` en http://localhost:8082 (Swagger en `/swagger-ui.html` de cada uno). El front todavía no los usa: se conectan al terminar el cierre en `ms-lives`.
 
 `api-gateway` corre en http://localhost:8080 y es la única dirección que usa el front. Su `.env` lleva el mismo `JWT_SECRET` que `ms-auth`.
 

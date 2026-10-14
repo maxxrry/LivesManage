@@ -13,6 +13,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -61,6 +62,14 @@ public class ClientaController {
     @PutMapping("/api/clientas/{id}")
     public ResponseEntity<ClientaDto> editar(@PathVariable String id, @Valid @RequestBody DatosClienta datos) {
         return ResponseEntity.ok(servicio.editar(id, datos));
+    }
+
+    @Operation(summary = "Borrar una clienta recién creada (Deshacer de una anotación, D-11)",
+            description = "409 si se creó hace más de 10 minutos: después, una clienta solo se desactiva.")
+    @DeleteMapping("/api/clientas/{id}")
+    public ResponseEntity<Void> borrarRecienCreada(@PathVariable String id) {
+        servicio.borrarRecienCreada(id);
+        return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "Desactivar o reactivar (solo Admin)")

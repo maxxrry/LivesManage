@@ -10,6 +10,8 @@ import cl.livesmanage.clientas.model.Configuracion;
 import cl.livesmanage.clientas.model.Direccion;
 import cl.livesmanage.clientas.repository.ClientaRepository;
 import cl.livesmanage.clientas.repository.ConfiguracionRepository;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,9 @@ public class ClientaService {
 
     /** Para las consultas "...AndIdNot" cuando no hay que excluir a nadie. */
     private static final String NINGUNA = "";
+
+    /** Deshacer dura unos segundos en pantalla; 10 minutos da margen sin permitir borrar fichas antiguas. */
+    static final Duration VENTANA_BORRADO = Duration.ofMinutes(10);
 
     private final ClientaRepository clientas;
     private final ConfiguracionRepository configuracion;
@@ -46,6 +51,7 @@ public class ClientaService {
     public ClientaDto crear(DatosClienta datos) {
         Clienta clienta = new Clienta();
         aplicar(clienta, datos);
+        clienta.setCreada(Instant.now());
         clienta = clientas.save(clienta);
         log.info("Clienta {} creada", clienta.getId());
         return ClientaDto.de(clienta);
@@ -73,6 +79,20 @@ public class ClientaService {
         ClientaDto conTelefono = digitos == null ? null
                 : clientas.findFirstByTelefonoDigitosAndIdNot(digitos, excluir).map(ClientaDto::de).orElse(null);
         return new Duplicados(conTiktok, conTelefono);
+    }
+
+    /**
+     * Deshacer una anotación borra la clienta que esa anotación creó (D-11). Solo en sus primeros minutos,
+     * para que no sirva para borrar fichas con historial: después, una clienta se desactiva (RF-12).
+     */
+    @Transactional
+    public void borrarRecienCreada(String id) {
+        Clienta clienta = buscar(id);
+        if (clienta.getCreada() == null || clienta.getCreada().isBefore(Instant.now().minus(VENTANA_BORRADO))) {
+            throw new ReglaException(HttpStatus.CONFLICT, null, "Solo se puede borrar una clienta recién creada. Desactívala en su ficha.");
+        }
+        clientas.delete(clienta);
+        log.info("Clienta {} borrada al deshacer su anotación", id);
     }
 
     /** Baja lógica: conserva su historial (RF-12). */

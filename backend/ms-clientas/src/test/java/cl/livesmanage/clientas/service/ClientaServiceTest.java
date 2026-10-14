@@ -3,6 +3,7 @@ package cl.livesmanage.clientas.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import cl.livesmanage.clientas.dto.ClientaDto;
@@ -14,6 +15,8 @@ import cl.livesmanage.clientas.model.Clienta;
 import cl.livesmanage.clientas.model.Configuracion;
 import cl.livesmanage.clientas.repository.ClientaRepository;
 import cl.livesmanage.clientas.repository.ConfiguracionRepository;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -92,6 +95,22 @@ class ClientaServiceTest {
     @Test
     void duplicadosSinDatosNoConsultaNada() {
         assertThat(servicio.duplicados(" ", null, null)).isEqualTo(new Duplicados(null, null));
+    }
+
+    @Test
+    void soloSeBorraUnaClientaRecienCreada() {
+        when(clientas.findById("c-1")).thenReturn(Optional.of(gabriela));
+
+        gabriela.setCreada(Instant.now().minusSeconds(30));
+        servicio.borrarRecienCreada("c-1");
+        verify(clientas).delete(gabriela);
+
+        gabriela.setCreada(Instant.now().minus(Duration.ofMinutes(11)));
+        assertThatThrownBy(() -> servicio.borrarRecienCreada("c-1"))
+                .satisfies(e -> assertThat(((ReglaException) e).getEstado()).isEqualTo(HttpStatus.CONFLICT));
+
+        gabriela.setCreada(null); // fichas anteriores a este campo
+        assertThatThrownBy(() -> servicio.borrarRecienCreada("c-1")).isInstanceOf(ReglaException.class);
     }
 
     @Test

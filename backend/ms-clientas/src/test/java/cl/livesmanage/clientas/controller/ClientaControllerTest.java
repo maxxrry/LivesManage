@@ -1,5 +1,6 @@
 package cl.livesmanage.clientas.controller;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -167,6 +168,14 @@ class ClientaControllerTest {
                         .contentType(MediaType.APPLICATION_JSON).content("{\"dias\":90}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.dias").value(90));
+    }
+
+    @Test
+    void unaClientaRecienCreadaSePuedeBorrar() throws Exception {
+        String id = idDe(crear(VENDEDORA, "{\"nombre\":\"flo 6\"}"));
+
+        mvc.perform(delete("/api/clientas/" + id).header("Authorization", VENDEDORA)).andExpect(status().isNoContent());
+        mvc.perform(get("/api/clientas/" + id).header("Authorization", VENDEDORA)).andExpect(status().isNotFound());
     }
 
     @Test

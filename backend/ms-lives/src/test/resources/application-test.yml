@@ -1,0 +1,14 @@
+# Pruebas con H2 en memoria: no necesitan MySQL.
+spring:
+  datasource:
+    url: jdbc:h2:mem:lives;MODE=MySQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+
+livesmanage:
+  jwt:
+    secreto: clave-solo-para-pruebas-de-al-menos-32-caracteres
+  clientas-url: http://localhost:0

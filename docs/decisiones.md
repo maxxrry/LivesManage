@@ -40,6 +40,7 @@ Registro de decisiones de diseño que complementan o precisan el ERS (`docs/ERS.
 | D-34 | 14/10/2026 | RF-01, RNF-07 | api-gateway (rutas, JWT, CORS, límite de intentos de login) y login del front conectado con `VITE_API_URL`. |
 | D-35 | 14/10/2026 | RF-02, RF-03 | Gestión de usuarios: contrato REST, reglas (nadie se desactiva ni se cambia el rol a sí mismo, contraseña de 8 caracteres), pantalla Usuarios y menú según el rol. Reemplaza la parte de menú de D-07. |
 | D-36 | 14/10/2026 | RF-12, RF-14 | `ms-clientas`: contrato REST de fichas y días de inactividad, reglas de D-28 en Java y conexión del front junto con `ms-lives`. |
+| D-37 | 14/10/2026 | RF-04 a RF-08, RF-05 (D-11) | `ms-lives`: contrato REST, anotación con clienta nueva en `ms-clientas`, Deshacer con borrado acotado de la clienta y conexión del front al terminar el cierre. |
 
 ## D-01 · Estilos con Tailwind CSS
 
@@ -362,3 +363,32 @@ Paso 4 de `docs/plan-backend.md`.
 - **Pendiente para el paso 7** (necesita ms-lives): `ultimaCompra` (D-15), ranking, inactivas y el aviso a ms-lives al renombrar, para actualizar `clientaNombre` en las líneas (D-28).
 - **El front sigue simulado:** la pantalla de live simulada busca a las clientas en los datos simulados, así que conectar solo Clientas dejaría el modo real a medias. `clientasService` se conecta junto con `sesionesService` cuando exista ms-lives.
 - **Código repetido entre servicios:** `SeguridadConfig`, `ManejadorErrores`, `ReglaException` y `ErrorRespuesta` se copiaron de ms-auth. Se prefirió repetir unas pocas clases a mantener una librería compartida entre microservicios.
+
+## D-37 · ms-lives: lives, anotación, correcciones y pagos
+
+Paso 5 de `docs/plan-backend.md`.
+
+- **Contrato** (por el gateway; rutas que ya anotaba `sesionesService.ts`):
+
+  ```
+  GET    /api/lives                                  200 → SesionResumen[] (totales calculados), el más reciente primero
+  POST   /api/lives                                  { nombre? }   201 → Sesion   409 si ya hay uno Abierto
+  GET    /api/lives/{id}                             200 → SesionDetalle { sesion, lineas, entregas }
+  POST   /api/lives/{id}/anotaciones                 { destino: { clientaId } | { nuevaClienta }, precios[] }   201 → { anotacionId, linea }
+  DELETE /api/lives/{id}/anotaciones/{anotacionId}   204   409 si ya no se puede deshacer
+  PATCH  /api/lives/{id}/lineas/{lineaId}/prendas/{prendaId}   200 → Linea
+  PATCH  /api/lives/{id}/lineas/{lineaId}/clienta    { clientaId } | { nuevaClienta }   200 → Linea (la unida, si había otra)
+  PATCH  /api/lives/{id}/lineas/{lineaId}/pago       200 → Linea
+  ```
+
+  Las fechas van en ISO 8601 (UTC) y los montos en CLP enteros. Para deshacer hace falta el id del live: al conectar el front, `deshacerAnotacion` recibe también `sesionId`.
+- **Solo un live Abierto, garantizado por la base:** la columna `sesion.abierta` vale `true` mientras el live está Abierto y `null` en los demás estados, y tiene un índice único. Dos aperturas al mismo tiempo no pasan. Del mismo modo, la línea tiene un índice único `(sesion_id, clienta_id)`, que asegura una línea por clienta por live.
+- **Reglas** iguales al `sesionesService` simulado: precios de $1.000 a $999.000 en miles; D-18 a D-23, incluidos D-20 (anotar o restaurar en una línea Pagada la vuelve Pendiente) y D-19 (al unir líneas, las prendas pasan a la línea de destino). Los totales se calculan en `Totales`, con la misma fórmula que `totalesDeLineas`.
+- **Anotaciones** (tabla `anotacion`): cada una guarda quién, cuándo y cuánto (RNF-09), y lo necesario para deshacerla. Deshacer funciona mientras la línea no cambie (D-22) y el live siga Abierto. La anotación deshecha queda registrada, marcada como no deshacible.
+- **Clientas:** al anotar a una clienta nueva, ms-lives la crea en ms-clientas. Al anotar a una existente, usa la copia del nombre si ya tiene línea en el live y solo pregunta a ms-clientas si es su primera línea (D-03). Las llamadas reenvían el JWT de la usuaria. Si anotar falla después de crear la clienta, ms-lives la borra para no dejarla suelta.
+- **Deshacer y la clienta creada (D-11):** ms-clientas tiene `DELETE /api/clientas/{id}`, que solo funciona durante los primeros 10 minutos después de crear la clienta (columna `creada`). Así cumple D-11 sin servir para borrar fichas con historial. Pasado ese plazo responde 409 y la clienta se desactiva como siempre. Si el borrado falla, Deshacer igual se completa y se deja un aviso en el log. El borrado se pide recién cuando la base confirmó el resto. Del mismo modo, si anotar o cambiar a una clienta nueva falla después de crearla (incluso al confirmar), la clienta se borra. Límite conocido: cualquier usuaria con sesión podría llamar a ese `DELETE` directamente sobre una clienta creada hace menos de 10 minutos. En el paso 7, ms-clientas además revisará en ms-lives que la clienta no tenga líneas.
+- **Concurrencia:** `Linea` tiene bloqueo optimista (`@Version`). Si dos usuarias cambian la misma línea al mismo tiempo, la segunda recibe 409 "Intenta de nuevo" en vez de pisar el cambio de la primera. Una anotación nueva anula el Deshacer de las anteriores de esa línea (D-22); el `sesionesService` simulado del front aplica la misma regla.
+- **RestClient en vez de WebClient** para las llamadas entre servicios: es el cliente síncrono actual de Spring y viene con Spring Web, sin agregar `spring-boot-starter-webflux`. Reemplaza la mención a WebClient de CLAUDE.md.
+- **Errores de ms-clientas:** un 4xx (dato inválido, sesión vencida, sin permiso) llega al front con su código y su mensaje. Si ms-clientas no responde, la respuesta es 503 "No se pudo consultar las clientas". A una clienta desactivada no se le crea una línea nueva (409).
+- **Entregas:** la tabla y el modelo ya existen, porque al unir líneas hay que mover y limpiar entregas (D-05, D-19). Registrarlas (RF-10) llega en el paso 6.
+- **El front sigue simulado:** conectar lives sin el cierre dejaría el modo real a medias. `sesionesService` y `clientasService` se conectan juntos al terminar el paso 6.

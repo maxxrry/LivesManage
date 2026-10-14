@@ -30,8 +30,9 @@ Proyecto del ramo Desarrollo FullStack 2 (Duoc UC) y para un cliente real.
 - Hecho: backend paso 2, `api-gateway` (:8080, Spring Cloud Gateway servlet): valida el JWT, rutas a `ms-auth`, CORS por `CORS_ORIGENES`, 429 tras 10 logins fallidos por IP en 15 min. Front: `services/api.ts` (`pedirApi`, `ErrorApi`); con `VITE_API_URL` en `frontend/.env.local`, `iniciarSesion` y `usuarioActual` usan la API y un 401 en `/yo` vuelve al login; sin ella, datos simulados. E2E en el puerto 5174 siempre simuladas (D-34).
 - Hecho: backend paso 3. RF-03 en `ms-auth` (`/api/usuarios`: listar, crear, editar, activar/desactivar; solo Admin, 403 a la Vendedora) y pantalla Usuarios (`features/usuarios`, `FormularioUsuario`). Nadie se desactiva ni se cambia el rol a sí mismo. RF-02: entrada Usuarios con `soloAdmin` en `components/menu.ts` y aviso de sin permiso en `/usuarios` (D-35).
 - Hecho: backend paso 4, `ms-clientas` (:8083, base `livesmanage_clientas`): CRUD de fichas, duplicados, activar/desactivar (Admin por JWT) y días de inactividad; reglas de D-28 en `Normalizar`; ruta en el gateway. El front sigue simulado: `clientasService` se conecta junto con `ms-lives` (D-36).
-- Decisiones D-01 a D-36 en `docs/decisiones.md`.
-- Siguiente: paso 5 de `docs/plan-backend.md` (`ms-lives`: RF-04 a RF-08) y conectar `clientasService` y `sesionesService`.
+- Hecho: backend paso 5, `ms-lives` (:8082, base `livesmanage_lives`): RF-04 a RF-08 (`/api/lives`: listar con totales, abrir, detalle, anotar, deshacer, prenda, cambiar clienta con unión, pago). Un solo live Abierto garantizado por índice único; `Totales` igual a `totalesDeLineas`; anotación con clienta nueva vía `ClientasCliente` (RestClient, reenvía el JWT); Deshacer borra la clienta creada con `DELETE /api/clientas/{id}` (solo 10 min, D-37).
+- Decisiones D-01 a D-37 en `docs/decisiones.md`.
+- Siguiente: paso 6 de `docs/plan-backend.md` (cierre RF-09 a RF-11 en `ms-lives` y conectar `clientasService` y `sesionesService` en el front).
 
 ## Estructura
 
@@ -48,7 +49,7 @@ backend/
   ms-importacion/      foto del cuaderno → API de Claude        :8084
 ```
 
-Cada microservicio tiene su propia base MySQL (`livesmanage_auth`, `livesmanage_lives`, ...). Nada de joins entre bases: se consulta por REST (WebClient).
+Cada microservicio tiene su propia base MySQL (`livesmanage_auth`, `livesmanage_lives`, ...). Nada de joins entre bases: se consulta por REST (RestClient, D-37).
 
 ## Comandos
 

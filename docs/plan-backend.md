@@ -19,7 +19,7 @@ flowchart LR
 ```
 
 - El frontend **solo** conoce el gateway (`http://localhost:8080/api/...`).
-- El gateway revisa que el token sea válido y reenvía la petición al microservicio que corresponde según la ruta (`/api/auth/**` → ms-auth, `/api/sesiones/**` → ms-lives, etc.).
+- El gateway revisa que el token sea válido y reenvía la petición al microservicio que corresponde según la ruta (`/api/auth/**` → ms-auth, `/api/lives/**` → ms-lives, etc.).
 - Cada microservicio tiene su propia base y no lee las tablas de otro. Si necesita un dato ajeno, lo pide por REST.
 
 ## 2. Paso 0: instalar herramientas (una vez)
@@ -56,7 +56,7 @@ ms-xxx/
 ### Ejemplo de punta a punta: anotar "flo 6-4"
 
 1. **Pantalla de live** (`LivePage` → `CampoAnotacion`): el parser del front convierte el texto en `{ nombre: "flo", precios: [6000, 4000] }` y llama a `anotar()`.
-2. **`sesionesService.anotar()`**: hoy modifica el mock. Con backend hace `POST /api/sesiones/{id}/anotaciones` con el token en `Authorization: Bearer ...`.
+2. **`sesionesService.anotar()`**: hoy modifica el mock. Con backend hace `POST /api/lives/{id}/anotaciones` con el token en `Authorization: Bearer ...`.
 3. **api-gateway**: valida el token y reenvía la petición a ms-lives.
 4. **ms-lives / `AnotacionController`**: valida el cuerpo (precios entre $1.000 y $999.000, enteros).
 5. **`AnotacionService`** (en una sola transacción, RNF-12): revisa que la sesión esté Abierta, busca la línea de esa clienta o crea una, agrega las prendas, vuelve la línea a Pendiente si estaba Pagada (D-20) y guarda quién anotó y cuándo (RNF-09).
@@ -85,7 +85,7 @@ Tabla `usuario`: id, nombre, correo (único), contrasena_hash (BCrypt, RNF-05), 
 
 ### 4.2 api-gateway (:8080) — RF-02, RNF-07
 
-- No tiene base de datos. Rutas: `/api/auth/**` y `/api/usuarios/**` → ms-auth; `/api/sesiones/**` y `/api/compras/**` → ms-lives; `/api/clientas/**` y `/api/configuracion/**` → ms-clientas; `/api/importaciones/**` → ms-importacion.
+- No tiene base de datos. Rutas: `/api/auth/**` y `/api/usuarios/**` → ms-auth; `/api/lives/**` (incluye `/api/lives/lineas` para historial y compras) → ms-lives; `/api/clientas/**` y `/api/configuracion/**` → ms-clientas; `/api/importaciones/**` → ms-importacion.
 - Valida el JWT en todas las rutas salvo el login. Sin token o con un token vencido responde 401.
 - Configura **CORS** para que el navegador acepte las respuestas del front (`localhost:5173` y la URL de GitHub Pages).
 - Además, cada microservicio vuelve a revisar el rol (RNF-07): una Vendedora que llama directo a `/api/usuarios` recibe 403. Para eso todos comparten la clave del JWT (`JWT_SECRET`, por variable de entorno).
@@ -107,7 +107,7 @@ Tablas: `clienta` (nombre, usuario_tiktok, telefono, activa), con la dirección 
 | `GET/PUT /api/configuracion/dias-inactividad` | `obtenerDiasInactividad` / `cambiarDiasInactividad` | Estadísticas (Admin) |
 
 - Las reglas que hoy están en `frontend/src/utils/clientas.ts` (normalizar TikTok y teléfono, ranking, inactivas, indicadores) se pasan a Java en `ClientaService` y `EstadisticasService`, con sus pruebas JUnit.
-- `ultimaCompra` (D-15), el ranking y las inactivas necesitan las compras, que viven en ms-lives: ms-clientas las pide con `GET /api/compras` (interno).
+- `ultimaCompra` (D-15), el ranking y las inactivas necesitan las compras, que viven en ms-lives: ms-clientas las pide con `GET /api/lives/lineas` (interno).
 
 ### 4.4 ms-lives (:8082): el corazón — RF-04 a RF-11
 
@@ -115,22 +115,22 @@ Tablas: `sesion`, `linea` (con copia de `clienta_nombre`, D-03), `prenda`, `anot
 
 | Endpoint | Función del front | Pantalla |
 | --- | --- | --- |
-| `GET /api/sesiones` | `listarSesiones` | Lista de lives (totales calculados aquí, RNF-11) |
-| `POST /api/sesiones` | `abrirSesion` | Abrir live (solo una Abierta) |
-| `GET /api/sesiones/{id}` | `obtenerSesion` | Live y cierre |
-| `POST /api/sesiones/{id}/anotaciones` | `anotar` | Live (RF-05) |
+| `GET /api/lives` | `listarSesiones` | Lista de lives (totales calculados aquí, RNF-11) |
+| `POST /api/lives` | `abrirSesion` | Abrir live (solo una Abierta) |
+| `GET /api/lives/{id}` | `obtenerSesion` | Live y cierre |
+| `POST /api/lives/{id}/anotaciones` | `anotar` | Live (RF-05) |
 | `DELETE /api/anotaciones/{id}` | `deshacerAnotacion` | Aviso con Deshacer (D-22) |
 | `PATCH .../lineas/{id}/prendas/{id}` | `alternarPrenda` | Live (RF-06) |
 | `PATCH .../lineas/{id}/clienta` | `cambiarClienta` | Live (RF-06, D-19) |
 | `PATCH .../lineas/{id}/pago` | `alternarPago` | Live (RF-07) |
-| `POST /api/sesiones/{id}/terminar` | `terminarSesion` | Live (RF-09) |
+| `POST /api/lives/{id}/terminar` | `terminarSesion` | Live (RF-09) |
 | `PATCH .../lineas/{id}/bolsa` | `alternarBolsa` | Cierre |
 | `PUT .../lineas/{id}/entrega` | `registrarEntrega` | Cierre (RF-10) |
 | `PUT .../lineas/{id}/entrega/{entregaId}` | `agruparEntrega` | Cierre ("Enviar junto con") |
 | `PATCH .../lineas/{id}/no-pago` | `marcarNoPago` | Finalizar cierre |
-| `POST /api/sesiones/{id}/finalizar` | `finalizarCierre` | Finalizar cierre (transacción, RNF-12) |
-| `POST /api/sesiones/{id}/reabrir` | `reabrirSesion` | Admin |
-| `GET /api/compras?clientaId=` | `historialDeClienta` / `listarCompras` | Ficha y Estadísticas |
+| `POST /api/lives/{id}/finalizar` | `finalizarCierre` | Finalizar cierre (transacción, RNF-12) |
+| `POST /api/lives/{id}/reabrir` | `reabrirSesion` | Admin |
+| `GET /api/lives/lineas?clientaId=` | `historialDeClienta` / `listarCompras` | Ficha y Estadísticas |
 
 - Las reglas que hoy están en `sesionesService.ts` (mock), `utils/montos.ts` y `utils/cierre.ts` se pasan a Java: `totalesDeLineas` (D-23) y `revisarCierre` (D-27). Son las pruebas unitarias obligatorias del ERS (RNF-22: cobertura de al menos 60 %).
 - Comunicación con ms-clientas:
@@ -168,8 +168,8 @@ El front se puede seguir mejorando durante todo el proceso: mientras no cambie l
 | 2 | **api-gateway** y conexión del login del front | El login usa usuarios reales |
 | 3 | **RF-03** en ms-auth y pantalla Usuarios; **RF-02** (menú y rutas por rol, 403) | La Admin crea vendedoras; la Vendedora no ve Usuarios |
 | 4 | **ms-clientas**: CRUD y duplicados (RF-12) y conexión de `clientasService` | Las clientas se guardan de verdad |
-| 5 | **ms-lives**: sesiones, anotar, Deshacer, corregir y pago (RF-04 a RF-08) | Un live completo con datos reales |
-| 6 | **ms-lives**: terminar, bolsas, entregas, finalizar y reabrir (RF-09 a RF-11) | Cierre real |
+| 5 | **ms-lives**: sesiones, anotar, Deshacer, corregir y pago (RF-04 a RF-08) | Probado con JUnit y Swagger (el front sigue simulado, D-37) |
+| 6 | **ms-lives**: terminar, bolsas, entregas, finalizar y reabrir (RF-09 a RF-11), y conexión de `clientasService` y `sesionesService` en el front | Live, cierre y clientas con datos reales |
 | 7 | Comunicación entre ms-lives y ms-clientas, indicadores, ranking e inactivas (RF-13, RF-14) | Ficha y Estadísticas con datos reales |
 | 8 | **ms-importacion** (RF-15) | Importar cuaderno |
 | 9 | Swagger revisado, README del backend, E2E contra el backend y respaldos (RNF-19) | Entrega final |

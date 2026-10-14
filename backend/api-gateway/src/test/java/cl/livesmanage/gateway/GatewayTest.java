@@ -56,6 +56,7 @@ class GatewayTest {
                 }
             });
             servidor.createContext("/api/clientas", intercambio -> responder(intercambio, 200, "[]"));
+            servidor.createContext("/api/lives", intercambio -> responder(intercambio, 200, "[]"));
             servidor.createContext("/api/configuracion", intercambio -> responder(intercambio, 200, "{\"dias\":60}"));
             servidor.createContext("/api/auth/yo", intercambio ->
                     responder(intercambio, 200, "{\"recibido\":\"" + intercambio.getRequestHeaders().getFirst("Authorization") + "\"}"));
@@ -78,6 +79,7 @@ class GatewayTest {
     static void propiedades(DynamicPropertyRegistry registro) {
         registro.add("AUTH_URL", () -> "http://localhost:" + MS_AUTH_FALSO.getAddress().getPort());
         registro.add("CLIENTAS_URL", () -> "http://localhost:" + MS_AUTH_FALSO.getAddress().getPort());
+        registro.add("LIVES_URL", () -> "http://localhost:" + MS_AUTH_FALSO.getAddress().getPort());
         registro.add("JWT_SECRET", () -> SECRETO);
     }
 
@@ -130,6 +132,12 @@ class GatewayTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.dias").value(60));
         mvc.perform(get("/api/clientas")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void losLivesVanAMsLivesConToken() throws Exception {
+        mvc.perform(get("/api/lives").header("Authorization", "Bearer " + token("ms-auth"))).andExpect(status().isOk());
+        mvc.perform(get("/api/lives")).andExpect(status().isUnauthorized());
     }
 
     @Test

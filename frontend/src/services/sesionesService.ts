@@ -128,6 +128,7 @@ export async function anotar(sesionId: string, destino: DestinoAnotacion, precio
   const ahora = new Date().toISOString();
   const nuevas: Prenda[] = precios.map((precio) => ({ id: nuevoId('p'), precio, estado: 'VIGENTE' }));
   const existente = lineas.find((l) => l.sesionId === sesionId && l.clientaId === clienta.id);
+  if (existente) anularDeshacer(existente.id); // D-22: una anotación nueva cambia la línea
   const anotacion: Omit<Anotacion, 'lineaId'> = {
     prendaIds: nuevas.map((p) => p.id),
     lineaCreada: !existente,

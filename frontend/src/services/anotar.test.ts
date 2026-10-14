@@ -77,4 +77,13 @@ describe('deshacerAnotacion (D-11)', () => {
     expect(await obtenerSesion('s-2')).toEqual(sesionAntes);
     expect(await listarClientas()).toEqual(clientasAntes);
   });
+
+  it('una anotación nueva en la misma línea anula el Deshacer de la anterior (D-22)', async () => {
+    const { anotacionId: primera } = await anotar('s-2', { nuevaClienta: 'ana' }, [5000]);
+    const { linea } = await anotar('s-2', { clientaId: (await lineaDe('ana'))!.clientaId }, [4000]);
+
+    await expect(deshacerAnotacion(primera)).rejects.toThrow('ya no se puede deshacer');
+    expect(precios(await lineaDe('ana'))).toEqual([5000, 4000]);
+    expect(linea.prendas).toHaveLength(2);
+  });
 });

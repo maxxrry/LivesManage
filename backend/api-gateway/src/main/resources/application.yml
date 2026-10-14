@@ -19,6 +19,10 @@ spring:
               uri: ${CLIENTAS_URL:http://localhost:8083}
               predicates:
                 - Path=/api/clientas/**,/api/configuracion/**
+            - id: ms-lives
+              uri: ${LIVES_URL:http://localhost:8082}
+              predicates:
+                - Path=/api/lives/**
 
 server:
   port: ${PORT:8080}
