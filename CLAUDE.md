@@ -8,7 +8,7 @@ Proyecto del ramo Desarrollo FullStack 2 (Duoc UC) y para un cliente real.
 
 ## Estado actual
 
-- Fase: frontend primero, con datos simulados. El backend aún no existe.
+- Fase: backend en construcción según `docs/plan-backend.md` (un paso por sesión). El frontend sigue con datos simulados hasta conectar cada servicio.
 - Hecho: base del frontend (Vite + React + TS 6, Tailwind 4, React Router, Vitest, Playwright en Chromium 360×740). Tipos del dominio en `src/types/` (textos visibles solo en `etiquetas.ts`), servicios simulados en `src/services/` (live Abierto con 5 líneas, live Cerrado, usuario ADMIN), router con pantallas vacías de 3.1.1 y layout con menú.
 - Hecho: RF-05. Parser (`features/live/parseAnotacion.ts`), sugerencias, `anotar()`/`deshacerAnotacion()` simulados, pantalla de live con total del live, hoja en formato cuaderno y aviso con Deshacer. Cobertura con `npm run coverage`. Guía de pruebas en `docs/pruebas.md`.
 - Hecho: RF-04. Lista de lives con fecha, estado, clientas, total y pagado (`SesionResumen`, totales calculados por el servicio), abrir live con nombre opcional y "Continuar" si ya hay uno Abierto.
@@ -26,8 +26,9 @@ Proyecto del ramo Desarrollo FullStack 2 (Duoc UC) y para un cliente real.
 - Hecho: RF-14. Pantalla "Ranking e inactivas" (hoy pestañas de Estadísticas, D-32): ranking por total gastado o compras en un período (3 meses por defecto, atajos y fechas) y clientas inactivas con días sin comprar y contacto (TikTok, teléfono, WhatsApp); la Admin cambia los días (60 por defecto). Reglas en `rankingDeClientas` y `clientasInactivas` (`utils/clientas.ts`), con "hoy" como parámetro (D-30). Clientas completo (RF-12 a RF-14).
 - Hecho: RF-01 (frontend, simulado). Login con mensaje genérico, sesión en `localStorage`, rutas protegidas en el Layout y "Cerrar sesión" en el menú. Contrato `POST /api/auth/login` en D-31: al conectar `ms-auth` solo cambian `iniciarSesion` y `usuarioActual` (`usuariosService`). Los servicios simulados revisan el rol y registran pagos con `usuarioConectado()`. Vitest y Playwright parten con la Admin conectada; usuarios de prueba en el README.
 - Hecho: pantalla Estadísticas (D-32), antes "Ranking e inactivas", en `/estadisticas` (`features/estadisticas`). Pestañas Lives, Ranking e Inactivas; período compartido con "Otro…" para fechas. Pestaña Lives: cifras del período y gráfico "Vendido por live" (barras sin librería, Cobrado y No pagó), regla en `resumenDeLives` (`utils/sesion.ts`). Los datos simulados no se tocaron: el gráfico se verá completo con el backend.
-- Decisiones D-01 a D-32 en `docs/decisiones.md`.
-- Siguiente: RF-02 (menú y pantallas según el rol), RF-15 (importar cuaderno, necesita `ms-importacion`) o empezar el backend.
+- Hecho: backend paso 1, `ms-auth` (Spring Boot 4.1.1, Java 21): `POST /api/auth/login`, `GET /api/auth/yo`, JWT HS256 de 8 h con `JWT_SECRET` compartido, BCrypt, Admin inicial por variables de entorno, errores `{ mensaje, campos? }`, Swagger. Pruebas JUnit con H2 (D-33).
+- Decisiones D-01 a D-33 en `docs/decisiones.md`.
+- Siguiente: paso 2 de `docs/plan-backend.md` (api-gateway y conectar el login del front).
 
 ## Estructura
 

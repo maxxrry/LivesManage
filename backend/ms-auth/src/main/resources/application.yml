@@ -1,0 +1,27 @@
+# Secretos y datos de conexión por variables de entorno (RNF-26).
+# En desarrollo se pueden poner en ms-auth/.env (ver .env.example); git lo ignora.
+spring:
+  application:
+    name: ms-auth
+  config:
+    import: optional:file:.env[.properties]
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/livesmanage_auth?createDatabaseIfNotExist=true}
+    username: ${DB_USUARIO}
+    password: ${DB_CONTRASENA}
+  jpa:
+    open-in-view: false
+    hibernate:
+      # shortcut: Hibernate crea y ajusta las tablas solo; pasar a migraciones (Flyway) antes de tener datos reales.
+      ddl-auto: update
+
+server:
+  port: ${PORT:8081}
+
+livesmanage:
+  jwt:
+    secreto: ${JWT_SECRET}
+  admin-inicial:
+    nombre: ${ADMIN_NOMBRE:Administradora}
+    correo: ${ADMIN_CORREO:}
+    contrasena: ${ADMIN_CONTRASENA:}

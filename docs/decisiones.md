@@ -36,6 +36,7 @@ Registro de decisiones de diseño que complementan o precisan el ERS (`docs/ERS.
 | D-30 | 04/10/2026 | RF-14 | Ranking de los últimos 3 meses por defecto, desempates, inactivas sin desactivadas, contacto por teléfono y WhatsApp. |
 | D-31 | 08/10/2026 | RF-01 | Contrato del login, sesión en `localStorage` y mensaje genérico también para usuarios desactivados. |
 | D-32 | 08/10/2026 | RF-14 | Pantalla "Estadísticas" (antes "Ranking e inactivas") con gráfico de vendido por live, cobrado y no pagó. |
+| D-33 | 14/10/2026 | RF-01, RF-02, RNF-05 a RNF-07 | `ms-auth`: stack, contenido del JWT, `GET /api/auth/yo`, formato de errores y Admin inicial. Complementa D-31. |
 
 ## D-01 · Estilos con Tailwind CSS
 
@@ -265,3 +266,17 @@ Pedido de la tienda: ver, además del ranking, cómo le fue a cada live.
 - **Con backend:** hoy la pantalla pide todos los lives (`listarSesiones`) y filtra el período en el navegador. Al conectar `ms-lives`, el período va en la consulta (`GET /api/lives?estado=CERRADA&desde=&hasta=`), como en el ranking, para no traer todo el historial.
 - **Enlace antiguo:** `/ranking` redirige a `/estadisticas`.
 - **Fuera por ahora:** clientas y ticket promedio por live, prendas canceladas por live.
+
+## D-33 · ms-auth: JWT, usuario actual y errores
+
+Primer microservicio del backend (paso 1 de `docs/plan-backend.md`).
+
+- **Stack:** Java 21 (Temurin LTS) y Spring Boot 4.1.1, la versión estable de start.spring.io al crearlo. Todos los servicios usan esa misma versión. Swagger con springdoc 3.1.1 en `/swagger-ui.html`.
+- **JWT** firmado con HS256 usando `JWT_SECRET` (al menos 32 caracteres), que es la misma clave en el gateway y en cada microservicio. Así cada uno valida el token y revisa el rol sin preguntarle a `ms-auth` (RNF-07). Se usa el soporte JWT de Spring Security (`oauth2-resource-server`), sin librerías extra. Contenido: `sub` = id del usuario, `nombre`, `rol` (`ADMIN` o `VENDEDOR`), `iss` = `ms-auth` (los servicios rechazan otro emisor) y vencimiento a las 8 horas (RNF-06). Cada servicio convierte `rol` en `ROLE_ADMIN` o `ROLE_VENDEDOR`.
+- **Usuario actual:** `GET /api/auth/yo` con el token devuelve el usuario al día (forma de D-07). Si el usuario fue desactivado o ya no existe, responde 401. Es lo que llamará `usuarioActual()` (D-31).
+- **Errores:** todos los servicios responden `{ mensaje, campos? }`. `mensaje` se puede mostrar tal cual y `campos` trae el error de cada campo cuando la validación falla (400). El login malo responde 401 con "Correo o contraseña incorrectos." (D-31). Un token ausente, vencido o alterado responde 401 "Tu sesión expiró o no es válida. Vuelve a iniciar sesión.", y la falta de permiso responde 403. Los errores 4xx de Spring (ruta inexistente, tipo de contenido equivocado) conservan su código y nunca se convierten en 500.
+- **Contraseñas:** BCrypt de costo 12 (RNF-05). Una contraseña de más de 72 bytes (el límite de BCrypt) se rechaza como credencial inválida. Si el correo no existe, igual se compara contra un hash de relleno, para que el tiempo de respuesta no revele qué correos existen.
+- **Correo:** se guarda y se compara en minúsculas y sin espacios.
+- **Admin inicial:** si la tabla de usuarios está vacía al arrancar, se crea una Admin con `ADMIN_CORREO` y `ADMIN_CONTRASENA` (mínimo 8 caracteres). Si faltan, el servicio avisa en el log.
+- **Configuración:** variables de entorno, o un `.env` local en la carpeta del servicio (lo ignora `backend/.gitignore`; ver `.env.example`). Las pruebas usan H2 en memoria (perfil `test`) y no necesitan MySQL.
+- **Pendiente:** limitar los intentos de login (unos 10 cada 15 minutos) se agrega en el api-gateway. Las tablas las crea Hibernate (`ddl-auto: update`); antes de cargar datos reales se pasa a migraciones.

@@ -9,7 +9,7 @@ Proyecto del ramo Desarrollo FullStack 2 (Duoc UC), para un cliente real.
 | Parte | Estado |
 | --- | --- |
 | Frontend (React) | En desarrollo, con **datos simulados en memoria**: cada recarga de página vuelve a los datos iniciales. |
-| Backend (Spring Boot, microservicios) | Aún no implementado. |
+| Backend (Spring Boot, microservicios) | En construcción: `ms-auth` (login y JWT) listo. Plan completo en [docs/plan-backend.md](docs/plan-backend.md). |
 
 Requisitos implementados en el frontend: RF-01 (login simulado) y RF-04 a RF-14 (lives, pantalla de live, cierre, clientas, ficha, ranking e inactivas). El detalle está en [docs/ERS.md](docs/ERS.md) y en la sección "Estado actual" de [CLAUDE.md](CLAUDE.md).
 
@@ -46,6 +46,28 @@ Abrir http://localhost:5173 e ingresar con un usuario de prueba (solo existen en
 La app parte en la lista de lives; "Continuar" entra al live abierto de los datos simulados.
 
 Para verla desde un celular en la misma red Wi-Fi: `npm run dev -- --host` y abrir en el celular la dirección "Network" que muestra Vite.
+
+## Backend
+
+Requisitos: **JDK 21** y **MySQL 8**. Maven no se instala: cada servicio trae `mvnw`.
+
+Crear la base y su usuario una vez, en MySQL como root:
+
+```sql
+CREATE DATABASE livesmanage_auth;
+CREATE USER 'livesmanage'@'localhost' IDENTIFIED BY 'tu-contrasena';
+GRANT ALL PRIVILEGES ON livesmanage_auth.* TO 'livesmanage'@'localhost';
+```
+
+Después, desde la carpeta de cada servicio (por ahora `backend/ms-auth`; el `.env` se busca en la carpeta desde la que se arranca):
+
+```bash
+cp .env.example .env     # completar los valores; el .env nunca se sube
+./mvnw spring-boot:run   # en Windows: .\mvnw.cmd spring-boot:run
+./mvnw test              # pruebas (usan H2 en memoria, no necesitan MySQL)
+```
+
+`ms-auth` corre en http://localhost:8081 y su Swagger está en http://localhost:8081/swagger-ui.html. La primera vez crea la Admin definida en `ADMIN_CORREO` y `ADMIN_CONTRASENA`.
 
 ## Pruebas
 
