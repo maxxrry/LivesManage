@@ -177,10 +177,13 @@ export const lineas: Linea[] = [...lineasLiveAnterior, ...lineasLiveAbierto];
 /** Configuración de la tienda (RF-14). La cambia la administradora. */
 export const configuracion = { diasInactividad: 60 };
 
-const iniciales = structuredClone({ clientas, sesiones, entregas, lineas, configuracion });
+const iniciales = structuredClone({ usuarios, contrasenas, clientas, sesiones, entregas, lineas, configuracion });
 
 /** Vuelve los datos a su estado inicial, para que cada test parta igual. */
 export function reiniciarDatos(): void {
+  usuarios.splice(0, usuarios.length, ...structuredClone(iniciales.usuarios));
+  for (const correo of Object.keys(contrasenas)) delete contrasenas[correo];
+  Object.assign(contrasenas, iniciales.contrasenas);
   clientas.splice(0, clientas.length, ...structuredClone(iniciales.clientas));
   sesiones.splice(0, sesiones.length, ...structuredClone(iniciales.sesiones));
   entregas.splice(0, entregas.length, ...structuredClone(iniciales.entregas));

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Usuario } from '../types/dominio';
-import { cerrarSesion, ERROR_CREDENCIALES, iniciarSesion, tokenActual, usuarioActual, usuarioDeLaSesion } from './usuariosService';
+import { cerrarSesion, crearUsuario, ERROR_CREDENCIALES, iniciarSesion, tokenActual, usuarioActual, usuarioDeLaSesion } from './usuariosService';
 
 const ADMIN: Usuario = { id: 'uuid-1', nombre: 'Administradora', correo: 'admin@livesmanage.cl', rol: 'ADMIN', activo: true };
 
@@ -74,6 +74,20 @@ describe('sesión con el backend (RF-01, D-34)', () => {
     const [url, opciones] = fetchFalso.mock.calls[1] ?? [];
     expect(url).toBe('http://gateway/api/auth/yo');
     expect(opciones?.headers).toMatchObject({ Authorization: 'Bearer jwt' });
+  });
+
+  it('crear usuario manda el token y muestra el mensaje del backend si el correo ya existe (RF-03)', async () => {
+    fetchFalso.mockResolvedValueOnce(respuesta(200, { token: 'jwt', usuario: ADMIN }));
+    await iniciarSesion('admin@livesmanage.cl', 'clave');
+    fetchFalso.mockResolvedValueOnce(respuesta(409, { mensaje: 'Ya existe un usuario con ese correo.', campos: { correo: '…' } }));
+
+    const nueva = { nombre: 'Nueva', correo: 'vendedora@livesmanage.cl', rol: 'VENDEDOR' as const, contrasena: 'inicial123' };
+    await expect(crearUsuario(nueva)).rejects.toThrow('Ya existe un usuario con ese correo.');
+    const [url, opciones] = fetchFalso.mock.calls[1] ?? [];
+    expect(url).toBe('http://gateway/api/usuarios');
+    expect(opciones?.method).toBe('POST');
+    expect(opciones?.headers).toMatchObject({ Authorization: 'Bearer jwt' });
+    expect(JSON.parse(opciones?.body as string)).toEqual(nueva);
   });
 
   it('con el token vencido (401) descarta la sesión', async () => {

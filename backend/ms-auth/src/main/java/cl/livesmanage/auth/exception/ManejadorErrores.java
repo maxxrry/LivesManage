@@ -4,6 +4,7 @@ import cl.livesmanage.auth.dto.ErrorRespuesta;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -27,6 +28,19 @@ public class ManejadorErrores {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     ResponseEntity<ErrorRespuesta> cuerpoIlegible(HttpMessageNotReadableException e) {
         return ResponseEntity.badRequest().body(new ErrorRespuesta("La petición no tiene el formato esperado."));
+    }
+
+    @ExceptionHandler(ReglaException.class)
+    ResponseEntity<ErrorRespuesta> regla(ReglaException e) {
+        Map<String, String> campos = e.getCampo() == null ? null : Map.of(e.getCampo(), e.getMessage());
+        return ResponseEntity.status(e.getEstado()).body(new ErrorRespuesta(e.getMessage(), campos));
+    }
+
+    /** Hoy el único índice único es el correo: dos pedidos con el mismo correo al mismo tiempo. Si se agrega otro, distinguirlos aquí. */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    ResponseEntity<ErrorRespuesta> correoRepetido(DataIntegrityViolationException e) {
+        log.warn("Violación de integridad tratada como correo repetido: {}", e.getMostSpecificCause().getMessage());
+        return regla(ReglaException.correoRepetido());
     }
 
     @ExceptionHandler({CredencialesInvalidasException.class, SesionInvalidaException.class})

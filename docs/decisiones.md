@@ -38,6 +38,7 @@ Registro de decisiones de diseño que complementan o precisan el ERS (`docs/ERS.
 | D-32 | 08/10/2026 | RF-14 | Pantalla "Estadísticas" (antes "Ranking e inactivas") con gráfico de vendido por live, cobrado y no pagó. |
 | D-33 | 14/10/2026 | RF-01, RF-02, RNF-05 a RNF-07 | `ms-auth`: stack, contenido del JWT, `GET /api/auth/yo`, formato de errores y Admin inicial. Complementa D-31. |
 | D-34 | 14/10/2026 | RF-01, RNF-07 | api-gateway (rutas, JWT, CORS, límite de intentos de login) y login del front conectado con `VITE_API_URL`. |
+| D-35 | 14/10/2026 | RF-02, RF-03 | Gestión de usuarios: contrato REST, reglas (nadie se desactiva ni se cambia el rol a sí mismo, contraseña de 8 caracteres), pantalla Usuarios y menú según el rol. Reemplaza la parte de menú de D-07. |
 
 ## D-01 · Estilos con Tailwind CSS
 
@@ -295,3 +296,38 @@ Paso 2 de `docs/plan-backend.md`.
 - **Token vencido** (cierra el pendiente de D-31): si cualquier llamada con token responde 401, `pedirApi` borra la sesión y vuelve a `/login`. Hoy la única llamada con token es `GET /api/auth/yo`. Una respuesta 200 que no es JSON, o un login sin `token` y `usuario`, muestra "El servidor respondió algo inesperado.".
 - **Mientras ms-lives y ms-clientas sigan simulados:** con login real, `usuarioConectado()` devuelve el usuario guardado en la sesión (el id real no existe en los datos simulados). Se borra al conectar esos servicios.
 - **Pruebas:** Vitest fuerza `VITE_API_URL` vacía (`vite.config.ts`) y las E2E de Playwright levantan su propio servidor en el puerto 5174 con la variable vacía. Así ninguna prueba depende del backend ni reutiliza un `npm run dev` en modo API.
+
+## D-35 · Gestión de usuarios y acceso por rol
+
+Paso 3 de `docs/plan-backend.md`.
+
+- **Contrato** (`ms-auth`, solo Admin; a una Vendedora le responde 403 `{ mensaje }`):
+
+  ```
+  GET   /api/usuarios               200 → Usuario[] ordenados por nombre
+  POST  /api/usuarios               { nombre, correo, rol, contrasena }  201 → Usuario
+  PUT   /api/usuarios/{id}          { nombre, correo, rol }              200 → Usuario
+  PATCH /api/usuarios/{id}/activo   { activo }                           200 → Usuario
+  400 → { mensaje, campos }   404 → usuario inexistente   409 → correo repetido o regla de abajo
+  ```
+
+- **Reglas:**
+  - El correo es único, sin importar mayúsculas ni espacios.
+  - El nombre es obligatorio (hasta 100 caracteres).
+  - La contraseña inicial tiene al menos 8 caracteres y como máximo 72 bytes (el límite de BCrypt).
+  - Ningún usuario se borra: se desactiva y se puede reactivar (RF-03).
+- **Nadie se desactiva ni se cambia el rol a sí mismo.** Quien hace el cambio sigue siendo Admin activa, así que siempre queda al menos una Admin.
+- **El rol se revisa en la base, no solo en el token:** cada operación de `/api/usuarios` comprueba que quien la pide siga siendo Admin activa. Así, una Admin desactivada o pasada a Vendedora pierde el acceso al instante, aunque su JWT (hasta 8 horas) todavía diga ADMIN. En la pantalla, la fila propia dice "(tú)", no tiene Desactivar y el rol aparece bloqueado al editarla.
+- **Contraseña:** solo se define al crear el usuario. Editar no la cambia, porque el ERS habla de contraseña inicial. Restablecer una contraseña olvidada queda fuera por ahora.
+- **Efecto de desactivar:** el usuario no puede iniciar sesión. Si ya tenía sesión, la pierde en su siguiente llamada a la API, porque `GET /api/auth/yo` responde 401 (D-33).
+- **Pantalla Usuarios** (`features/usuarios`):
+  - Lista: tarjetas en celular y filas con rol y acciones alineadas en computador.
+  - "Nuevo usuario" y "Editar" usan el mismo formulario (`FormularioUsuario`), que se muestra en la misma fila.
+  - Desactivar pide confirmación (ERS 3.1.1). Reactivar no la pide.
+  - Después de crear o guardar aparece un aviso.
+- **RF-02 en el front:**
+  - La entrada Usuarios del menú lleva `soloAdmin` y no se muestra a la Vendedora (ERS 3.1.1).
+  - Si una Vendedora abre `/usuarios` por URL, ve "No tienes permiso para ver esta pantalla."
+  - El front toma el rol de la sesión guardada, y `usuarioActual()` la pone al día cada vez que se llama (la pantalla Usuarios lo llama al abrirse y después de que la Admin edita sus propios datos). La protección real es el 403 de `ms-auth`.
+  - Las demás acciones solo de Admin (reabrir cierre, desactivar clienta, días de inactividad) ya revisaban el rol.
+- **Datos simulados:** sin `VITE_API_URL`, `usuariosService` aplica las mismas reglas y mensajes sobre los usuarios simulados. Si se cambia el correo, la contraseña simulada pasa al correo nuevo. `reiniciarDatos()` también restaura los usuarios y las contraseñas.

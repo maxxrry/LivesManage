@@ -71,7 +71,7 @@ export function Layout() {
         } overflow-y-auto bg-white p-2 lg:fixed lg:top-14 lg:bottom-0 lg:left-0 lg:z-10 lg:block lg:w-60 lg:max-w-none lg:border-r lg:border-gray-200 lg:shadow-none`}
       >
         <ul className="flex flex-col gap-1">
-          {ENTRADAS_MENU.map(({ ruta, texto }) => (
+          {ENTRADAS_MENU.filter((e) => !e.soloAdmin || usuario.rol === 'ADMIN').map(({ ruta, texto }) => (
             <li key={ruta}>
               <NavLink
                 to={ruta}

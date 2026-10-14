@@ -11,7 +11,7 @@ Proyecto del ramo Desarrollo FullStack 2 (Duoc UC), para un cliente real.
 | Frontend (React) | En desarrollo, con **datos simulados en memoria**: cada recarga de página vuelve a los datos iniciales. |
 | Backend (Spring Boot, microservicios) | En construcción: `ms-auth` (login y JWT) y `api-gateway` listos; el login del front ya puede usarlos. Plan completo en [docs/plan-backend.md](docs/plan-backend.md). |
 
-Requisitos implementados en el frontend: RF-01 (login simulado) y RF-04 a RF-14 (lives, pantalla de live, cierre, clientas, ficha, ranking e inactivas). El detalle está en [docs/ERS.md](docs/ERS.md) y en la sección "Estado actual" de [CLAUDE.md](CLAUDE.md).
+Requisitos implementados en el frontend: RF-01 a RF-03 (login, acceso por rol y usuarios; con backend real o simulado) y RF-04 a RF-14 (lives, pantalla de live, cierre, clientas, ficha, ranking e inactivas). El detalle está en [docs/ERS.md](docs/ERS.md) y en la sección "Estado actual" de [CLAUDE.md](CLAUDE.md).
 
 ## Requisitos
 

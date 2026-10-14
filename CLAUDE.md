@@ -28,8 +28,9 @@ Proyecto del ramo Desarrollo FullStack 2 (Duoc UC) y para un cliente real.
 - Hecho: pantalla Estadísticas (D-32), antes "Ranking e inactivas", en `/estadisticas` (`features/estadisticas`). Pestañas Lives, Ranking e Inactivas; período compartido con "Otro…" para fechas. Pestaña Lives: cifras del período y gráfico "Vendido por live" (barras sin librería, Cobrado y No pagó), regla en `resumenDeLives` (`utils/sesion.ts`). Los datos simulados no se tocaron: el gráfico se verá completo con el backend.
 - Hecho: backend paso 1, `ms-auth` (Spring Boot 4.1.1, Java 21): `POST /api/auth/login`, `GET /api/auth/yo`, JWT HS256 de 8 h con `JWT_SECRET` compartido, BCrypt, Admin inicial por variables de entorno, errores `{ mensaje, campos? }`, Swagger. Pruebas JUnit con H2 (D-33).
 - Hecho: backend paso 2, `api-gateway` (:8080, Spring Cloud Gateway servlet): valida el JWT, rutas a `ms-auth`, CORS por `CORS_ORIGENES`, 429 tras 10 logins fallidos por IP en 15 min. Front: `services/api.ts` (`pedirApi`, `ErrorApi`); con `VITE_API_URL` en `frontend/.env.local`, `iniciarSesion` y `usuarioActual` usan la API y un 401 en `/yo` vuelve al login; sin ella, datos simulados. E2E en el puerto 5174 siempre simuladas (D-34).
-- Decisiones D-01 a D-34 en `docs/decisiones.md`.
-- Siguiente: paso 3 de `docs/plan-backend.md` (RF-03 usuarios en `ms-auth` y pantalla Usuarios; RF-02 menú y rutas por rol).
+- Hecho: backend paso 3. RF-03 en `ms-auth` (`/api/usuarios`: listar, crear, editar, activar/desactivar; solo Admin, 403 a la Vendedora) y pantalla Usuarios (`features/usuarios`, `FormularioUsuario`). Nadie se desactiva ni se cambia el rol a sí mismo. RF-02: entrada Usuarios con `soloAdmin` en `components/menu.ts` y aviso de sin permiso en `/usuarios` (D-35).
+- Decisiones D-01 a D-35 en `docs/decisiones.md`.
+- Siguiente: paso 4 de `docs/plan-backend.md` (`ms-clientas`: RF-12 y conectar `clientasService`).
 
 ## Estructura
 

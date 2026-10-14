@@ -70,6 +70,7 @@ public class SeguridadConfig {
                 .authorizeHttpRequests(a -> a
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/error").permitAll()
+                        .requestMatchers("/api/usuarios/**").hasRole("ADMIN") // RF-02 y RF-03
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(o -> o
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(convertidor))
