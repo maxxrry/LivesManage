@@ -1,0 +1,26 @@
+# Secretos y direcciones por variables de entorno (RNF-26).
+# En desarrollo se pueden poner en api-gateway/.env (ver .env.example); git lo ignora.
+spring:
+  application:
+    name: api-gateway
+  config:
+    import: optional:file:.env[.properties]
+  cloud:
+    gateway:
+      server:
+        webmvc:
+          # Una ruta por microservicio. Se agregan a medida que existen (docs/plan-backend.md, 4.2).
+          routes:
+            - id: ms-auth
+              uri: ${AUTH_URL:http://localhost:8081}
+              predicates:
+                - Path=/api/auth/**,/api/usuarios/**
+
+server:
+  port: ${PORT:8080}
+
+livesmanage:
+  jwt:
+    secreto: ${JWT_SECRET}
+  cors:
+    origenes: ${CORS_ORIGENES:http://localhost:5173}

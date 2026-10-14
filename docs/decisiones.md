@@ -37,6 +37,7 @@ Registro de decisiones de diseño que complementan o precisan el ERS (`docs/ERS.
 | D-31 | 08/10/2026 | RF-01 | Contrato del login, sesión en `localStorage` y mensaje genérico también para usuarios desactivados. |
 | D-32 | 08/10/2026 | RF-14 | Pantalla "Estadísticas" (antes "Ranking e inactivas") con gráfico de vendido por live, cobrado y no pagó. |
 | D-33 | 14/10/2026 | RF-01, RF-02, RNF-05 a RNF-07 | `ms-auth`: stack, contenido del JWT, `GET /api/auth/yo`, formato de errores y Admin inicial. Complementa D-31. |
+| D-34 | 14/10/2026 | RF-01, RNF-07 | api-gateway (rutas, JWT, CORS, límite de intentos de login) y login del front conectado con `VITE_API_URL`. |
 
 ## D-01 · Estilos con Tailwind CSS
 
@@ -280,3 +281,17 @@ Primer microservicio del backend (paso 1 de `docs/plan-backend.md`).
 - **Admin inicial:** si la tabla de usuarios está vacía al arrancar, se crea una Admin con `ADMIN_CORREO` y `ADMIN_CONTRASENA` (mínimo 8 caracteres). Si faltan, el servicio avisa en el log.
 - **Configuración:** variables de entorno, o un `.env` local en la carpeta del servicio (lo ignora `backend/.gitignore`; ver `.env.example`). Las pruebas usan H2 en memoria (perfil `test`) y no necesitan MySQL.
 - **Pendiente:** limitar los intentos de login (unos 10 cada 15 minutos) se agrega en el api-gateway. Las tablas las crea Hibernate (`ddl-auto: update`); antes de cargar datos reales se pasa a migraciones.
+
+## D-34 · api-gateway y login del front conectado
+
+Paso 2 de `docs/plan-backend.md`.
+
+- **Gateway:** Spring Cloud Gateway en su versión servlet (`gateway-server-webmvc`, Spring Cloud 2025.1.3). Es el mismo stack que los microservicios, así que la validación del JWT se configura igual que en `ms-auth`. Escucha en el puerto 8080. Las rutas se agregan a medida que existe cada servicio; hoy solo `/api/auth/**` y `/api/usuarios/**` → `ms-auth` (`AUTH_URL`).
+- **JWT:** deja pasar sin token solo `POST /api/auth/login`. Todo lo demás exige un token firmado con `JWT_SECRET`, vigente y con `iss` = `ms-auth`; si no, responde 401 `{ mensaje }` sin llegar al servicio. El rol no se revisa aquí: lo revisa cada microservicio (RNF-07).
+- **CORS:** solo los orígenes de `CORS_ORIGENES` (por defecto `http://localhost:5173`), con los headers `Authorization` y `Content-Type`. Para usar la API desde GitHub Pages hay que agregar esa URL.
+- **Límite de intentos de login** (cierra el pendiente de D-33): después de 10 logins fallidos desde una misma IP en 15 minutos, responde 429 "Demasiados intentos. Espera unos minutos y vuelve a intentar." hasta que pasa la ventana. Solo cuentan los fallidos, para que las vendedoras detrás del mismo Wi-Fi no se bloqueen entre ellas. Cada intento se cuenta antes de reenviarlo y se descuenta si no falló, así que muchos intentos en paralelo no pasan todos. La ruta se compara ya decodificada, igual que Spring Security, para que `/api/auth/logi%6E` también cuente. El contador vive en memoria (una sola instancia) y usa la IP de la conexión; con varias instancias o detrás de un proxy habrá que cambiarlo. Límite conocido: en una IP compartida (el Wi-Fi de la tienda), 10 fallos de una persona bloquean a todas por 15 minutos. Se aceptó porque se inicia sesión pocas veces (el token dura 8 horas).
+- **Frontend:** `src/services/api.ts` tiene `pedirApi` (fetch, sin dependencias), que agrega el token y convierte la respuesta de error en un `ErrorApi` con el código HTTP y el `mensaje` del backend. Con `VITE_API_URL` (en `frontend/.env.local`, que git ignora) `iniciarSesion` y `usuarioActual` usan la API real; sin la variable siguen los datos simulados. Así funcionan Vitest, GitHub Pages y la demo.
+- **Errores del login:** un 401 muestra siempre "Correo o contraseña incorrectos." (D-31). Un 429 o la falta de conexión muestran su propio mensaje.
+- **Token vencido** (cierra el pendiente de D-31): si cualquier llamada con token responde 401, `pedirApi` borra la sesión y vuelve a `/login`. Hoy la única llamada con token es `GET /api/auth/yo`. Una respuesta 200 que no es JSON, o un login sin `token` y `usuario`, muestra "El servidor respondió algo inesperado.".
+- **Mientras ms-lives y ms-clientas sigan simulados:** con login real, `usuarioConectado()` devuelve el usuario guardado en la sesión (el id real no existe en los datos simulados). Se borra al conectar esos servicios.
+- **Pruebas:** Vitest fuerza `VITE_API_URL` vacía (`vite.config.ts`) y las E2E de Playwright levantan su propio servidor en el puerto 5174 con la variable vacía. Así ninguna prueba depende del backend ni reutiliza un `npm run dev` en modo API.

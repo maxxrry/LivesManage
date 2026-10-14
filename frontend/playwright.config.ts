@@ -14,7 +14,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   reporter: 'list',
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: 'http://localhost:5174',
     locale: 'es-CL',
     timezoneId: 'America/Santiago',
     trace: 'on-first-retry',
@@ -22,7 +22,7 @@ export default defineConfig({
       cookies: [],
       origins: [
         {
-          origin: 'http://localhost:5173',
+          origin: 'http://localhost:5174',
           localStorage: [{ name: 'livesmanage.sesion', value: JSON.stringify(sesionAdmin) }],
         },
       ],
@@ -48,8 +48,11 @@ export default defineConfig({
     ...(process.platform === 'win32' ? [] : [{ name: 'iphone', use: { ...devices['iPhone 13'] } }]),
   ],
   webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:5173',
+    // Puerto propio: así nunca reutiliza el `npm run dev` de 5173, que puede estar en modo API (D-34).
+    command: 'npm run dev -- --port 5174 --strictPort',
+    url: 'http://localhost:5174',
     reuseExistingServer: !process.env.CI,
+    // Datos simulados aunque exista un .env.local con VITE_API_URL.
+    env: { VITE_API_URL: '' },
   },
 });

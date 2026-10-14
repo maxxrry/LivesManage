@@ -9,7 +9,7 @@ Proyecto del ramo Desarrollo FullStack 2 (Duoc UC), para un cliente real.
 | Parte | Estado |
 | --- | --- |
 | Frontend (React) | En desarrollo, con **datos simulados en memoria**: cada recarga de página vuelve a los datos iniciales. |
-| Backend (Spring Boot, microservicios) | En construcción: `ms-auth` (login y JWT) listo. Plan completo en [docs/plan-backend.md](docs/plan-backend.md). |
+| Backend (Spring Boot, microservicios) | En construcción: `ms-auth` (login y JWT) y `api-gateway` listos; el login del front ya puede usarlos. Plan completo en [docs/plan-backend.md](docs/plan-backend.md). |
 
 Requisitos implementados en el frontend: RF-01 (login simulado) y RF-04 a RF-14 (lives, pantalla de live, cierre, clientas, ficha, ranking e inactivas). El detalle está en [docs/ERS.md](docs/ERS.md) y en la sección "Estado actual" de [CLAUDE.md](CLAUDE.md).
 
@@ -59,7 +59,7 @@ CREATE USER 'livesmanage'@'localhost' IDENTIFIED BY 'tu-contrasena';
 GRANT ALL PRIVILEGES ON livesmanage_auth.* TO 'livesmanage'@'localhost';
 ```
 
-Después, desde la carpeta de cada servicio (por ahora `backend/ms-auth`; el `.env` se busca en la carpeta desde la que se arranca):
+Después, desde la carpeta de cada servicio (`backend/ms-auth` y `backend/api-gateway`; el `.env` se busca en la carpeta desde la que se arranca):
 
 ```bash
 cp .env.example .env     # completar los valores; el .env nunca se sube
@@ -68,6 +68,10 @@ cp .env.example .env     # completar los valores; el .env nunca se sube
 ```
 
 `ms-auth` corre en http://localhost:8081 y su Swagger está en http://localhost:8081/swagger-ui.html. La primera vez crea la Admin definida en `ADMIN_CORREO` y `ADMIN_CONTRASENA`.
+
+`api-gateway` corre en http://localhost:8080 y es la única dirección que usa el front. Su `.env` lleva el mismo `JWT_SECRET` que `ms-auth`.
+
+**Front con el backend real:** crear `frontend/.env.local` con `VITE_API_URL=http://localhost:8080` y levantar MySQL, `ms-auth`, `api-gateway` y `npm run dev`. El login usa entonces los usuarios de MySQL (el resto de las pantallas sigue con datos simulados hasta conectar cada servicio). Sin ese archivo, el front funciona como antes, solo con datos simulados.
 
 ## Pruebas
 

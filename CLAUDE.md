@@ -27,8 +27,9 @@ Proyecto del ramo Desarrollo FullStack 2 (Duoc UC) y para un cliente real.
 - Hecho: RF-01 (frontend, simulado). Login con mensaje genérico, sesión en `localStorage`, rutas protegidas en el Layout y "Cerrar sesión" en el menú. Contrato `POST /api/auth/login` en D-31: al conectar `ms-auth` solo cambian `iniciarSesion` y `usuarioActual` (`usuariosService`). Los servicios simulados revisan el rol y registran pagos con `usuarioConectado()`. Vitest y Playwright parten con la Admin conectada; usuarios de prueba en el README.
 - Hecho: pantalla Estadísticas (D-32), antes "Ranking e inactivas", en `/estadisticas` (`features/estadisticas`). Pestañas Lives, Ranking e Inactivas; período compartido con "Otro…" para fechas. Pestaña Lives: cifras del período y gráfico "Vendido por live" (barras sin librería, Cobrado y No pagó), regla en `resumenDeLives` (`utils/sesion.ts`). Los datos simulados no se tocaron: el gráfico se verá completo con el backend.
 - Hecho: backend paso 1, `ms-auth` (Spring Boot 4.1.1, Java 21): `POST /api/auth/login`, `GET /api/auth/yo`, JWT HS256 de 8 h con `JWT_SECRET` compartido, BCrypt, Admin inicial por variables de entorno, errores `{ mensaje, campos? }`, Swagger. Pruebas JUnit con H2 (D-33).
-- Decisiones D-01 a D-33 en `docs/decisiones.md`.
-- Siguiente: paso 2 de `docs/plan-backend.md` (api-gateway y conectar el login del front).
+- Hecho: backend paso 2, `api-gateway` (:8080, Spring Cloud Gateway servlet): valida el JWT, rutas a `ms-auth`, CORS por `CORS_ORIGENES`, 429 tras 10 logins fallidos por IP en 15 min. Front: `services/api.ts` (`pedirApi`, `ErrorApi`); con `VITE_API_URL` en `frontend/.env.local`, `iniciarSesion` y `usuarioActual` usan la API y un 401 en `/yo` vuelve al login; sin ella, datos simulados. E2E en el puerto 5174 siempre simuladas (D-34).
+- Decisiones D-01 a D-34 en `docs/decisiones.md`.
+- Siguiente: paso 3 de `docs/plan-backend.md` (RF-03 usuarios en `ms-auth` y pantalla Usuarios; RF-02 menú y rutas por rol).
 
 ## Estructura
 

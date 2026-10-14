@@ -13,6 +13,8 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    // Datos simulados aunque exista un .env.local con VITE_API_URL (D-34).
+    env: { VITE_API_URL: '' },
     include: ['src/**/*.test.{ts,tsx}'],
     coverage: {
       provider: 'v8',
