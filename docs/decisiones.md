@@ -41,6 +41,7 @@ Registro de decisiones de diseño que complementan o precisan el ERS (`docs/ERS.
 | D-35 | 14/10/2026 | RF-02, RF-03 | Gestión de usuarios: contrato REST, reglas (nadie se desactiva ni se cambia el rol a sí mismo, contraseña de 8 caracteres), pantalla Usuarios y menú según el rol. Reemplaza la parte de menú de D-07. |
 | D-36 | 14/10/2026 | RF-12, RF-14 | `ms-clientas`: contrato REST de fichas y días de inactividad, reglas de D-28 en Java y conexión del front junto con `ms-lives`. |
 | D-37 | 14/10/2026 | RF-04 a RF-08, RF-05 (D-11) | `ms-lives`: contrato REST, anotación con clienta nueva en `ms-clientas`, Deshacer con borrado acotado de la clienta y conexión del front al terminar el cierre. |
+| D-38 | 17/10/2026 | RF-09 a RF-11, RF-13, D-28 | Cierre en `ms-lives`, historial de compras, renombrar entre servicios y front conectado a lives y clientas. |
 
 ## D-01 · Estilos con Tailwind CSS
 
@@ -392,3 +393,30 @@ Paso 5 de `docs/plan-backend.md`.
 - **Errores de ms-clientas:** un 4xx (dato inválido, sesión vencida, sin permiso) llega al front con su código y su mensaje. Si ms-clientas no responde, la respuesta es 503 "No se pudo consultar las clientas". A una clienta desactivada no se le crea una línea nueva (409).
 - **Entregas:** la tabla y el modelo ya existen, porque al unir líneas hay que mover y limpiar entregas (D-05, D-19). Registrarlas (RF-10) llega en el paso 6.
 - **El front sigue simulado:** conectar lives sin el cierre dejaría el modo real a medias. `sesionesService` y `clientasService` se conectan juntos al terminar el paso 6.
+
+## D-38 · Cierre en ms-lives y front conectado
+
+Paso 6 de `docs/plan-backend.md`.
+
+- **Contrato del cierre** (`ms-lives`, por el gateway):
+
+  ```
+  POST  /api/lives/{id}/terminar                       200 → Sesion (En cierre)
+  PATCH /api/lives/{id}/lineas/{lineaId}/bolsa         200 → Linea
+  PUT   /api/lives/{id}/lineas/{lineaId}/entrega       { tipo, direccion? }   200 → Entrega
+  PATCH /api/lives/{id}/lineas/{lineaId}/entrega       { entregaId }          200 → Entrega (sumarse a un despacho)
+  PUT   /api/lives/{id}/lineas/{lineaId}/no-pago       { noPago }             200 → Linea
+  POST  /api/lives/{id}/finalizar                      200 → Sesion (Cerrada)   409 con lo que falta
+  POST  /api/lives/{id}/reabrir                        solo Admin             200 → Sesion (En cierre)
+  GET   /api/lives/lineas?clientaId=                   200 → CompraClienta[] (sin clientaId, todas)
+  POST  /api/lives/clientas/{clientaId}/sincronizar-nombre                    204 (lo llama ms-clientas)
+  ```
+
+- **Reglas** iguales al `sesionesService` simulado (D-25 a D-27). `RevisionCierre` repite las reglas de `revisarCierre`, con prueba unitaria: bolsas sin revisar, líneas Pendientes y Pagadas sin entrega. Las líneas de $0 quedan fuera de pago y entrega. Los mensajes de error son los mismos del front.
+- **Dirección del despacho:** ms-lives la guarda en la ficha con `PUT /api/clientas/{id}/direccion` (nuevo en ms-clientas) antes de tocar su base. Si ms-clientas falla, no se guarda nada y se muestra el error. Si en cambio falla después la base de ms-lives, la ficha ya tiene la dirección nueva y la entrega no; reintentar la deja igual, así que se aceptó.
+- **Renombrar (D-28):** cada vez que se guarda una ficha, ms-clientas avisa a ms-lives una vez confirmada su transacción. ms-lives lee el nombre de la ficha (no lo recibe de quien llama, así nadie puede poner otro) y lo copia solo en las líneas que tienen otro nombre, avanzando su versión para que un cambio simultáneo no lo pise. Si ms-lives no responde, la ficha queda guardada, se deja un aviso en el log y volver a guardar la ficha lo repara. Las llamadas entre servicios esperan como máximo 2 s para conectar y 5 s para responder.
+- **Reabrir:** el rol de Admin se toma del JWT, como desactivar clientas en ms-clientas (D-36).
+- **Front:** con `VITE_API_URL`, `sesionesService` y `clientasService` llaman a la API a través de `pedirConSesion` (en `usuariosService`, agrega el token). Sin la variable, siguen con los datos simulados. `deshacerAnotacion` ahora recibe también el id del live. `usuarioConectado()` ya no lee la sesión guardada en modo API, porque nada en ese modo lo usa.
+- **Ranking e inactivas (hasta el paso 7):** con la API se calculan en el front, con las mismas funciones de `utils/clientas.ts`, sobre las fichas de ms-clientas, las compras de `GET /api/lives/lineas` y los días configurados. Funcionan, pero traen todo el historial. `ultimaCompra` (D-15) todavía no viene de ms-clientas, así que las sugerencias al anotar no se ordenan por compra reciente en el modo real.
+- **Anotar seguido:** con la API, guardar una anotación tarda unos milisegundos. Si en ese tiempo ya escribieron la siguiente, el campo ya no la borra al terminar (`CampoAnotacion`); solo se limpia si el texto sigue siendo el enviado.
+- **Prueba de punta a punta:** con MySQL, los cuatro servicios y el front en modo API, se recorrió en Chromium a 360 px un live completo: abrir, anotar clientas nuevas, Deshacer (borró la clienta en ms-clientas), pagar, terminar, bolsas, despacho con dirección, No pagó y cerrar. Después se revisaron la ficha (dirección e historial), Estadísticas y el renombre en las líneas. Sin errores.

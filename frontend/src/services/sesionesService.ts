@@ -16,9 +16,10 @@ import { revisarCierre } from '../utils/cierre';
 import { normalizarDireccion } from '../utils/clientas';
 import { totalesDeLineas } from '../utils/montos';
 import { clientas, entregas, lineas, nuevoId, sesiones } from './mock/datos';
-import { usuarioConectado } from './usuariosService';
+import { urlApi } from './api';
+import { pedirConSesion, usuarioConectado } from './usuariosService';
 
-// Simulado en memoria. Con backend:
+// Con VITE_API_URL, cada función llama a ms-lives por el gateway (D-37, D-38); sin ella, datos simulados en memoria.
 //   GET    /api/lives                          listarSesiones
 //   POST   /api/lives                          abrirSesion
 //   GET    /api/lives/{id}                     obtenerSesion
@@ -30,15 +31,19 @@ import { usuarioConectado } from './usuariosService';
 //   POST   /api/lives/{id}/terminar                     terminarSesion
 //   PATCH  /api/lives/{id}/lineas/{lid}/bolsa           alternarBolsa
 //   PUT    /api/lives/{id}/lineas/{lid}/entrega         registrarEntrega
-//   PATCH  /api/lives/{id}/lineas/{lid}/entrega         agruparEntrega
-//   PUT    /api/lives/{id}/lineas/{lid}/no-pago         marcarNoPago
+//   PATCH  /api/lives/{id}/lineas/{lid}/entrega         agruparEntrega { entregaId }
+//   PUT    /api/lives/{id}/lineas/{lid}/no-pago         marcarNoPago { noPago }
 //   POST   /api/lives/{id}/finalizar                    finalizarCierre
 //   POST   /api/lives/{id}/reabrir                      reabrirSesion
 //   GET    /api/lives/lineas?clientaId={cid}           historialDeClienta
 //   GET    /api/lives/lineas                           listarCompras
 
+const ruta = encodeURIComponent;
+const rutaLinea = (sesionId: string, lineaId: string) => `/api/lives/${ruta(sesionId)}/lineas/${ruta(lineaId)}`;
+
 /** RF-04: cada live con sus totales, calculados desde las prendas vigentes (como hará ms-lives). */
 export async function listarSesiones(): Promise<SesionResumen[]> {
+  if (urlApi()) return pedirConSesion('/api/lives');
   return sesiones.map((sesion) => {
     const { total, pagado, clientas: numero } = totalesDeLineas(lineas.filter((l) => l.sesionId === sesion.id));
     return { ...structuredClone(sesion), clientas: numero, total, totalPagado: pagado };
@@ -47,6 +52,7 @@ export async function listarSesiones(): Promise<SesionResumen[]> {
 
 /** RF-04: abre un live nuevo. Solo puede haber uno Abierto; uno En cierre no bloquea. */
 export async function abrirSesion(nombre?: string): Promise<Sesion> {
+  if (urlApi()) return pedirConSesion('/api/lives', { metodo: 'POST', cuerpo: { nombre } });
   if (sesiones.some((s) => s.estado === 'ABIERTA')) {
     throw new Error('Ya hay un live abierto. Continúa en él o termínalo antes de abrir otro.');
   }
@@ -57,6 +63,7 @@ export async function abrirSesion(nombre?: string): Promise<Sesion> {
 }
 
 export async function obtenerSesion(id: string): Promise<SesionDetalle> {
+  if (urlApi()) return pedirConSesion(`/api/lives/${ruta(id)}`);
   const sesion = sesiones.find((s) => s.id === id);
   if (!sesion) {
     throw new Error('Live no encontrado');
@@ -118,6 +125,7 @@ const precioValido = (p: MontoClp) => Number.isInteger(p) && p >= 1000 && p <= 9
  * Valida todo antes de modificar, para que la anotación se guarde completa o no se guarde (RNF-12).
  */
 export async function anotar(sesionId: string, destino: DestinoAnotacion, precios: MontoClp[]): Promise<ResultadoAnotar> {
+  if (urlApi()) return pedirConSesion(`/api/lives/${ruta(sesionId)}/anotaciones`, { metodo: 'POST', cuerpo: { destino, precios } });
   const sesion = sesiones.find((s) => s.id === sesionId);
   if (!sesion) throw new Error('Live no encontrado');
   if (sesion.estado !== 'ABIERTA') throw new Error('El live no está abierto; no se puede anotar.');
@@ -165,7 +173,8 @@ export async function anotar(sesionId: string, destino: DestinoAnotacion, precio
 }
 
 /** D-11: elimina lo que creó la anotación (prendas, y la línea y la clienta si eran nuevas). */
-export async function deshacerAnotacion(anotacionId: string): Promise<void> {
+export async function deshacerAnotacion(sesionId: string, anotacionId: string): Promise<void> {
+  if (urlApi()) return pedirConSesion(`/api/lives/${ruta(sesionId)}/anotaciones/${ruta(anotacionId)}`, { metodo: 'DELETE' });
   const anotacion = anotaciones.get(anotacionId);
   if (!anotacion) throw new Error('La anotación ya no se puede deshacer.');
   anotaciones.delete(anotacionId);
@@ -205,6 +214,7 @@ function lineaEditable(sesionId: string, lineaId: string): Linea {
 
 /** RF-06: cancela una prenda vigente o restaura una cancelada. Nunca se borra ni reordena la hoja (D-18). */
 export async function alternarPrenda(sesionId: string, lineaId: string, prendaId: string): Promise<Linea> {
+  if (urlApi()) return pedirConSesion(`${rutaLinea(sesionId, lineaId)}/prendas/${ruta(prendaId)}`, { metodo: 'PATCH' });
   const linea = lineaEditable(sesionId, lineaId);
   const prenda = linea.prendas.find((p) => p.id === prendaId);
   if (!prenda) throw new Error('Prenda no encontrada');
@@ -217,6 +227,7 @@ export async function alternarPrenda(sesionId: string, lineaId: string, prendaId
 
 /** RF-07: pasa la línea de Pendiente a Pagado o al revés. No reordena la hoja (D-21). */
 export async function alternarPago(sesionId: string, lineaId: string): Promise<Linea> {
+  if (urlApi()) return pedirConSesion(`${rutaLinea(sesionId, lineaId)}/pago`, { metodo: 'PATCH' });
   const linea = lineaEditable(sesionId, lineaId);
   if (linea.estadoPago === 'NO_PAGO') throw new Error('"No pagó" se revisa en el cierre del live.');
   anularDeshacer(linea.id);
@@ -229,6 +240,7 @@ export async function alternarPago(sesionId: string, lineaId: string): Promise<L
  * une ambas con las reglas de D-19 y devuelve la línea resultante.
  */
 export async function cambiarClienta(sesionId: string, lineaId: string, destino: DestinoAnotacion): Promise<Linea> {
+  if (urlApi()) return pedirConSesion(`${rutaLinea(sesionId, lineaId)}/clienta`, { metodo: 'PATCH', cuerpo: destino });
   const linea = lineaEditable(sesionId, lineaId);
   if ('clientaId' in destino && destino.clientaId === linea.clientaId) return structuredClone(linea);
 
@@ -257,6 +269,7 @@ export async function cambiarClienta(sesionId: string, lineaId: string, destino:
 
 /** RF-09: termina el live. Pasa de Abierta a En cierre; desde ahí se puede abrir otro live. */
 export async function terminarSesion(sesionId: string): Promise<Sesion> {
+  if (urlApi()) return pedirConSesion(`/api/lives/${ruta(sesionId)}/terminar`, { metodo: 'POST' });
   const sesion = sesiones.find((s) => s.id === sesionId);
   if (!sesion) throw new Error('Live no encontrado');
   if (sesion.estado !== 'ABIERTA') throw new Error('Solo se puede terminar un live abierto.');
@@ -266,6 +279,7 @@ export async function terminarSesion(sesionId: string): Promise<Sesion> {
 
 /** RF-09: marca o desmarca la bolsa revisada. Solo En cierre (D-25); no reordena la hoja. */
 export async function alternarBolsa(sesionId: string, lineaId: string): Promise<Linea> {
+  if (urlApi()) return pedirConSesion(`${rutaLinea(sesionId, lineaId)}/bolsa`, { metodo: 'PATCH' });
   const sesion = sesiones.find((s) => s.id === sesionId);
   if (sesion?.estado !== 'EN_CIERRE') throw new Error('Las bolsas se revisan en el cierre del live.');
   const linea = lineaEditable(sesionId, lineaId);
@@ -306,6 +320,7 @@ function quitarEntregasVacias(sesionId: string): void {
  * No reordena la hoja.
  */
 export async function registrarEntrega(sesionId: string, lineaId: string, datos: DatosEntrega): Promise<Entrega> {
+  if (urlApi()) return pedirConSesion(`${rutaLinea(sesionId, lineaId)}/entrega`, { metodo: 'PUT', cuerpo: datos });
   const linea = lineaEnCierre(sesionId, lineaId);
   const direccion = datos.tipo === 'DESPACHO' ? direccionValida(datos.direccion) : undefined;
 
@@ -333,6 +348,7 @@ export async function registrarEntrega(sesionId: string, lineaId: string, datos:
 
 /** RF-10: suma la clienta al despacho de otra del mismo live (ej: hermanas). Cada una conserva su línea. */
 export async function agruparEntrega(sesionId: string, lineaId: string, entregaId: string): Promise<Entrega> {
+  if (urlApi()) return pedirConSesion(`${rutaLinea(sesionId, lineaId)}/entrega`, { metodo: 'PATCH', cuerpo: { entregaId } });
   const linea = lineaEnCierre(sesionId, lineaId);
   const entrega = entregas.find((e) => e.id === entregaId && e.sesionId === sesionId);
   if (!entrega) throw new Error('Entrega no encontrada');
@@ -347,6 +363,7 @@ export async function agruparEntrega(sesionId: string, lineaId: string, entregaI
  * Fija el estado en vez de alternarlo: repetir la llamada (doble toque) no la deshace. Solo En cierre.
  */
 export async function marcarNoPago(sesionId: string, lineaId: string, noPago: boolean): Promise<Linea> {
+  if (urlApi()) return pedirConSesion(`${rutaLinea(sesionId, lineaId)}/no-pago`, { metodo: 'PUT', cuerpo: { noPago } });
   const sesion = sesiones.find((s) => s.id === sesionId);
   if (sesion?.estado !== 'EN_CIERRE') throw new Error('"No pagó" se marca en el cierre del live.');
   const linea = lineaEditable(sesionId, lineaId);
@@ -361,6 +378,7 @@ export async function marcarNoPago(sesionId: string, lineaId: string, noPago: bo
  * Con backend, la validación y el cambio de estado van en una transacción.
  */
 export async function finalizarCierre(sesionId: string): Promise<Sesion> {
+  if (urlApi()) return pedirConSesion(`/api/lives/${ruta(sesionId)}/finalizar`, { metodo: 'POST' });
   const sesion = sesiones.find((s) => s.id === sesionId);
   if (sesion?.estado !== 'EN_CIERRE') throw new Error('Solo se finaliza un live En cierre.');
   const delLive = lineas.filter((l) => l.sesionId === sesionId);
@@ -374,6 +392,7 @@ export async function finalizarCierre(sesionId: string): Promise<Sesion> {
 
 /** RF-11: solo la administradora reabre un live Cerrado; vuelve a En cierre. */
 export async function reabrirSesion(sesionId: string): Promise<Sesion> {
+  if (urlApi()) return pedirConSesion(`/api/lives/${ruta(sesionId)}/reabrir`, { metodo: 'POST' });
   // Simulado: con backend, el rol sale del JWT.
   if (usuarioConectado()?.rol !== 'ADMIN') throw new Error('Solo un administrador puede reabrir un live.');
   const sesion = sesiones.find((s) => s.id === sesionId);
@@ -384,11 +403,13 @@ export async function reabrirSesion(sesionId: string): Promise<Sesion> {
 
 /** RF-13: las líneas de una clienta en todos los lives, con su live y su entrega. El más reciente primero. */
 export async function historialDeClienta(clientaId: string): Promise<CompraClienta[]> {
+  if (urlApi()) return pedirConSesion(`/api/lives/lineas?clientaId=${ruta(clientaId)}`);
   return comprasDe(lineas.filter((l) => l.clientaId === clientaId));
 }
 
 /** RF-14: las líneas de todas las clientas, para el ranking y las inactivas (las consulta ms-clientas). */
 export async function listarCompras(): Promise<CompraClienta[]> {
+  if (urlApi()) return pedirConSesion('/api/lives/lineas');
   return comprasDe(lineas);
 }
 

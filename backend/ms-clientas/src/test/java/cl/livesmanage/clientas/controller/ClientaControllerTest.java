@@ -1,5 +1,8 @@
 package cl.livesmanage.clientas.controller;
 
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -24,7 +27,9 @@ import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
+import cl.livesmanage.clientas.cliente.LivesCliente;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
@@ -40,6 +45,9 @@ class ClientaControllerTest {
 
     @Autowired
     private MockMvc mvc;
+
+    @MockitoBean
+    private LivesCliente lives;
 
     private static String token(String rol) {
         var encoder = new NimbusJwtEncoder(new ImmutableSecret<>(new SecretKeySpec(SECRETO.getBytes(StandardCharsets.UTF_8), "HmacSHA256")));
@@ -183,6 +191,31 @@ class ClientaControllerTest {
         mvc.perform(get("/api/clientas/no-existe").header("Authorization", VENDEDORA))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.mensaje").value("La clienta no existe."));
+    }
+
+    @Test
+    void editarAvisaAMsLivesDespuesDeGuardar() throws Exception {
+        String id = idDe(crear(VENDEDORA, "{\"nombre\":\"Flo\"}"));
+        verify(lives, never()).sincronizarNombre(anyString()); // crear no: aún no tiene líneas
+
+        mvc.perform(put("/api/clientas/" + id).header("Authorization", VENDEDORA).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"nombre\":\"Florencia  Ruiz\"}")).andExpect(status().isOk()).andExpect(jsonPath("$.nombre").value("Florencia Ruiz"));
+        verify(lives).sincronizarNombre(id);
+    }
+
+    @Test
+    void elDespachoGuardaLaDireccionEnLaFicha() throws Exception {
+        String id = idDe(crear(VENDEDORA, "{\"nombre\":\"Gabi\"}"));
+
+        mvc.perform(put("/api/clientas/" + id + "/direccion").header("Authorization", VENDEDORA).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"calle\":\"Los Aromos 1234\",\"comuna\":\"Maipú\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nombre").value("Gabi"))
+                .andExpect(jsonPath("$.direccion.comuna").value("Maipú"))
+                .andExpect(jsonPath("$.direccion.region").value("Metropolitana"));
+        mvc.perform(put("/api/clientas/" + id + "/direccion").header("Authorization", VENDEDORA).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"calle\":\"Los Aromos 1234\"}"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

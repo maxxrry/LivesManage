@@ -55,6 +55,11 @@ export function usuarioDeLaSesion(): Usuario | null {
   return sesionGuardada()?.usuario ?? null;
 }
 
+/** Llamada a la API con el token de la sesión (para los demás servicios). Un 401 vuelve al login (D-34). */
+export function pedirConSesion<T>(ruta: string, opciones: { metodo?: string; cuerpo?: unknown } = {}): Promise<T> {
+  return pedirApi<T>(ruta, { ...opciones, token: tokenActual() });
+}
+
 /** Token para el header Authorization: Bearer de las llamadas a la API. */
 export function tokenActual(): string | undefined {
   return sesionGuardada()?.token;
@@ -65,8 +70,6 @@ export function tokenActual(): string | undefined {
  * Con backend sobra: cada microservicio lo saca del JWT.
  */
 export function usuarioConectado(): Usuario | undefined {
-  // shortcut: con login real, los servicios aún simulados usan el usuario guardado; se borra al conectar ms-lives y ms-clientas.
-  if (urlApi()) return usuarioDeLaSesion() ?? undefined;
   const id = usuarioDeLaSesion()?.id;
   return usuarios.find((u) => u.id === id && u.activo);
 }
@@ -76,7 +79,7 @@ export async function usuarioActual(): Promise<Usuario> {
   let usuario: Usuario | undefined;
   if (urlApi()) {
     // Un 401 (token vencido o usuario desactivado) lo maneja pedirApi: borra la sesión y vuelve al login.
-    usuario = await pedirApi<Usuario>('/api/auth/yo', { token: tokenActual() });
+    usuario = await pedirConSesion<Usuario>('/api/auth/yo');
   } else {
     usuario = structuredClone(usuarioConectado());
     if (!usuario) throw new Error('No hay una sesión iniciada.');
@@ -128,14 +131,14 @@ function buscarUsuario(id: string): Usuario {
 
 /** RF-03: todos los usuarios, por nombre. */
 export async function listarUsuarios(): Promise<Usuario[]> {
-  if (urlApi()) return pedirApi<Usuario[]>('/api/usuarios', { token: tokenActual() });
+  if (urlApi()) return pedirConSesion<Usuario[]>('/api/usuarios');
   exigirAdmin();
   return structuredClone([...usuarios].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')));
 }
 
 /** RF-03: crea un usuario activo con su contraseña inicial. Un correo repetido se rechaza. */
 export async function crearUsuario(datos: NuevoUsuario): Promise<Usuario> {
-  if (urlApi()) return pedirApi<Usuario>('/api/usuarios', { metodo: 'POST', cuerpo: datos, token: tokenActual() });
+  if (urlApi()) return pedirConSesion<Usuario>('/api/usuarios', { metodo: 'POST', cuerpo: datos });
   exigirAdmin();
   const limpios = datosLimpios(datos);
   if (datos.contrasena.length < 8) throw new Error('La contraseña debe tener al menos 8 caracteres.');
@@ -148,7 +151,7 @@ export async function crearUsuario(datos: NuevoUsuario): Promise<Usuario> {
 
 /** RF-03: edita nombre, correo y rol. Nadie se cambia su propio rol (D-35). */
 export async function editarUsuario(id: string, datos: DatosUsuario): Promise<Usuario> {
-  if (urlApi()) return pedirApi<Usuario>(`/api/usuarios/${encodeURIComponent(id)}`, { metodo: 'PUT', cuerpo: datos, token: tokenActual() });
+  if (urlApi()) return pedirConSesion<Usuario>(`/api/usuarios/${encodeURIComponent(id)}`, { metodo: 'PUT', cuerpo: datos });
   const actual = exigirAdmin();
   const usuario = buscarUsuario(id);
   const limpios = datosLimpios(datos, id);
@@ -165,7 +168,7 @@ export async function editarUsuario(id: string, datos: DatosUsuario): Promise<Us
 /** RF-03: desactivar (baja lógica) o reactivar. Nadie se desactiva a sí mismo (D-35). */
 export async function cambiarActivoUsuario(id: string, activo: boolean): Promise<Usuario> {
   if (urlApi()) {
-    return pedirApi<Usuario>(`/api/usuarios/${encodeURIComponent(id)}/activo`, { metodo: 'PATCH', cuerpo: { activo }, token: tokenActual() });
+    return pedirConSesion<Usuario>(`/api/usuarios/${encodeURIComponent(id)}/activo`, { metodo: 'PATCH', cuerpo: { activo } });
   }
   const actual = exigirAdmin();
   const usuario = buscarUsuario(id);

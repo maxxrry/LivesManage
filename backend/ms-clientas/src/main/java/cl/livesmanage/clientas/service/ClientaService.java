@@ -1,5 +1,6 @@
 package cl.livesmanage.clientas.service;
 
+import cl.livesmanage.clientas.cliente.LivesCliente;
 import cl.livesmanage.clientas.dto.ClientaDto;
 import cl.livesmanage.clientas.dto.DatosClienta;
 import cl.livesmanage.clientas.dto.DireccionDto;
@@ -20,6 +21,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /** RF-12: fichas de clientas, con las reglas de D-28. Desactivar y los días de inactividad son solo de la Admin (SeguridadConfig). */
 @Slf4j
@@ -35,6 +38,7 @@ public class ClientaService {
 
     private final ClientaRepository clientas;
     private final ConfiguracionRepository configuracion;
+    private final LivesCliente lives;
 
     @Transactional(readOnly = true)
     public List<ClientaDto> listar() {
@@ -58,14 +62,23 @@ public class ClientaService {
     }
 
     /**
-     * Un campo vacío se borra.
-     * shortcut: al renombrar falta avisar a ms-lives para actualizar la copia del nombre en las líneas (D-28); se agrega con ms-lives.
+     * Un campo vacío se borra. Después de guardar, ms-lives iguala el nombre en las líneas (D-28); se avisa en cada edición
+     * (solo cambia las líneas con otro nombre), así volver a guardar repara un aviso que falló.
      */
     @Transactional
     public ClientaDto editar(String id, DatosClienta datos) {
         Clienta clienta = buscar(id);
         aplicar(clienta, datos);
+        alConfirmar(() -> lives.sincronizarNombre(id)); // solo si la ficha quedó guardada
         log.info("Clienta {} editada", id);
+        return ClientaDto.de(clienta);
+    }
+
+    /** RF-10 y D-26: la dirección de un despacho reemplaza la de la ficha (una sola, sin historial). */
+    @Transactional
+    public ClientaDto guardarDireccion(String id, DireccionDto direccion) {
+        Clienta clienta = buscar(id);
+        clienta.setDireccion(direccion(direccion));
         return ClientaDto.de(clienta);
     }
 
@@ -121,12 +134,28 @@ public class ClientaService {
         clienta.setUsuarioTiktok(Normalizar.tiktok(datos.usuarioTiktok()));
         clienta.setTelefono(Normalizar.recortar(datos.telefono()));
         clienta.setTelefonoDigitos(Normalizar.digitosTelefono(datos.telefono()));
-        DireccionDto d = datos.direccion();
-        clienta.setDireccion(d == null ? null : new Direccion(
+        clienta.setDireccion(datos.direccion() == null ? null : direccion(datos.direccion()));
+    }
+
+    private static Direccion direccion(DireccionDto d) {
+        return new Direccion(
                 Normalizar.recortar(d.calle()),
                 Normalizar.recortar(d.comuna()),
                 Objects.requireNonNullElse(Normalizar.recortar(d.region()), DireccionDto.REGION_POR_DEFECTO),
-                Normalizar.recortar(d.referencia())));
+                Normalizar.recortar(d.referencia()));
+    }
+
+    private static void alConfirmar(Runnable accion) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            accion.run(); // sin transacción (pruebas unitarias): no hay nada que esperar
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                accion.run();
+            }
+        });
     }
 
     private Clienta buscar(String id) {

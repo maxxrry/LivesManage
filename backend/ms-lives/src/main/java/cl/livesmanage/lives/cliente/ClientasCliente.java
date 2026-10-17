@@ -1,11 +1,14 @@
 package cl.livesmanage.lives.cliente;
 
+import cl.livesmanage.lives.dto.DireccionDto;
 import cl.livesmanage.lives.exception.ReglaException;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import java.time.Duration;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
@@ -28,7 +31,10 @@ public class ClientasCliente {
     private final RestClient http;
 
     public ClientasCliente(@Value("${livesmanage.clientas-url}") String url) {
-        this.http = RestClient.builder().baseUrl(url).build();
+        var tiempos = new SimpleClientHttpRequestFactory();
+        tiempos.setConnectTimeout(Duration.ofSeconds(2));
+        tiempos.setReadTimeout(Duration.ofSeconds(5)); // que un servicio colgado no deje la pantalla esperando
+        this.http = RestClient.builder().baseUrl(url).requestFactory(tiempos).build();
     }
 
     public ClientaRef obtener(String id) {
@@ -47,6 +53,18 @@ public class ClientasCliente {
         try {
             return http.post().uri("/api/clientas").header("Authorization", bearer())
                     .body(Map.of("nombre", nombre)).retrieve().body(ClientaRef.class);
+        } catch (HttpClientErrorException e) {
+            throw comoRegla(e);
+        } catch (RestClientException e) {
+            throw sinConexion(e);
+        }
+    }
+
+    /** RF-10 y D-26: la dirección de un despacho queda en la ficha de la clienta. */
+    public void guardarDireccion(String clientaId, DireccionDto direccion) {
+        try {
+            http.put().uri("/api/clientas/{id}/direccion", clientaId).header("Authorization", bearer())
+                    .body(direccion).retrieve().toBodilessEntity();
         } catch (HttpClientErrorException e) {
             throw comoRegla(e);
         } catch (RestClientException e) {

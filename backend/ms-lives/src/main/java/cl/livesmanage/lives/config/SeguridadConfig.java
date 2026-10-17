@@ -7,6 +7,7 @@ import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
@@ -53,6 +54,8 @@ public class SeguridadConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(a -> a
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/error").permitAll()
+                        // shortcut: el rol sale del JWT (hasta 8 h), como en ms-clientas; revisarlo en ms-auth si hiciera falta.
+                        .requestMatchers(HttpMethod.POST, "/api/lives/*/reabrir").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(o -> o
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(convertidor))

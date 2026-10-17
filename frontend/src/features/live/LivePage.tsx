@@ -60,7 +60,7 @@ export function LivePage() {
   async function alDeshacer() {
     if (!aviso) return;
     setAviso(null);
-    await ejecutar(() => deshacerAnotacion(aviso.anotacionId), 'No se pudo deshacer la anotación.');
+    await ejecutar(() => deshacerAnotacion(id, aviso.anotacionId), 'No se pudo deshacer la anotación.');
   }
 
   // Un cambio en la línea recién anotada anula su Deshacer (D-22): el aviso se cierra.

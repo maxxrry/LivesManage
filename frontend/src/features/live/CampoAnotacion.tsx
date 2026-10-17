@@ -38,7 +38,8 @@ export function CampoAnotacion({ clientas, idsConLinea, onAnotar }: CampoAnotaci
     setError('');
     try {
       await onAnotar(destino, resultado.precios);
-      setTexto('');
+      // Si mientras se guardaba ya escribieron la siguiente anotación, no se borra.
+      setTexto((actual) => (actual === texto ? '' : actual));
       setResaltada(0);
     } catch (e) {
       setError(`No se guardó la anotación. ${e instanceof Error ? e.message : ''}`.trim());

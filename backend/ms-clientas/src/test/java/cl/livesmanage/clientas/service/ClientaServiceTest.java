@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import cl.livesmanage.clientas.cliente.LivesCliente;
 import cl.livesmanage.clientas.dto.ClientaDto;
 import cl.livesmanage.clientas.dto.DatosClienta;
 import cl.livesmanage.clientas.dto.DireccionDto;
@@ -29,6 +30,9 @@ import org.springframework.http.HttpStatus;
 class ClientaServiceTest {
 
     @Mock
+    private LivesCliente lives;
+
+    @Mock
     private ClientaRepository clientas;
 
     @Mock
@@ -39,7 +43,7 @@ class ClientaServiceTest {
 
     @BeforeEach
     void preparar() {
-        servicio = new ClientaService(clientas, configuracion);
+        servicio = new ClientaService(clientas, configuracion, lives);
         gabriela = new Clienta();
         gabriela.setId("c-1");
         gabriela.setNombre("Gabriela Peña");

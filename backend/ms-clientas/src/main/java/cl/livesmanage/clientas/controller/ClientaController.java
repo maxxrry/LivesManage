@@ -4,6 +4,7 @@ import cl.livesmanage.clientas.dto.CambioActiva;
 import cl.livesmanage.clientas.dto.ClientaDto;
 import cl.livesmanage.clientas.dto.DatosClienta;
 import cl.livesmanage.clientas.dto.DiasInactividad;
+import cl.livesmanage.clientas.dto.DireccionDto;
 import cl.livesmanage.clientas.dto.Duplicados;
 import cl.livesmanage.clientas.service.ClientaService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -62,6 +63,12 @@ public class ClientaController {
     @PutMapping("/api/clientas/{id}")
     public ResponseEntity<ClientaDto> editar(@PathVariable String id, @Valid @RequestBody DatosClienta datos) {
         return ResponseEntity.ok(servicio.editar(id, datos));
+    }
+
+    @Operation(summary = "Guardar la dirección de un despacho en la ficha (RF-10; lo llama ms-lives)")
+    @PutMapping("/api/clientas/{id}/direccion")
+    public ResponseEntity<ClientaDto> guardarDireccion(@PathVariable String id, @Valid @RequestBody DireccionDto direccion) {
+        return ResponseEntity.ok(servicio.guardarDireccion(id, direccion));
     }
 
     @Operation(summary = "Borrar una clienta recién creada (Deshacer de una anotación, D-11)",

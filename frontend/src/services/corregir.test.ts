@@ -107,6 +107,6 @@ describe('cambiarClienta (RF-06)', () => {
   it('después de cambiar la clienta, la última anotación ya no se puede deshacer (D-19)', async () => {
     const { anotacionId } = await anotar('s-2', { clientaId: 'c-1' }, [3000]);
     await cambiarClienta('s-2', 'l-4', { clientaId: 'c-6' });
-    await expect(deshacerAnotacion(anotacionId)).rejects.toThrow('ya no se puede deshacer');
+    await expect(deshacerAnotacion('s-2', anotacionId)).rejects.toThrow('ya no se puede deshacer');
   });
 });

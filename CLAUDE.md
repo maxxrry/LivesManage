@@ -8,7 +8,7 @@ Proyecto del ramo Desarrollo FullStack 2 (Duoc UC) y para un cliente real.
 
 ## Estado actual
 
-- Fase: backend en construcción según `docs/plan-backend.md` (un paso por sesión). El frontend sigue con datos simulados hasta conectar cada servicio.
+- Fase: backend en construcción según `docs/plan-backend.md` (un paso por sesión). El frontend funciona con el backend real (`VITE_API_URL`) o con datos simulados (pruebas y GitHub Pages).
 - Hecho: base del frontend (Vite + React + TS 6, Tailwind 4, React Router, Vitest, Playwright en Chromium 360×740). Tipos del dominio en `src/types/` (textos visibles solo en `etiquetas.ts`), servicios simulados en `src/services/` (live Abierto con 5 líneas, live Cerrado, usuario ADMIN), router con pantallas vacías de 3.1.1 y layout con menú.
 - Hecho: RF-05. Parser (`features/live/parseAnotacion.ts`), sugerencias, `anotar()`/`deshacerAnotacion()` simulados, pantalla de live con total del live, hoja en formato cuaderno y aviso con Deshacer. Cobertura con `npm run coverage`. Guía de pruebas en `docs/pruebas.md`.
 - Hecho: RF-04. Lista de lives con fecha, estado, clientas, total y pagado (`SesionResumen`, totales calculados por el servicio), abrir live con nombre opcional y "Continuar" si ya hay uno Abierto.
@@ -31,8 +31,9 @@ Proyecto del ramo Desarrollo FullStack 2 (Duoc UC) y para un cliente real.
 - Hecho: backend paso 3. RF-03 en `ms-auth` (`/api/usuarios`: listar, crear, editar, activar/desactivar; solo Admin, 403 a la Vendedora) y pantalla Usuarios (`features/usuarios`, `FormularioUsuario`). Nadie se desactiva ni se cambia el rol a sí mismo. RF-02: entrada Usuarios con `soloAdmin` en `components/menu.ts` y aviso de sin permiso en `/usuarios` (D-35).
 - Hecho: backend paso 4, `ms-clientas` (:8083, base `livesmanage_clientas`): CRUD de fichas, duplicados, activar/desactivar (Admin por JWT) y días de inactividad; reglas de D-28 en `Normalizar`; ruta en el gateway. El front sigue simulado: `clientasService` se conecta junto con `ms-lives` (D-36).
 - Hecho: backend paso 5, `ms-lives` (:8082, base `livesmanage_lives`): RF-04 a RF-08 (`/api/lives`: listar con totales, abrir, detalle, anotar, deshacer, prenda, cambiar clienta con unión, pago). Un solo live Abierto garantizado por índice único; `Totales` igual a `totalesDeLineas`; anotación con clienta nueva vía `ClientasCliente` (RestClient, reenvía el JWT); Deshacer borra la clienta creada con `DELETE /api/clientas/{id}` (solo 10 min, D-37).
-- Decisiones D-01 a D-37 en `docs/decisiones.md`.
-- Siguiente: paso 6 de `docs/plan-backend.md` (cierre RF-09 a RF-11 en `ms-lives` y conectar `clientasService` y `sesionesService` en el front).
+- Hecho: backend paso 6. Cierre en `ms-lives` (terminar, bolsa, entrega con dirección a la ficha vía `PUT /api/clientas/{id}/direccion`, agrupar, No pagó, finalizar con `RevisionCierre`, reabrir solo Admin), historial `GET /api/lives/lineas` y renombrar (ms-clientas avisa a ms-lives tras confirmar). Front conectado: con `VITE_API_URL`, `sesionesService` y `clientasService` usan la API vía `pedirConSesion`; ranking e inactivas se calculan en el front con datos reales hasta el paso 7. Probado un live completo en Chromium contra MySQL (D-38).
+- Decisiones D-01 a D-38 en `docs/decisiones.md`.
+- Siguiente: paso 7 de `docs/plan-backend.md` (`ultimaCompra`, ranking e inactivas en `ms-clientas`; borrar solo clientas sin compras).
 
 ## Estructura
 

@@ -43,6 +43,24 @@ describe('Pantalla de live (RF-05)', () => {
     expect(campo).toHaveValue('');
   });
 
+  it('lo que se escribe mientras se guarda la anotación anterior no se borra', async () => {
+    let terminar: () => void = () => {};
+    vi.mocked(anotar).mockImplementationOnce(async (...args) => {
+      await new Promise<void>((listo) => (terminar = listo)); // la API tarda
+      const { anotar: real } = await vi.importActual<typeof import('../../services/sesionesService')>('../../services/sesionesService');
+      return real(...args);
+    });
+    const { usuario, campo } = await abrirLive();
+
+    await usuario.type(campo!, 'flo 6-4{Enter}');
+    await usuario.clear(campo!);
+    await usuario.type(campo!, 'ana 5');
+    terminar();
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Florencia Ruiz');
+    expect(campo).toHaveValue('ana 5');
+  });
+
   it('"flo 6-" muestra el error y conserva el texto', async () => {
     const { usuario, campo } = await abrirLive();
 

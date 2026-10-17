@@ -2,7 +2,10 @@ package cl.livesmanage.lives.service;
 
 import cl.livesmanage.lives.cliente.ClientasCliente;
 import cl.livesmanage.lives.cliente.ClientasCliente.ClientaRef;
+import cl.livesmanage.lives.dto.CompraClienta;
+import cl.livesmanage.lives.dto.DatosEntrega;
 import cl.livesmanage.lives.dto.Destino;
+import cl.livesmanage.lives.dto.DireccionDto;
 import cl.livesmanage.lives.dto.EntregaDto;
 import cl.livesmanage.lives.dto.LineaDto;
 import cl.livesmanage.lives.dto.NuevaAnotacion;
@@ -12,20 +15,25 @@ import cl.livesmanage.lives.dto.SesionDto;
 import cl.livesmanage.lives.dto.SesionResumenDto;
 import cl.livesmanage.lives.exception.ReglaException;
 import cl.livesmanage.lives.model.Anotacion;
+import cl.livesmanage.lives.model.Direccion;
+import cl.livesmanage.lives.model.Entrega;
 import cl.livesmanage.lives.model.EstadoPago;
 import cl.livesmanage.lives.model.EstadoPrenda;
 import cl.livesmanage.lives.model.EstadoSesion;
 import cl.livesmanage.lives.model.Linea;
 import cl.livesmanage.lives.model.Prenda;
 import cl.livesmanage.lives.model.Sesion;
+import cl.livesmanage.lives.model.TipoEntrega;
 import cl.livesmanage.lives.repository.AnotacionRepository;
 import cl.livesmanage.lives.repository.EntregaRepository;
 import cl.livesmanage.lives.repository.LineaRepository;
 import cl.livesmanage.lives.repository.SesionRepository;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.IntPredicate;
 import java.util.stream.Collectors;
@@ -51,6 +59,8 @@ public class LiveService {
     private final AnotacionRepository anotaciones;
     private final EntregaRepository entregas;
     private final ClientasCliente clientas;
+
+    static final String REGION_POR_DEFECTO = "Metropolitana";
 
     // RF-04
 
@@ -244,7 +254,159 @@ public class LiveService {
         return LineaDto.de(otra);
     }
 
+    // RF-09 a RF-11: cierre (D-25 a D-27)
+
+    /** Pasa el live de Abierta a En cierre; desde ahí se puede abrir otro live. */
+    @Transactional
+    public SesionDto terminar(String sesionId) {
+        Sesion sesion = buscarSesion(sesionId);
+        if (sesion.getEstado() != EstadoSesion.ABIERTA) {
+            throw new ReglaException(HttpStatus.CONFLICT, null, "Solo se puede terminar un live abierto.");
+        }
+        sesion.setEstado(EstadoSesion.EN_CIERRE);
+        log.info("Live {} terminado", sesionId);
+        return SesionDto.de(sesion);
+    }
+
+    /** Marca o desmarca la bolsa revisada. Solo En cierre (D-25); no reordena la hoja. */
+    @Transactional
+    public LineaDto alternarBolsa(String sesionId, String lineaId) {
+        Linea linea = lineaEnCierre(sesionId, lineaId, "Las bolsas se revisan en el cierre del live.");
+        linea.setBolsaRevisada(!linea.isBolsaRevisada());
+        return LineaDto.de(linea);
+    }
+
+    /**
+     * Registra la forma de entrega de una clienta. Despacho exige dirección, que queda en su ficha (D-26).
+     * Si la clienta compartía la entrega con otras, sale del grupo y las demás no cambian. No reordena la hoja.
+     */
+    @Transactional
+    public EntregaDto registrarEntrega(String sesionId, String lineaId, DatosEntrega datos) {
+        Linea linea = lineaEnCierre(sesionId, lineaId, "La entrega se registra en el cierre del live.");
+        Direccion direccion = null;
+        if (datos.tipo() == TipoEntrega.DESPACHO) {
+            if (datos.direccion() == null) throw new ReglaException(HttpStatus.BAD_REQUEST, "direccion", "El despacho necesita una dirección.");
+            DireccionDto d = datos.direccion();
+            direccion = new Direccion(d.calle().trim(), d.comuna().trim(),
+                    d.region() == null || d.region().isBlank() ? REGION_POR_DEFECTO : d.region().trim(),
+                    d.referencia() == null || d.referencia().isBlank() ? null : d.referencia().trim());
+            clientas.guardarDireccion(linea.getClientaId(), DireccionDto.de(direccion)); // primero: si falla, no se guarda nada
+        }
+
+        Entrega actual = linea.getEntregaId() == null ? null : entregas.findById(linea.getEntregaId()).orElse(null);
+        boolean compartida = actual != null && lineas.countByEntregaId(actual.getId()) > 1;
+        Entrega entrega = actual;
+        if (actual == null || compartida) {
+            entrega = new Entrega();
+            entrega.setSesionId(sesionId);
+        }
+        entrega.setTipo(datos.tipo());
+        entrega.setDireccion(direccion);
+        entrega = entregas.saveAndFlush(entrega);
+        linea.setEntregaId(entrega.getId());
+        return EntregaDto.de(entrega);
+    }
+
+    /** Suma la clienta al despacho de otra del mismo live (ej: hermanas). Cada una conserva su línea (RF-10). */
+    @Transactional
+    public EntregaDto agruparEntrega(String sesionId, String lineaId, String entregaId) {
+        Linea linea = lineaEnCierre(sesionId, lineaId, "La entrega se registra en el cierre del live.");
+        Entrega entrega = entregas.findByIdAndSesionId(entregaId, sesionId)
+                .orElseThrow(() -> new ReglaException(HttpStatus.NOT_FOUND, null, "La entrega no existe."));
+        if (entrega.getTipo() != TipoEntrega.DESPACHO) {
+            throw new ReglaException(HttpStatus.CONFLICT, null, "Solo se puede agrupar con un despacho.");
+        }
+        String anterior = linea.getEntregaId();
+        linea.setEntregaId(entrega.getId());
+        lineas.flush();
+        // La entrega que dejó pudo quedar sin líneas (D-05: no existe sin líneas).
+        if (anterior != null && !anterior.equals(entregaId) && !lineas.existsByEntregaId(anterior)) entregas.deleteById(anterior);
+        return EntregaDto.de(entrega);
+    }
+
+    /**
+     * Marca una línea Pendiente como No pagó, o la devuelve a Pendiente (si pagó después). Fija el estado en vez de
+     * alternarlo: repetir la llamada no lo deshace (D-27). Solo En cierre.
+     */
+    @Transactional
+    public LineaDto marcarNoPago(String sesionId, String lineaId, boolean noPago, String usuarioId) {
+        Linea linea = lineaEnCierre(sesionId, lineaId, "\"No pagó\" se marca en el cierre del live.");
+        if (linea.getEstadoPago() == EstadoPago.PAGADO) throw new ReglaException(HttpStatus.CONFLICT, null, "La línea está Pagada.");
+        EstadoPago estado = noPago ? EstadoPago.NO_PAGO : EstadoPago.PENDIENTE;
+        if (linea.getEstadoPago() != estado) linea.registrarPago(estado, usuarioId, Instant.now());
+        return LineaDto.de(linea);
+    }
+
+    /** Finaliza el cierre: valida las reglas de RevisionCierre y pasa a Cerrada, todo en una transacción (RNF-12). */
+    @Transactional
+    public SesionDto finalizar(String sesionId) {
+        Sesion sesion = buscarSesion(sesionId);
+        if (sesion.getEstado() != EstadoSesion.EN_CIERRE) {
+            throw new ReglaException(HttpStatus.CONFLICT, null, "Solo se finaliza un live En cierre.");
+        }
+        RevisionCierre falta = RevisionCierre.de(lineas.findBySesionId(sesionId), entregas.findBySesionId(sesionId));
+        if (falta.bolsas() > 0) throw new ReglaException(HttpStatus.CONFLICT, null, "Falta revisar " + falta.bolsas() + " bolsa(s).");
+        if (falta.pendientes() > 0) {
+            throw new ReglaException(HttpStatus.CONFLICT, null, "Hay " + falta.pendientes() + " línea(s) Pendiente(s): cóbralas o márcalas No pagó.");
+        }
+        if (falta.sinEntrega() > 0) {
+            throw new ReglaException(HttpStatus.CONFLICT, null, "Falta la forma de entrega de " + falta.sinEntrega() + " clienta(s) que pagaron.");
+        }
+        sesion.setEstado(EstadoSesion.CERRADA);
+        log.info("Live {} cerrado", sesionId);
+        return SesionDto.de(sesion);
+    }
+
+    /** Solo la Admin reabre un live Cerrado (la ruta lo exige); vuelve a En cierre con sus líneas tal como estaban. */
+    @Transactional
+    public SesionDto reabrir(String sesionId) {
+        Sesion sesion = buscarSesion(sesionId);
+        if (sesion.getEstado() != EstadoSesion.CERRADA) {
+            throw new ReglaException(HttpStatus.CONFLICT, null, "Solo se reabre un live Cerrado.");
+        }
+        sesion.setEstado(EstadoSesion.EN_CIERRE);
+        log.info("Live {} reabierto", sesionId);
+        return SesionDto.de(sesion);
+    }
+
+    // RF-13 y RF-14: historial de compras, y D-28: renombrar
+
+    /**
+     * Las líneas de una clienta (o de todas, sin clientaId) con su live y su entrega, el live más reciente primero.
+     * shortcut: sin clientaId trae todas las líneas; con años de lives, filtrar por período en la consulta.
+     */
+    @Transactional(readOnly = true)
+    public List<CompraClienta> compras(String clientaId) {
+        List<Linea> deLineas = clientaId == null ? lineas.findAll() : lineas.findByClientaId(clientaId);
+        Map<String, Sesion> porSesion = sesiones.findByIdIn(deLineas.stream().map(Linea::getSesionId).collect(Collectors.toSet())).stream()
+                .collect(Collectors.toMap(Sesion::getId, s -> s));
+        Map<String, Entrega> porEntrega = entregas.findAllById(deLineas.stream().map(Linea::getEntregaId).filter(Objects::nonNull).toList())
+                .stream().collect(Collectors.toMap(Entrega::getId, e -> e));
+        return deLineas.stream()
+                .filter(l -> porSesion.containsKey(l.getSesionId()))
+                .sorted(Comparator.comparing((Linea l) -> porSesion.get(l.getSesionId()).getInicio()).reversed())
+                .map(l -> new CompraClienta(SesionDto.de(porSesion.get(l.getSesionId())), LineaDto.de(l),
+                        Optional.ofNullable(porEntrega.get(l.getEntregaId())).map(EntregaDto::de).orElse(null)))
+                .toList();
+    }
+
+    /**
+     * ms-clientas avisa que la ficha cambió: la copia del nombre en las líneas se iguala a la de la ficha (D-03, D-28).
+     * El nombre se lee de ms-clientas, no lo manda quien llama: así nadie puede poner otro, y repetir la llamada repara.
+     */
+    @Transactional
+    public void sincronizarNombre(String clientaId) {
+        int cambiadas = lineas.renombrarClienta(clientaId, clientas.obtener(clientaId).nombre());
+        log.info("Clienta {} renombrada en {} línea(s)", clientaId, cambiadas);
+    }
+
     // Apoyo
+
+    /** Línea de un live En cierre: bolsas, entregas y No pagó solo existen ahí (D-25 a D-27). */
+    private Linea lineaEnCierre(String sesionId, String lineaId, String mensaje) {
+        if (buscarSesion(sesionId).getEstado() != EstadoSesion.EN_CIERRE) throw new ReglaException(HttpStatus.CONFLICT, null, mensaje);
+        return lineaEditable(sesionId, lineaId);
+    }
 
     /**
      * La clienta del destino. Si ya tiene línea en el live se usa su copia del nombre, sin llamar a ms-clientas (D-03).

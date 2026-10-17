@@ -9,7 +9,7 @@ Proyecto del ramo Desarrollo FullStack 2 (Duoc UC), para un cliente real.
 | Parte | Estado |
 | --- | --- |
 | Frontend (React) | En desarrollo, con **datos simulados en memoria**: cada recarga de página vuelve a los datos iniciales. |
-| Backend (Spring Boot, microservicios) | En construcción: `ms-auth` (login, JWT y usuarios), `api-gateway`, `ms-clientas` y `ms-lives` (lives, anotación, correcciones y pagos) listos; el login y Usuarios del front ya pueden usarlos. Plan completo en [docs/plan-backend.md](docs/plan-backend.md). |
+| Backend (Spring Boot, microservicios) | En construcción: `ms-auth` (login, JWT y usuarios), `api-gateway`, `ms-clientas` y `ms-lives` (lives, anotación, cierre) listos; todo el front puede usarlos. el login y Usuarios del front ya pueden usarlos. Plan completo en [docs/plan-backend.md](docs/plan-backend.md). |
 
 Requisitos implementados en el frontend: RF-01 a RF-03 (login, acceso por rol y usuarios; con backend real o simulado) y RF-04 a RF-14 (lives, pantalla de live, cierre, clientas, ficha, ranking e inactivas). El detalle está en [docs/ERS.md](docs/ERS.md) y en la sección "Estado actual" de [CLAUDE.md](CLAUDE.md).
 
@@ -73,11 +73,11 @@ cp .env.example .env     # completar los valores; el .env nunca se sube
 
 `ms-auth` corre en http://localhost:8081 y su Swagger está en http://localhost:8081/swagger-ui.html. La primera vez crea la Admin definida en `ADMIN_CORREO` y `ADMIN_CONTRASENA`.
 
-`ms-clientas` corre en http://localhost:8083 y `ms-lives` en http://localhost:8082 (Swagger en `/swagger-ui.html` de cada uno). El front todavía no los usa: se conectan al terminar el cierre en `ms-lives`.
+`ms-clientas` corre en http://localhost:8083 y `ms-lives` en http://localhost:8082 (Swagger en `/swagger-ui.html` de cada uno). El front los usa a través del gateway.
 
 `api-gateway` corre en http://localhost:8080 y es la única dirección que usa el front. Su `.env` lleva el mismo `JWT_SECRET` que `ms-auth`.
 
-**Front con el backend real:** crear `frontend/.env.local` con `VITE_API_URL=http://localhost:8080` y levantar MySQL, `ms-auth`, `api-gateway` y `npm run dev`. El login usa entonces los usuarios de MySQL (el resto de las pantallas sigue con datos simulados hasta conectar cada servicio). Sin ese archivo, el front funciona como antes, solo con datos simulados.
+**Front con el backend real:** crear `frontend/.env.local` con `VITE_API_URL=http://localhost:8080` y levantar MySQL, los cuatro servicios (`ms-auth`, `ms-clientas`, `ms-lives`, `api-gateway`) y `npm run dev`. Todo se guarda en MySQL: usuarios, clientas, lives y cierres. Se entra con la Admin de `ADMIN_CORREO`. Sin ese archivo, el front funciona como antes, solo con datos simulados (los usuarios de prueba de arriba).
 
 ## Pruebas
 

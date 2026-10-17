@@ -146,7 +146,7 @@ Recibe la foto, la manda a la API de Claude y devuelve las anotaciones para revi
 
 1. **Un cliente HTTP pequeño** en `src/services/` (con `fetch`, sin dependencias): agrega `VITE_API_URL` y el token, convierte errores en mensajes y, si recibe un 401, borra la sesión y lleva al login (pendiente de D-31).
 2. **Cada función de servicio** cambia por dentro para hacer su petición a la API en vez de leer el mock. Su firma y lo que devuelve no cambian, así que ninguna pantalla se toca.
-3. **Las pruebas de Vitest siguen con el mock**, para no depender del backend. Cómo elegir entre mock y API (por ejemplo, con `VITE_API_URL` vacío = mock) se decide al conectar el primer servicio.
+3. **Las pruebas de Vitest siguen con el mock**, para no depender del backend: sin `VITE_API_URL` los servicios usan los datos simulados (D-34).
 4. **Playwright**: E2E contra el backend real cuando esté completo.
 5. **GitHub Pages** solo publica el front. Para que funcione con el backend hay que desplegar el backend en algún servidor (se decide más adelante).
 
@@ -169,8 +169,8 @@ El front se puede seguir mejorando durante todo el proceso: mientras no cambie l
 | 3 | **RF-03** en ms-auth y pantalla Usuarios; **RF-02** (menú y rutas por rol, 403) | La Admin crea vendedoras; la Vendedora no ve Usuarios |
 | 4 | **ms-clientas**: CRUD y duplicados (RF-12) y conexión de `clientasService` | Las clientas se guardan de verdad |
 | 5 | **ms-lives**: sesiones, anotar, Deshacer, corregir y pago (RF-04 a RF-08) | Probado con JUnit y Swagger (el front sigue simulado, D-37) |
-| 6 | **ms-lives**: terminar, bolsas, entregas, finalizar y reabrir (RF-09 a RF-11), y conexión de `clientasService` y `sesionesService` en el front | Live, cierre y clientas con datos reales |
-| 7 | Comunicación entre ms-lives y ms-clientas, indicadores, ranking e inactivas (RF-13, RF-14) | Ficha y Estadísticas con datos reales |
+| 6 | **ms-lives**: terminar, bolsas, entregas, finalizar y reabrir (RF-09 a RF-11), y conexión de `clientasService` y `sesionesService` en el front (D-38) | Live, cierre y clientas con datos reales |
+| 7 | `ultimaCompra` (D-15), ranking e inactivas en ms-clientas (hoy se calculan en el front con datos reales), y borrar solo clientas sin compras (D-37) | Estadísticas calculadas en el backend |
 | 8 | **ms-importacion** (RF-15) | Importar cuaderno |
 | 9 | Swagger revisado, README del backend, E2E contra el backend y respaldos (RNF-19) | Entrega final |
 

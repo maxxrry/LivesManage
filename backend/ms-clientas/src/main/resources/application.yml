@@ -21,3 +21,5 @@ server:
 livesmanage:
   jwt:
     secreto: ${JWT_SECRET}
+  # ms-lives: avisarle cuando una clienta cambia de nombre (D-28).
+  lives-url: ${LIVES_URL:http://localhost:8082}

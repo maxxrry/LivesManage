@@ -1,6 +1,10 @@
 package cl.livesmanage.lives.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.not;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -8,6 +12,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -40,6 +45,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 /**
  * RF-04 a RF-08 de punta a punta con H2. ms-clientas se simula. Cada prueba parte con la base vacía (solo puede haber
@@ -53,6 +59,7 @@ class LiveControllerTest {
 
     private static final String SECRETO = "clave-solo-para-pruebas-de-al-menos-32-caracteres";
     private static final String VENDEDORA = "Bearer " + token("u-2", "VENDEDOR");
+    private static final String ADMIN = "Bearer " + token("u-1", "ADMIN");
 
     @Autowired
     private MockMvc mvc;
@@ -332,6 +339,141 @@ class LiveControllerTest {
                         .contentType(MediaType.APPLICATION_JSON).content("{\"clientaId\":\"c-gabi\"}"))
                 .andExpect(jsonPath("$.id").value(linea))
                 .andExpect(jsonPath("$.clientaNombre").value("Gabriela Peña"));
+    }
+
+    // Cierre (RF-09 a RF-11)
+
+    private ResultActions accion(MockHttpServletRequestBuilder peticion, String json) throws Exception {
+        peticion.header("Authorization", VENDEDORA);
+        return mvc.perform(json == null ? peticion : peticion.contentType(MediaType.APPLICATION_JSON).content(json));
+    }
+
+    private String lineaId(String live, String clienta, int precio) throws Exception {
+        return JsonPath.read(cuerpo(anotar(live, "{\"clientaId\":\"" + clienta + "\"}", precio)), "$.linea.id");
+    }
+
+    @Test
+    void terminarPasaAEnCierreYYaNoSeAnotaPeroSePuedeAbrirOtro() throws Exception {
+        String live = abrirLive();
+        accion(post("/api/lives/" + live + "/terminar"), null).andExpect(status().isOk()).andExpect(jsonPath("$.estado").value("EN_CIERRE"));
+
+        anotar(live, "{\"clientaId\":\"c-flo\"}", 6000).andExpect(status().isConflict());
+        accion(post("/api/lives/" + live + "/terminar"), null).andExpect(status().isConflict());
+        abrirLive(); // uno En cierre no bloquea
+    }
+
+    @Test
+    void laBolsaSoloSeRevisaEnCierre() throws Exception {
+        String live = abrirLive();
+        String linea = lineaId(live, "c-flo", 6000);
+        accion(patch("/api/lives/" + live + "/lineas/" + linea + "/bolsa"), null)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.mensaje").value("Las bolsas se revisan en el cierre del live."));
+
+        accion(post("/api/lives/" + live + "/terminar"), null);
+        accion(patch("/api/lives/" + live + "/lineas/" + linea + "/bolsa"), null).andExpect(jsonPath("$.bolsaRevisada").value(true));
+    }
+
+    @Test
+    void despachoExigeDireccionYLaGuardaEnLaFicha() throws Exception {
+        String live = abrirLive();
+        String linea = lineaId(live, "c-flo", 6000);
+        accion(post("/api/lives/" + live + "/terminar"), null);
+        String ruta = "/api/lives/" + live + "/lineas/" + linea + "/entrega";
+
+        accion(put(ruta), "{\"tipo\":\"DESPACHO\"}").andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje").value("El despacho necesita una dirección."));
+        accion(put(ruta), "{\"tipo\":\"DESPACHO\",\"direccion\":{\"calle\":\"Los Aromos 1234\",\"comuna\":\"\"}}")
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.mensaje").value("Falta la comuna de la dirección."));
+
+        accion(put(ruta), "{\"tipo\":\"DESPACHO\",\"direccion\":{\"calle\":\" Los Aromos 1234 \",\"comuna\":\"Maipú\"}}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.direccion.calle").value("Los Aromos 1234"))
+                .andExpect(jsonPath("$.direccion.region").value("Metropolitana"));
+        verify(clientas).guardarDireccion(eq("c-flo"), any());
+    }
+
+    @Test
+    void hermanasCompartenDespachoYCambiarUnaLaSacaDelGrupo() throws Exception {
+        String live = abrirLive();
+        String flo = lineaId(live, "c-flo", 6000);
+        String gabi = lineaId(live, "c-gabi", 5000);
+        accion(post("/api/lives/" + live + "/terminar"), null);
+        String despacho = JsonPath.read(cuerpo(accion(put("/api/lives/" + live + "/lineas/" + flo + "/entrega"),
+                "{\"tipo\":\"DESPACHO\",\"direccion\":{\"calle\":\"Los Aromos 1234\",\"comuna\":\"Maipú\"}}")), "$.id");
+        String propia = JsonPath.read(cuerpo(accion(put("/api/lives/" + live + "/lineas/" + gabi + "/entrega"), "{\"tipo\":\"RETIRO\"}")), "$.id");
+
+        accion(patch("/api/lives/" + live + "/lineas/" + gabi + "/entrega"), "{\"entregaId\":\"" + despacho + "\"}")
+                .andExpect(jsonPath("$.id").value(despacho));
+        assertThat(entregas.existsById(propia)).isFalse(); // su retiro quedó sin líneas (D-05)
+
+        // Gabriela pasa a Feria: sale del grupo y Florencia conserva su despacho (D-26).
+        accion(put("/api/lives/" + live + "/lineas/" + gabi + "/entrega"), "{\"tipo\":\"FERIA\"}")
+                .andExpect(jsonPath("$.id").value(not(despacho)));
+        assertThat(lineas.findById(flo).orElseThrow().getEntregaId()).isEqualTo(despacho);
+    }
+
+    @Test
+    void finalizarExigeBolsasCobrosYEntregasYDespuesEsSoloLectura() throws Exception {
+        String live = abrirLive();
+        String flo = lineaId(live, "c-flo", 6000);
+        String gabi = lineaId(live, "c-gabi", 5000);
+        accion(post("/api/lives/" + live + "/terminar"), null);
+        String finalizar = "/api/lives/" + live + "/finalizar";
+
+        accion(post(finalizar), null).andExpect(status().isConflict()).andExpect(jsonPath("$.mensaje").value("Falta revisar 2 bolsa(s)."));
+        for (String l : new String[] {flo, gabi}) accion(patch("/api/lives/" + live + "/lineas/" + l + "/bolsa"), null);
+        accion(post(finalizar), null).andExpect(jsonPath("$.mensaje").value("Hay 2 línea(s) Pendiente(s): cóbralas o márcalas No pagó."));
+
+        accion(patch("/api/lives/" + live + "/lineas/" + flo + "/pago"), null);
+        accion(put("/api/lives/" + live + "/lineas/" + gabi + "/no-pago"), "{\"noPago\":true}").andExpect(jsonPath("$.estadoPago").value("NO_PAGO"));
+        accion(put("/api/lives/" + live + "/lineas/" + flo + "/no-pago"), "{\"noPago\":true}")
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.mensaje").value("La línea está Pagada."));
+        accion(post(finalizar), null).andExpect(jsonPath("$.mensaje").value("Falta la forma de entrega de 1 clienta(s) que pagaron."));
+
+        accion(put("/api/lives/" + live + "/lineas/" + flo + "/entrega"), "{\"tipo\":\"RETIRO\"}");
+        accion(post(finalizar), null).andExpect(status().isOk()).andExpect(jsonPath("$.estado").value("CERRADA"));
+        accion(patch("/api/lives/" + live + "/lineas/" + flo + "/pago"), null).andExpect(status().isConflict());
+    }
+
+    @Test
+    void soloLaAdminReabreUnLiveCerrado() throws Exception {
+        String live = abrirLive();
+        cambiarEstado(live, EstadoSesion.CERRADA);
+
+        accion(post("/api/lives/" + live + "/reabrir"), null).andExpect(status().isForbidden());
+        mvc.perform(post("/api/lives/" + live + "/reabrir").header("Authorization", ADMIN))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.estado").value("EN_CIERRE"));
+    }
+
+    // Historial (RF-13) y renombrar (D-28)
+
+    @Test
+    void elHistorialTraeLasLineasDeLaClientaConSuLiveYSuEntrega() throws Exception {
+        String live = abrirLive();
+        String flo = lineaId(live, "c-flo", 6000);
+        lineaId(live, "c-gabi", 5000);
+        accion(post("/api/lives/" + live + "/terminar"), null);
+        accion(put("/api/lives/" + live + "/lineas/" + flo + "/entrega"), "{\"tipo\":\"RETIRO\"}");
+
+        mvc.perform(get("/api/lives/lineas").param("clientaId", "c-flo").header("Authorization", VENDEDORA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].sesion.id").value(live))
+                .andExpect(jsonPath("$[0].linea.id").value(flo))
+                .andExpect(jsonPath("$[0].entrega.tipo").value("RETIRO"));
+        mvc.perform(get("/api/lives/lineas").header("Authorization", VENDEDORA)).andExpect(jsonPath("$.length()").value(2));
+    }
+
+    @Test
+    void sincronizarIgualaElNombreDeLasLineasAlDeLaFicha() throws Exception {
+        String live = abrirLive();
+        lineaId(live, "c-flo", 6000);
+        when(clientas.obtener("c-flo")).thenReturn(new ClientaRef("c-flo", "Florencia Ruiz Soto", true)); // ficha renombrada
+
+        accion(post("/api/lives/clientas/c-flo/sincronizar-nombre"), null).andExpect(status().isNoContent());
+        detalle(live).andExpect(jsonPath("$.lineas[0].clientaNombre").value("Florencia Ruiz Soto"));
+        assertThat(lineas.findAll().get(0).getVersion()).isPositive(); // el cambio cuenta para el bloqueo optimista
     }
 
     @Test

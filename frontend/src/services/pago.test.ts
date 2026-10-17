@@ -61,7 +61,7 @@ describe('cambios de monto en una línea Pagada (D-20)', () => {
     const antes = await linea('l-6');
     const { anotacionId } = await anotar('s-2', { clientaId: 'c-3' }, [5000]);
 
-    await deshacerAnotacion(anotacionId);
+    await deshacerAnotacion('s-2', anotacionId);
 
     expect(await linea('l-6')).toEqual(antes);
   });
@@ -73,7 +73,7 @@ describe('cambios de monto en una línea Pagada (D-20)', () => {
     const { anotacionId } = await anotar('s-2', { clientaId: 'c-3' }, [5000]);
     await alternarPrenda('s-2', 'l-6', prenda.id);
 
-    await expect(deshacerAnotacion(anotacionId)).rejects.toThrow('ya no se puede deshacer');
+    await expect(deshacerAnotacion('s-2', anotacionId)).rejects.toThrow('ya no se puede deshacer');
     expect((await linea('l-6')).estadoPago).toBe('PENDIENTE');
   });
 
@@ -82,7 +82,7 @@ describe('cambios de monto en una línea Pagada (D-20)', () => {
     await alternarPago('s-2', 'l-6');
     await alternarPago('s-2', 'l-6');
 
-    await expect(deshacerAnotacion(anotacionId)).rejects.toThrow('ya no se puede deshacer');
+    await expect(deshacerAnotacion('s-2', anotacionId)).rejects.toThrow('ya no se puede deshacer');
   });
 
   it('restaurar una prenda cancelada la vuelve a Pendiente', async () => {

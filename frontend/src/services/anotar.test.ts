@@ -62,7 +62,7 @@ describe('deshacerAnotacion (D-11)', () => {
     const antes = await lineaDe('Florencia Ruiz');
     const { anotacionId } = await anotar('s-2', { clientaId: 'c-2' }, [6000, 4000]);
 
-    await deshacerAnotacion(anotacionId);
+    await deshacerAnotacion('s-2', anotacionId);
 
     expect(await lineaDe('Florencia Ruiz')).toEqual(antes);
   });
@@ -72,7 +72,7 @@ describe('deshacerAnotacion (D-11)', () => {
     const clientasAntes = await listarClientas();
     const { anotacionId } = await anotar('s-2', { nuevaClienta: 'ana' }, [5000]);
 
-    await deshacerAnotacion(anotacionId);
+    await deshacerAnotacion('s-2', anotacionId);
 
     expect(await obtenerSesion('s-2')).toEqual(sesionAntes);
     expect(await listarClientas()).toEqual(clientasAntes);
@@ -82,7 +82,7 @@ describe('deshacerAnotacion (D-11)', () => {
     const { anotacionId: primera } = await anotar('s-2', { nuevaClienta: 'ana' }, [5000]);
     const { linea } = await anotar('s-2', { clientaId: (await lineaDe('ana'))!.clientaId }, [4000]);
 
-    await expect(deshacerAnotacion(primera)).rejects.toThrow('ya no se puede deshacer');
+    await expect(deshacerAnotacion('s-2', primera)).rejects.toThrow('ya no se puede deshacer');
     expect(precios(await lineaDe('ana'))).toEqual([5000, 4000]);
     expect(linea.prendas).toHaveLength(2);
   });

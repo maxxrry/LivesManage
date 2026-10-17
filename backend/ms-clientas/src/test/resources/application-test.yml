@@ -11,3 +11,4 @@ spring:
 livesmanage:
   jwt:
     secreto: clave-solo-para-pruebas-de-al-menos-32-caracteres
+  lives-url: http://localhost:0
