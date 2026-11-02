@@ -8,7 +8,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 
-/** Cuerpo de POST /api/lives/{id}/anotaciones (RF-05). Precios en CLP: de $1.000 a $999.000, en miles. */
+/** Cuerpo de POST /api/lives/{id}/anotaciones (RF-05). Precios en CLP: de $1.000 a $999.000, en múltiplos de $100 (D-39). */
 public record NuevaAnotacion(
         @NotNull(message = "Indica a quién se anota.") @Valid Destino destino,
         @NotEmpty(message = "Faltan los precios.")

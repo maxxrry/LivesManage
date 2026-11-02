@@ -155,7 +155,7 @@ class LiveControllerTest {
         String live = abrirLive();
         anotar(live, "{\"clientaId\":\"c-flo\"}", 5000).andExpect(status().isCreated());
 
-        // "flo 6-4" suma $10.000 a la línea existente de Florencia (criterio de RF-05).
+        // "flo 6000 4000" suma $10.000 a la línea existente de Florencia (criterio de RF-05).
         anotar(live, "{\"clientaId\":\"c-flo\"}", 6000, 4000)
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.anotacionId").isString())
@@ -173,9 +173,17 @@ class LiveControllerTest {
     }
 
     @Test
+    void aceptaPreciosQueNoSonMilesExactos() throws Exception {
+        String live = abrirLive();
+        anotar(live, "{\"clientaId\":\"c-flo\"}", 3500).andExpect(status().isCreated());
+
+        detalle(live).andExpect(jsonPath("$.lineas[0].prendas[0].precio").value(3500));
+    }
+
+    @Test
     void preciosInvalidosSeRechazanSinGuardarNada() throws Exception {
         String live = abrirLive();
-        anotar(live, "{\"clientaId\":\"c-flo\"}", 6500).andExpect(status().isBadRequest()).andExpect(jsonPath("$.mensaje").value("Precios no válidos."));
+        anotar(live, "{\"clientaId\":\"c-flo\"}", 6550).andExpect(status().isBadRequest()).andExpect(jsonPath("$.mensaje").value("Precios no válidos."));
         anotar(live, "{\"clientaId\":\"c-flo\"}", 0).andExpect(status().isBadRequest());
         anotar(live, "{\"clientaId\":\"c-flo\"}").andExpect(status().isBadRequest());
         anotar(live, "{\"clientaId\":\"c-flo\",\"nuevaClienta\":\"flo\"}", 6000).andExpect(status().isBadRequest());

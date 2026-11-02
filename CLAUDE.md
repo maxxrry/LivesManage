@@ -32,8 +32,9 @@ Proyecto del ramo Desarrollo FullStack 2 (Duoc UC) y para un cliente real.
 - Hecho: backend paso 4, `ms-clientas` (:8083, base `livesmanage_clientas`): CRUD de fichas, duplicados, activar/desactivar (Admin por JWT) y días de inactividad; reglas de D-28 en `Normalizar`; ruta en el gateway. El front sigue simulado: `clientasService` se conecta junto con `ms-lives` (D-36).
 - Hecho: backend paso 5, `ms-lives` (:8082, base `livesmanage_lives`): RF-04 a RF-08 (`/api/lives`: listar con totales, abrir, detalle, anotar, deshacer, prenda, cambiar clienta con unión, pago). Un solo live Abierto garantizado por índice único; `Totales` igual a `totalesDeLineas`; anotación con clienta nueva vía `ClientasCliente` (RestClient, reenvía el JWT); Deshacer borra la clienta creada con `DELETE /api/clientas/{id}` (solo 10 min, D-37).
 - Hecho: backend paso 6. Cierre en `ms-lives` (terminar, bolsa, entrega con dirección a la ficha vía `PUT /api/clientas/{id}/direccion`, agrupar, No pagó, finalizar con `RevisionCierre`, reabrir solo Admin), historial `GET /api/lives/lineas` y renombrar (ms-clientas avisa a ms-lives tras confirmar). Front conectado: con `VITE_API_URL`, `sesionesService` y `clientasService` usan la API vía `pedirConSesion`; ranking e inactivas se calculan en el front con datos reales hasta el paso 7. Probado un live completo en Chromium contra MySQL (D-38).
-- Decisiones D-01 a D-38 en `docs/decisiones.md`.
-- Siguiente: paso 7 de `docs/plan-backend.md` (`ultimaCompra`, ranking e inactivas en `ms-clientas`; borrar solo clientas sin compras).
+- Hecho: precios completos en la anotación y en pantalla ("flo 6000 4000", D-39), con `formatearPrecio` y validación de múltiplos de $100 en `ms-lives`. Costo de despacho, abonos y saldo a favor los lleva la dueña fuera del sistema (D-40).
+- Decisiones D-01 a D-40 en `docs/decisiones.md`.
+- Siguiente: paso 7 de `docs/plan-backend.md` (`ultimaCompra`, ranking e inactivas en `ms-clientas`; borrar solo clientas sin compras). Después, despliegue en AWS (cuenta por definir); entrega del ramo el 22/11/2026.
 
 ## Estructura
 
@@ -73,7 +74,7 @@ npm run lint
 - **Sesión de live**: Abierta → En cierre → Cerrada. Solo una Abierta a la vez. Cerrada es solo lectura (solo Admin reabre).
 - **Línea**: una por clienta por sesión. Anotar para una clienta que ya tiene línea suma a esa línea.
 - **Prenda**: solo tiene precio. Sin talla, descripción ni código. Estado Vigente o Cancelada; nunca se borra.
-- **Precios**: en la sintaxis van en miles (`6` = $6.000); en el sistema son CLP enteros (`int`/`long`, nunca `float`/`double`).
+- **Precios**: en la sintaxis van completos (`6000` o `6.000` = $6.000, D-39); en el sistema son CLP enteros (`int`/`long`, nunca `float`/`double`).
 - **Totales**: siempre calculados desde las prendas vigentes. El backend es la fuente de verdad; nunca se guarda un total escrito a mano.
 - **Pago** (por línea): Pendiente, Pagado o No pagó. "No pagó" solo se asigna al finalizar el cierre.
 - **Entrega**: Despacho (exige dirección), Retiro o Feria. Varias clientas pueden compartir una entrega (hermanas).
@@ -85,12 +86,14 @@ npm run lint
 Función pura, sin dependencias de UI, con tests primero:
 
 ```ts
-parseAnotacion("flo 6-4")    // { nombre: "flo", precios: [6000, 4000] }
-parseAnotacion("flo 6 - 4")  // igual: acepta espacios alrededor del guion
-parseAnotacion("flo 6-")     // { error: "..." } y la UI conserva el texto
+parseAnotacion("flo 6000 4000")    // { nombre: "flo", precios: [6000, 4000] }
+parseAnotacion("flo 6000-4000")    // igual: separa con espacio o guion
+parseAnotacion("flo 6.000 3.500")  // { nombre: "flo", precios: [6000, 3500] }
+parseAnotacion("Cami 2 6000")      // { nombre: "Cami 2", precios: [6000] }
+parseAnotacion("flo 6 4")          // { error: "..." } y la UI conserva el texto
 ```
 
-Precios: enteros de 1 a 999 (miles). Los decimales (3,5) están pendientes de confirmar: no los implementes hasta que el ERS lo diga.
+Precios: de $1.000 a $999.000, en múltiplos de $100. Un número menor a 1000 es parte del nombre.
 
 ## Frontend
 

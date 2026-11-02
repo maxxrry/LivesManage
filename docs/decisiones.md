@@ -42,6 +42,8 @@ Registro de decisiones de diseño que complementan o precisan el ERS (`docs/ERS.
 | D-36 | 14/10/2026 | RF-12, RF-14 | `ms-clientas`: contrato REST de fichas y días de inactividad, reglas de D-28 en Java y conexión del front junto con `ms-lives`. |
 | D-37 | 14/10/2026 | RF-04 a RF-08, RF-05 (D-11) | `ms-lives`: contrato REST, anotación con clienta nueva en `ms-clientas`, Deshacer con borrado acotado de la clienta y conexión del front al terminar el cierre. |
 | D-38 | 17/10/2026 | RF-09 a RF-11, RF-13, D-28 | Cierre en `ms-lives`, historial de compras, renombrar entre servicios y front conectado a lives y clientas. |
+| D-39 | 02/11/2026 | RF-05, RF-08, RF-13, D-12 | Los precios se anotan y se muestran completos ("flo 6000 4000"), en vez de en miles. |
+| D-40 | 02/11/2026 | RF-07, RF-10, D-20 | Costo de despacho, abonos y saldo a favor los lleva la dueña fuera del sistema; Feria sin detalle ni estado de entregada. |
 
 ## D-01 · Estilos con Tailwind CSS
 
@@ -109,10 +111,12 @@ El aviso de RF-05 ofrece Deshacer durante unos segundos. Deshacer elimina las pr
 
 ## D-12 · Nombres con números
 
-El nombre de una clienta puede empezar con números o contenerlos. En la sintaxis rápida, los precios son siempre el último grupo `número(-número)*` del texto y todo lo anterior es el nombre:
+El nombre de una clienta puede empezar con números o contenerlos. En la sintaxis rápida, los precios son siempre el último grupo de números de 4 o más dígitos, o con puntos de miles (D-39), y todo lo anterior es el nombre:
 
-- `Cami 2 6-4` → nombre "Cami 2", precios 6.000 y 4.000.
-- `flo 6 4` (sin guion) → nombre "flo 6", precio 4.000. Las sugerencias y el aviso con Deshacer permiten detectar el error.
+- `Cami 2 6000-4000` → nombre "Cami 2", precios 6.000 y 4.000.
+- `Cami 2 6000` → nombre "Cami 2", precio 6.000. Con D-39, un número menor a 1000 es parte del nombre.
+- `Cami 2000 6000` → nombre "Cami", precios 2.000 y 6.000. Un número de 4 o más dígitos nunca es parte del nombre.
+- `flo 6 4` → error. Antes de D-39 creaba la clienta "flo 6" con un precio de $4.000.
 
 Una clienta nueva se crea con el nombre tal como se escribió y se corrige después en su ficha (D-14).
 
@@ -152,7 +156,7 @@ RF-08 muestra la última línea modificada arriba. Cancelar o restaurar una pren
 ## D-20 · Cambios de monto en una línea Pagada
 
 - Si a una línea Pagada se le agrega una prenda (anotar, RF-05) o se le restaura una cancelada (RF-06), vuelve a Pendiente: hay un monto sin cobrar. Es la misma regla de D-19 al unir líneas. El cambio queda registrado con fecha y usuario como cualquier cambio de pago.
-- Si se cancela una prenda de una línea Pagada, sigue Pagado. Devoluciones y saldos a favor quedan fuera de alcance; la pregunta está en "Pendientes por confirmar" del ERS.
+- Si se cancela una prenda de una línea Pagada, sigue Pagado. El saldo a favor lo lleva la dueña, fuera del sistema (D-40).
 
 ## D-21 · Marcar el pago
 
@@ -384,7 +388,7 @@ Paso 5 de `docs/plan-backend.md`.
 
   Las fechas van en ISO 8601 (UTC) y los montos en CLP enteros. Para deshacer hace falta el id del live: al conectar el front, `deshacerAnotacion` recibe también `sesionId`.
 - **Solo un live Abierto, garantizado por la base:** la columna `sesion.abierta` vale `true` mientras el live está Abierto y `null` en los demás estados, y tiene un índice único. Dos aperturas al mismo tiempo no pasan. Del mismo modo, la línea tiene un índice único `(sesion_id, clienta_id)`, que asegura una línea por clienta por live.
-- **Reglas** iguales al `sesionesService` simulado: precios de $1.000 a $999.000 en miles; D-18 a D-23, incluidos D-20 (anotar o restaurar en una línea Pagada la vuelve Pendiente) y D-19 (al unir líneas, las prendas pasan a la línea de destino). Los totales se calculan en `Totales`, con la misma fórmula que `totalesDeLineas`.
+- **Reglas** iguales al `sesionesService` simulado: precios de $1.000 a $999.000 en miles (desde D-39, en múltiplos de $100); D-18 a D-23, incluidos D-20 (anotar o restaurar en una línea Pagada la vuelve Pendiente) y D-19 (al unir líneas, las prendas pasan a la línea de destino). Los totales se calculan en `Totales`, con la misma fórmula que `totalesDeLineas`.
 - **Anotaciones** (tabla `anotacion`): cada una guarda quién, cuándo y cuánto (RNF-09), y lo necesario para deshacerla. Deshacer funciona mientras la línea no cambie (D-22) y el live siga Abierto. La anotación deshecha queda registrada, marcada como no deshacible.
 - **Clientas:** al anotar a una clienta nueva, ms-lives la crea en ms-clientas. Al anotar a una existente, usa la copia del nombre si ya tiene línea en el live y solo pregunta a ms-clientas si es su primera línea (D-03). Las llamadas reenvían el JWT de la usuaria. Si anotar falla después de crear la clienta, ms-lives la borra para no dejarla suelta.
 - **Deshacer y la clienta creada (D-11):** ms-clientas tiene `DELETE /api/clientas/{id}`, que solo funciona durante los primeros 10 minutos después de crear la clienta (columna `creada`). Así cumple D-11 sin servir para borrar fichas con historial. Pasado ese plazo responde 409 y la clienta se desactiva como siempre. Si el borrado falla, Deshacer igual se completa y se deja un aviso en el log. El borrado se pide recién cuando la base confirmó el resto. Del mismo modo, si anotar o cambiar a una clienta nueva falla después de crearla (incluso al confirmar), la clienta se borra. Límite conocido: cualquier usuaria con sesión podría llamar a ese `DELETE` directamente sobre una clienta creada hace menos de 10 minutos. En el paso 7, ms-clientas además revisará en ms-lives que la clienta no tenga líneas.
@@ -420,3 +424,34 @@ Paso 6 de `docs/plan-backend.md`.
 - **Ranking e inactivas (hasta el paso 7):** con la API se calculan en el front, con las mismas funciones de `utils/clientas.ts`, sobre las fichas de ms-clientas, las compras de `GET /api/lives/lineas` y los días configurados. Funcionan, pero traen todo el historial. `ultimaCompra` (D-15) todavía no viene de ms-clientas, así que las sugerencias al anotar no se ordenan por compra reciente en el modo real.
 - **Anotar seguido:** con la API, guardar una anotación tarda unos milisegundos. Si en ese tiempo ya escribieron la siguiente, el campo ya no la borra al terminar (`CampoAnotacion`); solo se limpia si el texto sigue siendo el enviado.
 - **Prueba de punta a punta:** con MySQL, los cuatro servicios y el front en modo API, se recorrió en Chromium a 360 px un live completo: abrir, anotar clientas nuevas, Deshacer (borró la clienta en ms-clientas), pagar, terminar, bolsas, despacho con dirección, No pagó y cerrar. Después se revisaron la ficha (dirección e historial), Estadísticas y el renombre en las líneas. Sin errores.
+
+## D-39 · Precios completos en la anotación
+
+En la primera prueba en un live real (17/10/2026), a veces se duplicó una clienta. La causa más probable, según quien anotó, es haber omitido el guion: `flo 6 4` creaba una clienta "flo 6" con un precio de $4.000, lo que deja una ficha duplicada y $6.000 menos en la cuenta de Flo. Además, la tienda confirmó que existen precios como $3.500, que la sintaxis en miles no permitía escribir. Por eso se deja la sintaxis en miles y los precios se escriben completos.
+
+- **Sintaxis:** `flo 6000 4000`, `flo 6000-4000` y `flo 6.000 3.500` son válidas. Los precios se separan con espacio o guion, y pueden llevar punto de miles.
+- **Qué es un precio:** un número de 4 o más dígitos, o con puntos de miles. Debe estar entre $1.000 y $999.000 y ser múltiplo de $100, regla que también valida `ms-lives`.
+- **Sintaxis antigua:** `flo 6-4`, `flo 6 4` y `flo 3,5` dan error, conservan el texto y no crean ninguna clienta.
+- **Restos de precio antes de los precios:** `flo 6,000 4000`, `flo 3,5 6000`, `flo 6 - 4000` y `flo 6000 ana 5000` también dan error, para que esos restos no terminen en el nombre de una clienta nueva.
+- **Cómo se muestran:** completos en la hoja, el aviso y el historial (`6.000 6.000 5.000 = $17.000`), para que se lean igual que se escriben. Los precios largos pasan a otra fila, sin scroll horizontal a 360 px.
+- **Doble toque:** volver a tocar una sugerencia mientras esa misma anotación se guarda no hace nada. Antes, dos toques en "Nueva clienta" podían crear dos fichas. Una anotación distinta sí se guarda, para no perder ventas si la conexión está lenta.
+- **Datos existentes:** no cambian, porque los precios ya se guardaban en pesos.
+- **RF-15:** el cuaderno de papel sigue en miles, así que la importación tendrá que convertir esos precios a pesos.
+
+**Alternativa descartada:** mantener los miles, aceptar un decimal (`3,5`) y tratar los espacios como separadores. Obligaba a una excepción para nombres como "Cami 2", y `Cami 2 6` podía guardarse como $2.000 y $6.000.
+
+**Lo que se acepta a cambio:**
+
+- Hay más teclas por anotación (`flo 6-4` tenía 7 caracteres y `flo 6000 4000` tiene 13). RNF-16 (menos de 5 segundos) se debe medir en la UAT.
+- Un cero de más (`flo 60000`) se guarda como $60.000. El aviso muestra el monto y ofrece Deshacer.
+- `flo 6 4000` se lee como la clienta "flo 6" con un precio de $4.000, por la regla de los nombres con números (D-12). Es el único caso de precio incompleto que el parser no puede distinguir de un nombre; el aviso muestra el resultado y ofrece Deshacer.
+- Una clienta con un número de 4 o más dígitos en el nombre (`Cami 2000`) no se puede anotar por su nombre completo. Se elige escribiendo solo "Cami".
+
+## D-40 · Lo que la dueña lleva fuera del sistema
+
+Respuestas de la tienda a los pendientes del ERS (02/11/2026). Estos casos los resuelve la dueña con cada clienta, así que el sistema no los registra:
+
+- **Costo de despacho:** existe, pero no se suma al total de la línea.
+- **Abonos y pagos parciales:** existen, pero una línea sigue siendo Pendiente o Pagada completa.
+- **Saldo a favor:** si una clienta pagó y cancela una prenda, el dinero queda a favor y la línea sigue Pagada (D-20). Como los totales se calculan con las prendas vigentes, el total pagado puede ser menor que el dinero recibido.
+- **Feria:** basta con elegir Feria en el cierre (D-26). No se registra qué feria ni qué día, ni existe un estado de "entregada".

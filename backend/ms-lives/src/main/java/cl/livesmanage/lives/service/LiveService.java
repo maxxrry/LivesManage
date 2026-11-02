@@ -108,7 +108,7 @@ public class LiveService {
         if (sesion.getEstado() != EstadoSesion.ABIERTA) {
             throw new ReglaException(HttpStatus.CONFLICT, null, "El live no está abierto; no se puede anotar.");
         }
-        if (datos.precios().stream().anyMatch(p -> p % 1000 != 0)) {
+        if (datos.precios().stream().anyMatch(p -> p % 100 != 0)) {
             throw new ReglaException(HttpStatus.BAD_REQUEST, "precios", "Precios no válidos.");
         }
         ClientaRef clienta = resolverClienta(sesionId, datos.destino());

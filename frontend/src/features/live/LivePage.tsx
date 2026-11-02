@@ -14,7 +14,7 @@ import {
 import { usuarioActual } from '../../services/usuariosService';
 import type { MontoClp, Rol } from '../../types/dominio';
 import { ETIQUETAS_ESTADO_SESION } from '../../types/etiquetas';
-import { formatearClp, totalesDeLineas } from '../../utils/montos';
+import { formatearClp, formatearPrecio, totalesDeLineas } from '../../utils/montos';
 import { nombreSesion } from '../../utils/sesion';
 import { Aviso } from './Aviso';
 import { CampoAnotacion } from './CampoAnotacion';
@@ -52,7 +52,7 @@ export function LivePage() {
     setAviso({
       anotacionId,
       lineaId: linea.id,
-      texto: `${linea.clientaNombre}: ${precios.map((p) => p / 1000).join('-')} = ${formatearClp(total)}`,
+      texto: `${linea.clientaNombre}: ${precios.map(formatearPrecio).join(' ')} = ${formatearClp(total)}`,
     });
     await recargar();
   }

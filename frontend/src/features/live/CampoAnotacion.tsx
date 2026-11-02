@@ -20,12 +20,14 @@ export function CampoAnotacion({ clientas, idsConLinea, onAnotar }: CampoAnotaci
   const [resaltada, setResaltada] = useState(0);
   const [enviando, setEnviando] = useState(false);
   const campo = useRef<HTMLInputElement>(null);
+  const guardando = useRef(new Set<string>());
   const idLista = useId();
   const idError = useId();
 
   const opciones = opcionesPara(nombreEscrito(texto), clientas, idsConLinea);
 
   async function enviar(opcion: Opcion | undefined) {
+    if (guardando.current.has(texto)) return; // un doble toque en una sugerencia no anota dos veces (D-39)
     const resultado = parseAnotacion(texto);
     if ('error' in resultado) {
       setError(resultado.error);
@@ -34,6 +36,7 @@ export function CampoAnotacion({ clientas, idsConLinea, onAnotar }: CampoAnotaci
     const destino: DestinoAnotacion =
       opcion?.tipo === 'clienta' ? { clientaId: opcion.clienta.id } : { nuevaClienta: resultado.nombre };
 
+    guardando.current.add(texto);
     setEnviando(true);
     setError('');
     try {
@@ -44,6 +47,7 @@ export function CampoAnotacion({ clientas, idsConLinea, onAnotar }: CampoAnotaci
     } catch (e) {
       setError(`No se guardó la anotación. ${e instanceof Error ? e.message : ''}`.trim());
     } finally {
+      guardando.current.delete(texto);
       setEnviando(false);
       campo.current?.focus();
     }
@@ -70,7 +74,7 @@ export function CampoAnotacion({ clientas, idsConLinea, onAnotar }: CampoAnotaci
             setError('');
           }}
           onKeyDown={alPresionarTecla}
-          placeholder="flo 6-4"
+          placeholder="flo 6000 4000"
           aria-label="Anotación"
           role="combobox"
           aria-expanded={opciones.length > 0}

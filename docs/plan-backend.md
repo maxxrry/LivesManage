@@ -53,12 +53,12 @@ ms-xxx/
   src/test/java/...                     JUnit + Mockito
 ```
 
-### Ejemplo de punta a punta: anotar "flo 6-4"
+### Ejemplo de punta a punta: anotar "flo 6000 4000"
 
 1. **Pantalla de live** (`LivePage` → `CampoAnotacion`): el parser del front convierte el texto en `{ nombre: "flo", precios: [6000, 4000] }` y llama a `anotar()`.
 2. **`sesionesService.anotar()`**: hoy modifica el mock. Con backend hace `POST /api/lives/{id}/anotaciones` con el token en `Authorization: Bearer ...`.
 3. **api-gateway**: valida el token y reenvía la petición a ms-lives.
-4. **ms-lives / `AnotacionController`**: valida el cuerpo (precios entre $1.000 y $999.000, enteros).
+4. **ms-lives / `AnotacionController`**: valida el cuerpo (precios entre $1.000 y $999.000, en múltiplos de $100).
 5. **`AnotacionService`** (en una sola transacción, RNF-12): revisa que la sesión esté Abierta, busca la línea de esa clienta o crea una, agrega las prendas, vuelve la línea a Pendiente si estaba Pagada (D-20) y guarda quién anotó y cuándo (RNF-09).
 6. **Respuesta**: `{ anotacionId, linea }`, la misma forma que hoy devuelve el mock. La pantalla muestra el aviso con Deshacer sin enterarse de que ahora los datos son reales.
 

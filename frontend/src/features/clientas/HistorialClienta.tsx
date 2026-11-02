@@ -4,21 +4,21 @@ import type { CompraClienta, Linea } from '../../types/dominio';
 import { ETIQUETAS_ESTADO_PAGO, ETIQUETAS_ESTADO_SESION, ETIQUETAS_TIPO_ENTREGA } from '../../types/etiquetas';
 import { indicadoresDeClienta } from '../../utils/clientas';
 import { formatearFecha } from '../../utils/fechas';
-import { formatearClp, totalLinea } from '../../utils/montos';
+import { formatearClp, formatearPrecio, totalLinea } from '../../utils/montos';
 import { nombreSesion, rutaDeSesion } from '../../utils/sesion';
 
-/** "6-6-5" como en el cuaderno; las canceladas tachadas. */
+/** "6.000 6.000 5.000"; las canceladas tachadas. */
 function Prendas({ linea }: { linea: Linea }) {
   return linea.prendas.map((p, i) => (
     <Fragment key={p.id}>
-      {i > 0 && '-'}
+      {i > 0 && ' '}
       {p.estado === 'CANCELADA' ? (
         <s className="text-gray-400">
-          {p.precio / 1000}
+          {formatearPrecio(p.precio)}
           <span className="sr-only"> (cancelada)</span>
         </s>
       ) : (
-        p.precio / 1000
+        formatearPrecio(p.precio)
       )}
     </Fragment>
   ));

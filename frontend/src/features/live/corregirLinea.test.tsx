@@ -58,7 +58,7 @@ describe('Corregir línea (RF-06)', () => {
     await usuario.click(screen.getByRole('option', { name: 'Valentina Soto' }));
 
     expect(await screen.findByRole('button', { name: 'Cambiar clienta de Valentina Soto' })).toBeInTheDocument();
-    expect(lineaDe('Valentina Soto')).toHaveTextContent('6-6-5= $17.000');
+    expect(lineaDe('Valentina Soto')).toHaveTextContent('6.000 6.000 5.000= $17.000');
     expect(screen.queryByRole('button', { name: 'Cambiar clienta de Gabriela Peña' })).not.toBeInTheDocument();
   });
 
@@ -72,7 +72,7 @@ describe('Corregir línea (RF-06)', () => {
     await usuario.click(screen.getByRole('button', { name: 'Unir' }));
 
     expect(await screen.findByText('= $27.000')).toBeInTheDocument();
-    expect(lineaDe('Florencia Ruiz')).toHaveTextContent('6-4-6-6-5= $27.000');
+    expect(lineaDe('Florencia Ruiz')).toHaveTextContent('6.000 4.000 6.000 6.000 5.000= $27.000');
     expect(totalLive()).toHaveTextContent('$58.000');
     expect(within(screen.getByRole('list', { name: 'Hoja del live' })).getAllByRole('listitem')).toHaveLength(4);
   });

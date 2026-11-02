@@ -2,42 +2,53 @@ import type { MontoClp } from '../../types/dominio';
 
 export type ResultadoAnotacion = { nombre: string; precios: MontoClp[] } | { error: string };
 
-const GRUPO_PRECIOS = String.raw`\d+(?:\s*-\s*\d+)*`;
+// Un precio tiene 4 o más dígitos, o puntos de miles: "6.000". Un número menor es parte del nombre (D-12, D-39).
+const PRECIO = String.raw`(?:\d{1,3}(?:\.\d{3})+|\d{4,})`;
+const SEPARADOR = String.raw`\s*-\s*|\s+`;
+const SEPARADOR_PRECIOS = new RegExp(SEPARADOR);
+const GRUPO_PRECIOS = `${PRECIO}(?:(?:${SEPARADOR})${PRECIO})*`;
 const SOLO_PRECIOS = new RegExp(`^${GRUPO_PRECIOS}$`);
 // Nombre lo más corto posible, de modo que los precios sean el último grupo (D-12).
 const NOMBRE_Y_PRECIOS = new RegExp(`^(.+?)\\s+(${GRUPO_PRECIOS})$`);
+// Termina en números que no son precios completos: "flo 6-4", "flo 3,5".
+const PRECIOS_INCOMPLETOS = /(?:^|\s)[\d.,]+(?:\s*-\s*[\d.,]+)*$/;
+const ERROR_INCOMPLETOS = 'Escribe los precios completos (ej: flo 6000 4000).';
+
+/** "6,000", "3,5", "6-4", "6000" o "-" no son parte de un nombre, a diferencia de un número corto como el de "Cami 2". */
+const esRestoDePrecio = (palabra: string) => /^[\d.,-]+$/.test(palabra) && !/^\d{1,3}$/.test(palabra);
 
 /**
- * Interpreta la sintaxis del cuaderno: "flo 6-4" → { nombre: "flo", precios: [6000, 4000] }.
- * Los precios van en miles, enteros de 1 a 999.
+ * Interpreta la anotación: "flo 6000 4000" → { nombre: "flo", precios: [6000, 4000] }.
+ * Los precios van completos, separados por espacio o guion, de $1.000 a $999.000 en múltiplos de $100 (D-39).
  */
 export function parseAnotacion(texto: string): ResultadoAnotacion {
   const limpio = texto.trim().replace(/\s+/g, ' ');
 
-  if (!limpio) return { error: 'Escribe el nombre y los precios (ej: flo 6-4).' };
+  if (!limpio) return { error: 'Escribe el nombre y los precios (ej: flo 6000 4000).' };
   if (/-\s*$/.test(limpio)) return { error: 'Falta un precio después del guion.' };
-  if (/\d[.,]\d/.test(limpio)) return { error: 'Los precios van en miles enteros (6 = $6.000).' };
   if (SOLO_PRECIOS.test(limpio)) return { error: 'Falta el nombre de la clienta.' };
 
   const partes = NOMBRE_Y_PRECIOS.exec(limpio);
   if (!partes) {
+    if (PRECIOS_INCOMPLETOS.test(limpio)) return { error: ERROR_INCOMPLETOS };
     return /\d/.test(limpio)
-      ? { error: 'Formato no válido. Escribe el nombre y los precios separados por guion (ej: flo 6-4).' }
-      : { error: 'Faltan los precios (ej: flo 6-4).' };
+      ? { error: 'Formato no válido. Escribe el nombre y los precios (ej: flo 6000 4000).' }
+      : { error: 'Faltan los precios (ej: flo 6000 4000).' };
   }
 
   const [, nombre = '', grupo = ''] = partes;
-  const miles = grupo.split('-').map((p) => Number(p.trim()));
-  if (miles.some((m) => m < 1 || m > 999)) {
-    return { error: 'Cada precio va en miles, entre 1 y 999.' };
-  }
+  if (nombre.split(' ').some(esRestoDePrecio)) return { error: ERROR_INCOMPLETOS };
 
-  return { nombre, precios: miles.map((m) => m * 1000) };
+  const precios = grupo.split(SEPARADOR_PRECIOS).map((p) => Number(p.replaceAll('.', '')));
+  if (precios.some((p) => p < 1000 || p > 999_000)) return { error: 'Cada precio va de $1.000 a $999.000.' };
+  if (precios.some((p) => p % 100 !== 0)) return { error: 'Los precios van en múltiplos de $100 (ej: 3500).' };
+
+  return { nombre, precios };
 }
 
-/** Nombre escrito hasta ahora, aunque la anotación esté incompleta ("flo 6-" → "flo"). */
+/** Nombre escrito hasta ahora, aunque la anotación esté incompleta ("flo 6000-" → "flo"). */
 export function nombreEscrito(texto: string): string {
   const resultado = parseAnotacion(texto);
   if ('nombre' in resultado) return resultado.nombre;
-  return texto.trim().replace(/\s+/g, ' ').replace(/\s+[\d\s-]*$/, '');
+  return texto.trim().replace(/\s+/g, ' ').replace(/\s+[\d.,\s-]*$/, '');
 }

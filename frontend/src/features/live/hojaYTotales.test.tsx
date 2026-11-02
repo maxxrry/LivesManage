@@ -29,7 +29,7 @@ describe('Hoja y totales del live (RF-08)', () => {
     const usuario = await abrirLive();
     expect(sumaVisible()).toBe(clp(screen.getByTestId('total-live').textContent!));
 
-    await usuario.type(screen.getByRole('combobox', { name: 'Anotación' }), 'ana 5{Enter}');
+    await usuario.type(screen.getByRole('combobox', { name: 'Anotación' }), 'ana 5000{Enter}');
     await screen.findByText('ana');
     expect(screen.getByTestId('total-clientas')).toHaveTextContent('6');
     expect(sumaVisible()).toBe(clp(screen.getByTestId('total-live').textContent!));
@@ -66,7 +66,7 @@ describe('Hoja y totales del live (RF-08)', () => {
     const buscar = screen.getByRole('searchbox', { name: 'Buscar en la hoja' });
     await usuario.type(buscar, 'flo');
 
-    await usuario.type(screen.getByRole('combobox', { name: 'Anotación' }), 'ana 5{Enter}');
+    await usuario.type(screen.getByRole('combobox', { name: 'Anotación' }), 'ana 5000{Enter}');
 
     expect(await screen.findByText('ana')).toBeInTheDocument();
     expect(buscar).toHaveValue('');

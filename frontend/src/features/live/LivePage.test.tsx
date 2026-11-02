@@ -27,17 +27,17 @@ const lineaDe = (nombre: string) =>
 describe('Pantalla de live (RF-05)', () => {
   it('muestra la hoja en formato cuaderno y el total del live', async () => {
     await abrirLive();
-    expect(lineaDe('Gabriela Peña')).toHaveTextContent('Gabriela Peña6-6-5= $17.000');
+    expect(lineaDe('Gabriela Peña')).toHaveTextContent('Gabriela Peña6.000 6.000 5.000= $17.000');
     // 17.000 + 10.000 + 13.000 + 8.000 (7 cancelado) + 10.000
     expect(screen.getByTestId('total-live')).toHaveTextContent('$58.000');
   });
 
-  it('"flo 6-4" + Enter suma $10.000 a la línea de Florencia y limpia el campo', async () => {
+  it('"flo 6000 4000" + Enter suma $10.000 a la línea de Florencia y limpia el campo', async () => {
     const { usuario, campo } = await abrirLive();
 
-    await usuario.type(campo!, 'flo 6-4{Enter}');
+    await usuario.type(campo!, 'flo 6000 4000{Enter}');
 
-    expect(await screen.findByRole('status')).toHaveTextContent('Florencia Ruiz: 6-4 = $10.000');
+    expect(await screen.findByRole('status')).toHaveTextContent('Florencia Ruiz: 6.000 4.000 = $10.000');
     expect(lineaDe('Florencia Ruiz')).toHaveTextContent('= $20.000');
     expect(screen.getByTestId('total-live')).toHaveTextContent('$68.000');
     expect(campo).toHaveValue('');
@@ -52,33 +52,91 @@ describe('Pantalla de live (RF-05)', () => {
     });
     const { usuario, campo } = await abrirLive();
 
-    await usuario.type(campo!, 'flo 6-4{Enter}');
+    await usuario.type(campo!, 'flo 6000 4000{Enter}');
     await usuario.clear(campo!);
-    await usuario.type(campo!, 'ana 5');
+    await usuario.type(campo!, 'ana 5000');
     terminar();
 
     expect(await screen.findByRole('status')).toHaveTextContent('Florencia Ruiz');
-    expect(campo).toHaveValue('ana 5');
+    expect(campo).toHaveValue('ana 5000');
   });
 
-  it('"flo 6-" muestra el error y conserva el texto', async () => {
+  it('"flo 6000-" muestra el error y conserva el texto', async () => {
     const { usuario, campo } = await abrirLive();
 
-    await usuario.type(campo!, 'flo 6-{Enter}');
+    await usuario.type(campo!, 'flo 6000-{Enter}');
 
     expect(screen.getByRole('alert')).toHaveTextContent('Falta un precio después del guion');
-    expect(campo).toHaveValue('flo 6-');
+    expect(campo).toHaveValue('flo 6000-');
     expect(anotar).not.toHaveBeenCalled();
+  });
+
+  it('"flo 6 4" en miles da error: no anota ni crea una clienta "flo 6" (D-39)', async () => {
+    const { usuario, campo } = await abrirLive();
+
+    await usuario.type(campo!, 'flo 6 4{Enter}');
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Escribe los precios completos');
+    expect(campo).toHaveValue('flo 6 4');
+    expect(anotar).not.toHaveBeenCalled();
+    expect(screen.getByTestId('total-live')).toHaveTextContent('$58.000');
+  });
+
+  it('acepta precios que no son miles exactos: "flo 3.500" (D-39)', async () => {
+    const { usuario, campo } = await abrirLive();
+
+    await usuario.type(campo!, 'flo 3.500{Enter}');
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Florencia Ruiz: 3.500 = $3.500');
+    expect(lineaDe('Florencia Ruiz')).toHaveTextContent('= $13.500');
+  });
+
+  it('tocar dos veces una sugerencia mientras se guarda anota una sola vez (D-39)', async () => {
+    let terminar: () => void = () => {};
+    vi.mocked(anotar).mockImplementationOnce(async (...args) => {
+      await new Promise<void>((listo) => (terminar = listo)); // la API tarda
+      const { anotar: real } = await vi.importActual<typeof import('../../services/sesionesService')>('../../services/sesionesService');
+      return real(...args);
+    });
+    const { usuario, campo } = await abrirLive();
+
+    await usuario.type(campo!, 'nueva 5000');
+    const opcion = screen.getByRole('option', { name: /Nueva clienta "nueva"/ });
+    await usuario.click(opcion);
+    await usuario.click(opcion);
+    terminar();
+
+    expect(await screen.findByRole('status')).toHaveTextContent('nueva: 5.000');
+    expect(anotar).toHaveBeenCalledTimes(1);
+  });
+
+  it('mientras se guarda una anotación, tocar la sugerencia de la siguiente también la guarda', async () => {
+    let terminar: () => void = () => {};
+    vi.mocked(anotar).mockImplementationOnce(async (...args) => {
+      await new Promise<void>((listo) => (terminar = listo)); // la API tarda
+      const { anotar: real } = await vi.importActual<typeof import('../../services/sesionesService')>('../../services/sesionesService');
+      return real(...args);
+    });
+    const { usuario, campo } = await abrirLive();
+
+    await usuario.type(campo!, 'flo 6000 4000{Enter}');
+    await usuario.clear(campo!);
+    await usuario.type(campo!, 'nueva 5000');
+    await usuario.click(screen.getByRole('option', { name: /Nueva clienta "nueva"/ }));
+    terminar();
+
+    expect(await screen.findByRole('status')).toBeInTheDocument();
+    expect(anotar).toHaveBeenCalledTimes(2);
   });
 
   it('si falla la conexión, avisa y conserva el texto (RNF-13)', async () => {
     vi.mocked(anotar).mockRejectedValueOnce(new Error('Sin conexión.'));
     const { usuario, campo } = await abrirLive();
 
-    await usuario.type(campo!, 'flo 6-4{Enter}');
+    await usuario.type(campo!, 'flo 6000 4000{Enter}');
 
     expect(await screen.findByRole('alert')).toHaveTextContent('No se guardó la anotación. Sin conexión.');
-    expect(campo).toHaveValue('flo 6-4');
+    expect(campo).toHaveValue('flo 6000 4000');
     expect(lineaDe('Florencia Ruiz')).toHaveTextContent('= $10.000');
   });
 
@@ -86,28 +144,28 @@ describe('Pantalla de live (RF-05)', () => {
     const { usuario, campo } = await abrirLive();
     vi.mocked(obtenerSesion).mockRejectedValueOnce(new Error('Sin conexión.'));
 
-    await usuario.type(campo!, 'flo 6-4{Enter}');
+    await usuario.type(campo!, 'flo 6000 4000{Enter}');
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Se guardó el cambio, pero no se pudo actualizar la hoja');
-    expect(screen.getByRole('status')).toHaveTextContent('Florencia Ruiz: 6-4 = $10.000');
+    expect(screen.getByRole('status')).toHaveTextContent('Florencia Ruiz: 6.000 4.000 = $10.000');
     expect(campo).toHaveValue('');
   });
 
   it('sugiere clientas y tocar "Nueva clienta" crea la línea (D-13)', async () => {
     const { usuario, campo } = await abrirLive();
 
-    await usuario.type(campo!, 'flo 5');
+    await usuario.type(campo!, 'flo 5000');
     const sugerencias = screen.getByRole('listbox', { name: 'Sugerencias de clientas' });
     expect(within(sugerencias).getAllByRole('option')[0]).toHaveTextContent('Florencia Ruiz');
     await usuario.click(within(sugerencias).getByRole('option', { name: /Nueva clienta "flo"/ }));
 
-    expect(await screen.findByRole('status')).toHaveTextContent('flo: 5 = $5.000');
+    expect(await screen.findByRole('status')).toHaveTextContent('flo: 5.000 = $5.000');
     expect(lineaDe('flo')).toHaveTextContent('= $5.000');
   });
 
   it('Deshacer quita lo recién anotado', async () => {
     const { usuario, campo } = await abrirLive();
-    await usuario.type(campo!, 'flo 6-4{Enter}');
+    await usuario.type(campo!, 'flo 6000 4000{Enter}');
 
     await usuario.click(await screen.findByRole('button', { name: 'Deshacer' }));
 

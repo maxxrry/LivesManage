@@ -50,10 +50,15 @@ describe('anotar (RF-05)', () => {
     expect(await obtenerSesion('s-1')).toEqual(antes);
   });
 
+  it('acepta precios que no son miles exactos (D-39)', async () => {
+    const { linea } = await anotar('s-2', { clientaId: 'c-2' }, [3500]);
+    expect(linea.prendas.at(-1)?.precio).toBe(3500);
+  });
+
   it('rechaza precios inválidos', async () => {
     await expect(anotar('s-2', { clientaId: 'c-2' }, [])).rejects.toThrow();
     await expect(anotar('s-2', { clientaId: 'c-2' }, [0])).rejects.toThrow();
-    await expect(anotar('s-2', { clientaId: 'c-2' }, [6500])).rejects.toThrow();
+    await expect(anotar('s-2', { clientaId: 'c-2' }, [6550])).rejects.toThrow();
   });
 });
 

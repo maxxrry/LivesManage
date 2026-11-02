@@ -23,7 +23,7 @@ test('tras anotar, cancelar y pagar, el total es la suma de las líneas visibles
   await expect(page.getByTestId('total-clientas')).toHaveText('5');
   await verificarSuma(page);
 
-  await page.getByRole('combobox', { name: 'Anotación' }).fill('ana 5');
+  await page.getByRole('combobox', { name: 'Anotación' }).fill('ana 5000');
   await page.getByRole('combobox', { name: 'Anotación' }).press('Enter');
   await expect(page.getByTestId('total-live')).toHaveText('$63.000');
   await expect(page.getByTestId('total-clientas')).toHaveText('6');

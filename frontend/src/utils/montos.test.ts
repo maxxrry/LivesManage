@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import type { Linea, Prenda } from '../types/dominio';
-import { formatearClp, totalesDeLineas, totalLinea } from './montos';
+import { formatearClp, formatearPrecio, totalesDeLineas, totalLinea } from './montos';
 
 const prenda = (precio: number, estado: Prenda['estado'] = 'VIGENTE'): Prenda => ({ id: `p-${precio}`, precio, estado });
+
+describe('formatearPrecio', () => {
+  it('muestra el precio con separador de miles y sin signo', () => {
+    expect(formatearPrecio(6000)).toBe('6.000');
+    expect(formatearPrecio(3500)).toBe('3.500');
+    expect(formatearPrecio(120000)).toBe('120.000');
+  });
+});
 
 describe('totalLinea', () => {
   it('suma las prendas vigentes: 6-6-5 = 17.000', () => {

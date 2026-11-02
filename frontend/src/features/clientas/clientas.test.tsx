@@ -176,8 +176,8 @@ describe('Ficha: historial e indicadores (RF-13)', () => {
     abrir('/clientas/c-3'); // Javiera: live martes (Abierto, retiro) y live jueves (Cerrado, despacho)
 
     const [martes, jueves] = await filasHistorial();
-    expect(martes).toMatch(/29\/09\/2026.*Live martes.*Abierta.*8-5.*\$13\.000.*Pagado.*Retiro/);
-    expect(jueves).toMatch(/24\/09\/2026.*Live jueves noche.*7-5.*\$12\.000.*Pagado.*Despacho/);
+    expect(martes).toMatch(/29\/09\/2026.*Live martes.*Abierta.*8\.000 5\.000.*\$13\.000.*Pagado.*Retiro/);
+    expect(jueves).toMatch(/24\/09\/2026.*Live jueves noche.*7\.000 5\.000.*\$12\.000.*Pagado.*Despacho/);
     expect(jueves).not.toMatch(/Cerrada/);
   });
 
@@ -215,7 +215,7 @@ describe('Ficha: historial e indicadores (RF-13)', () => {
     sesiones.find((s) => s.id === 's-2')!.estado = 'CERRADA';
     abrir('/clientas/c-4'); // Camila 5-7-3, con el 7 cancelado
 
-    expect((await filasHistorial())[0]).toMatch(/5-7 \(cancelada\)-3.*\$8\.000/);
+    expect((await filasHistorial())[0]).toMatch(/5\.000 7\.000 \(cancelada\) 3\.000.*\$8\.000/);
     expect(indicador('Prendas canceladas')).toBe('1');
   });
 

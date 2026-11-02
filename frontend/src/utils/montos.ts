@@ -1,10 +1,16 @@
 import type { Linea, MontoClp, Prenda } from '../types/dominio';
 
 const clp = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' });
+const numero = new Intl.NumberFormat('es-CL');
 
 /** 17000 → "$17.000". */
 export function formatearClp(monto: MontoClp): string {
   return clp.format(monto);
+}
+
+/** Precio de una prenda en la hoja, sin signo: 6000 → "6.000". */
+export function formatearPrecio(precio: MontoClp): string {
+  return numero.format(precio);
 }
 
 /** Total de una línea: suma solo las prendas vigentes. */

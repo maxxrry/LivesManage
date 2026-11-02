@@ -118,7 +118,7 @@ function resolverClienta(destino: DestinoAnotacion): Clienta {
   return clienta;
 }
 
-const precioValido = (p: MontoClp) => Number.isInteger(p) && p >= 1000 && p <= 999_000 && p % 1000 === 0;
+const precioValido = (p: MontoClp) => Number.isInteger(p) && p >= 1000 && p <= 999_000 && p % 100 === 0;
 
 /**
  * RF-05: agrega prendas a la línea de la clienta en el live, o crea la línea (y la clienta si es nueva).

@@ -2,7 +2,7 @@ import { Fragment, useState, type ReactNode } from 'react';
 import type { DestinoAnotacion } from '../../services/sesionesService';
 import type { Clienta, Linea, Prenda } from '../../types/dominio';
 import { ETIQUETAS_ESTADO_PAGO } from '../../types/etiquetas';
-import { formatearClp, totalLinea } from '../../utils/montos';
+import { formatearClp, formatearPrecio, totalLinea } from '../../utils/montos';
 import { CambiarClienta } from './CambiarClienta';
 import { coincideNombre } from './sugerirClientas';
 
@@ -27,8 +27,16 @@ interface HojaLiveProps {
 
 function PrendaHoja({ prenda, editable, onAlternar }: { prenda: Prenda; editable: boolean; onAlternar: () => void }) {
   const cancelada = prenda.estado === 'CANCELADA';
-  const miles = prenda.precio / 1000;
-  if (!editable) return cancelada ? <s className="text-gray-400">{miles}</s> : <>{miles}</>;
+  const precio = formatearPrecio(prenda.precio);
+  if (!editable) {
+    if (!cancelada) return <>{precio}</>;
+    return (
+      <s className="text-gray-400">
+        {precio}
+        <span className="sr-only"> (cancelada)</span>
+      </s>
+    );
+  }
   return (
     <button
       type="button"
@@ -38,7 +46,7 @@ function PrendaHoja({ prenda, editable, onAlternar }: { prenda: Prenda; editable
         cancelada ? 'border-gray-200 bg-gray-100 text-gray-400 line-through' : 'border-gray-300 bg-white hover:border-marca-600'
       }`}
     >
-      {miles}
+      {precio}
     </button>
   );
 }
@@ -92,7 +100,7 @@ function EstadoPagoLinea({
 }
 
 /**
- * Hoja del live en formato cuaderno: "Gabriela Peña 6-6-5 = $17.000", la última modificada arriba.
+ * Hoja del live: "Gabriela Peña 6.000 6.000 5.000 = $17.000", la última modificada arriba.
  * RF-06: tocar una prenda la cancela o la restaura; el lápiz cambia la clienta de la línea.
  * RF-07: el botón Pagado marca o desmarca el pago; la línea pagada se destaca en rosado, como en el cuaderno.
  */
@@ -169,7 +177,7 @@ export function HojaLive({
             <span className={`tabular-nums ${editable ? 'order-last flex max-w-full shrink-0 flex-wrap items-center gap-1' : ''}`}>
               {linea.prendas.map((p, i) => (
                 <Fragment key={p.id}>
-                  {i > 0 && <span className={editable ? 'text-gray-400' : ''}>-</span>}
+                  {i > 0 && ' '}
                   <PrendaHoja prenda={p} editable={editable} onAlternar={() => onAlternarPrenda(linea.id, p.id)} />
                 </Fragment>
               ))}

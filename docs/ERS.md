@@ -8,6 +8,7 @@
 | --- | --- | --- | --- |
 | 26/09/2026 | 1.0 | Maxi | Versión inicial: introducción, descripción general y requisitos (enfoque de inventario genérico). |
 | 30/09/2026 | 2.0 | Maxi | Reenfoque en el live de TikTok: se eliminan productos, categorías, stock y ventas; se agregan sesiones de live, anotación rápida, cierre del live e importación de cuaderno. 15 RF y matriz de trazabilidad. |
+| 02/11/2026 | 2.1 | Maxi | RF-05 y RF-08: los precios se anotan y se muestran completos, sin la sintaxis en miles. Se cierran los pendientes sobre precios, despacho, abonos, saldo a favor y feria, y el despliegue pasa a AWS. |
 
 ## 1. Introducción
 
@@ -27,7 +28,7 @@ Se compone de un frontend en React, usado principalmente desde el celular, y un 
 
 * Autenticar usuarios y controlar el acceso según rol (administrador y vendedor).
 * Abrir y cerrar sesiones de live; toda anotación pertenece a una sesión.
-* Anotar compras durante el live con la misma sintaxis del cuaderno (ej: "flo 6-4"), autocompletando la clienta o creándola, y sumando a su línea si ya tenía una.
+* Anotar compras durante el live con una sintaxis rápida (ej: "flo 6000 4000"), autocompletando la clienta o creándola, y sumando a su línea si ya tenía una.
 * Quitar prendas canceladas con un toque y recalcular los totales.
 * Registrar si cada clienta pagó, y mostrar siempre el total del live y el total pagado.
 * Guiar el cierre del live: revisión de bolsas, cobro y forma de entrega (despacho, retiro o feria), con la dirección cuando corresponda.
@@ -58,7 +59,7 @@ Se compone de un frontend en React, usado principalmente desde el celular, y un 
 | Sesión de live | Registro de un live en el sistema. Agrupa todas las anotaciones hechas en él y pasa por los estados Abierta, En cierre y Cerrada. |
 | Línea | Equivalente a una línea del cuaderno: una clienta, sus prendas y su total dentro de una sesión. Una clienta tiene como máximo una línea por sesión. |
 | Prenda | Cada ítem anotado en una línea. Solo tiene precio; no tiene talla, descripción ni código. Puede estar Vigente o Cancelada. |
-| Sintaxis rápida | Formato de anotación del cuaderno: nombre seguido de precios en miles separados por guiones. Ej: "flo 6-4" son dos prendas de $6.000 y $4.000 para la clienta que coincide con "flo". |
+| Sintaxis rápida | Formato de anotación: nombre seguido de los precios completos, separados por espacio o guion. Ej: "flo 6000 4000" son dos prendas de $6.000 y $4.000 para la clienta que coincide con "flo". |
 | Estado de pago | Estado de una línea: Pendiente, Pagado o No pagó. Reemplaza el destacado rosado del cuaderno. |
 | Bolsa | Bolsa física donde se juntan las prendas de cada clienta durante el live; en el cierre se revisa contra su línea. |
 | Forma de entrega | Cómo recibe la clienta sus prendas: Despacho a domicilio, Retiro o Entrega en feria. |
@@ -88,7 +89,7 @@ LivesManage reemplaza un proceso manual en papel y no se integra con otro softwa
 
 | **Hoy en el cuaderno** | **Limitación** | **En LivesManage** |
 | --- | --- | --- |
-| Se escribe el nombre y los precios en miles ("Gabriela Peña 6-6-5 = 17.000"). | Con muchas compras seguidas cuesta seguir el ritmo del live. | Anotación rápida con la misma sintaxis y autocompletado de clientas (RF-05). |
+| Se escribe el nombre y los precios en miles ("Gabriela Peña 6-6-5 = 17.000"). | Con muchas compras seguidas cuesta seguir el ritmo del live. | Anotación rápida con el nombre y los precios completos, y autocompletado de clientas (RF-05). |
 | Si la clienta pide de nuevo, se agrega a su línea. | Hay que ubicar su línea en la página. | El sistema suma a su línea automáticamente (RF-05). |
 | Si cancela, se tacha la prenda y se corrige el total. | Sumas y correcciones a mano, propensas a error. | Quitar la prenda con un toque y recálculo automático (RF-06). |
 | Las clientas que pagaron se destacan en rosado. | No se ve de un vistazo cuánto falta por cobrar. | Estado de pago, total pagado y pendiente siempre visibles (RF-07, RF-08). |
@@ -144,10 +145,10 @@ Lo usarán entre 2 y 3 personas: el desarrollador durante el proyecto y 1 o 2 pe
 * La persona que anota cuenta con un celular o PC con internet durante el live.
 * Una sola persona anota por live; si en el futuro anotan dos a la vez, se necesitará sincronización en tiempo real.
 * Las prendas no se identifican: cada una es solo un precio. Si la tienda quiere registrar talla o descripción, habrá que revisar el modelo de datos.
-* Los precios se anotan en miles enteros (6 = $6.000).
-* Los pagos se reciben fuera del sistema (transferencia o efectivo); el sistema solo registra si se pagó.
+* Los precios se anotan completos (6000 o 6.000), de $1.000 a $999.000 y en múltiplos de $100.
+* Los pagos se reciben fuera del sistema (transferencia o efectivo); el sistema solo registra si se pagó. El costo de despacho, los abonos y los saldos a favor los lleva la dueña con cada clienta, fuera del sistema.
 * La foto del cuaderno debe ser legible; la extracción automática puede equivocarse y siempre requiere revisión humana.
-* El despliegue (servidor, nube o entorno local para el ramo) queda sujeto a lo que definan el ramo y la tienda.
+* El despliegue será en AWS, como pide el ramo. Falta definir la cuenta y si la tienda seguirá usando el sistema después de la entrega.
 
 ### 2.6. Requisitos futuros
 
@@ -219,21 +220,22 @@ Estados de una sesión: **Abierta** (se anotan compras), **En cierre** (el live 
 | RF-05 | Anotar compra con sintaxis rápida | Ambos | Ver detalle abajo. | Esencial |
 | RF-06 | Corregir línea | Ambos | Un toque sobre una prenda la marca Cancelada (se ve tachada, no se borra) y recalcula los totales; otro toque la restaura. También permite cambiar la clienta de la línea si se eligió mal; si la nueva clienta ya tenía línea en el live, ambas se unen. Disponible mientras la sesión no esté Cerrada. | Esencial |
 | RF-07 | Marcar estado de pago | Ambos | Con un toque la línea pasa de Pendiente a Pagado, o vuelve a Pendiente. Las líneas pagadas se destacan con color, como el rosado del cuaderno. Se registra fecha, hora y usuario del cambio. | Esencial |
-| RF-08 | Ver hoja y totales del live | Ambos | Muestra las líneas en el formato del cuaderno (ej: "Gabriela Peña 6-6-5 = $17.000"), con la última modificada arriba y búsqueda por nombre. El total del live, el total pagado, lo pendiente por cobrar y el número de clientas quedan siempre visibles y se actualizan tras cada anotación, corrección o pago, sin recargar la página. | Esencial |
+| RF-08 | Ver hoja y totales del live | Ambos | Muestra cada línea con su clienta, sus precios y su total (ej: "Gabriela Peña 6.000 6.000 5.000 = $17.000"), con la última modificada arriba y búsqueda por nombre. El total del live, el total pagado, lo pendiente por cobrar y el número de clientas quedan siempre visibles y se actualizan tras cada anotación, corrección o pago, sin recargar la página. | Esencial |
 
 **RF-05 · Anotar compra con sintaxis rápida**
 
-1. Con una sesión Abierta, el usuario escribe en el campo de anotación el nombre de la clienta seguido de los precios en miles separados por guiones, igual que en el cuaderno (ej: "flo 6-4").
+1. Con una sesión Abierta, el usuario escribe en el campo de anotación el nombre de la clienta seguido de los precios completos, separados por espacio o guion (ej: "flo 6000 4000").
 2. Mientras escribe el nombre, el sistema sugiere clientas que coinciden (sin distinguir mayúsculas ni tildes), mostrando primero las que ya tienen línea en este live y luego las de compra más reciente.
 3. Al presionar Enter (o Agregar en el celular), la anotación se asigna a la sugerencia destacada. Si no hay coincidencias, o el usuario elige "Nueva clienta", el sistema crea una clienta con ese nombre.
 4. Si la clienta ya tiene una línea en la sesión, las prendas se agregan a esa línea; si no, se crea una línea nueva en estado Pendiente.
-5. El sistema convierte cada precio a pesos (6 → $6.000), recalcula el total de la línea y del live, limpia el campo y lo deja listo para la siguiente anotación.
-6. Durante unos segundos muestra un aviso con el resultado (ej: "Florencia Ruiz: 6-4 = $10.000") y la opción Deshacer.
+5. El sistema recalcula el total de la línea y del live, limpia el campo y lo deja listo para la siguiente anotación.
+6. Durante unos segundos muestra un aviso con el resultado (ej: "Florencia Ruiz: 6.000 4.000 = $10.000") y la opción Deshacer.
 
 Validaciones y errores:
 
-* Debe haber un nombre y al menos un precio; cada precio es un número entero entre 1 y 999.
-* Se aceptan espacios alrededor de los guiones ("flo 6 - 4").
+* Debe haber un nombre y al menos un precio; cada precio va completo, de $1.000 a $999.000 y en múltiplos de $100. Acepta punto de miles ("flo 6.000 3.500").
+* Los precios se separan con espacio o guion ("flo 6000 4000", "flo 6000-4000", "flo 6000 - 4000").
+* Un número menor a 1000 es parte del nombre ("Cami 2 6000" es la clienta "Cami 2"). Si el texto termina en uno ("flo 6 4"), es un error y no se crea ninguna clienta. Un número de 4 o más dígitos siempre es un precio.
 * Si el texto no cumple el formato, no se guarda nada, se indica el problema y el texto se conserva para corregirlo.
 * No se puede anotar en una sesión que no esté Abierta.
 
@@ -280,7 +282,7 @@ Las estadísticas de una clienta se calculan con sus líneas de lives Cerrados: 
 **RF-15 · Importar cuaderno desde foto**
 
 1. El usuario elige Importar cuaderno, selecciona la sesión de destino (una que no esté Cerrada, o una nueva) y sube una foto de la página (JPG o PNG) o la toma con la cámara.
-2. El backend envía la imagen al modelo con visión (API de Claude) y recibe un JSON con las líneas detectadas: nombre, precios, total escrito, prendas tachadas y si la línea estaba destacada (pagada).
+2. El backend envía la imagen al modelo con visión (API de Claude) y recibe un JSON con las líneas detectadas: nombre, precios, total escrito, prendas tachadas y si la línea estaba destacada (pagada). Los precios del cuaderno, escritos en miles, se convierten a pesos.
 3. El sistema muestra las líneas en una tabla editable y marca las que requieren atención: total escrito distinto de la suma de precios, textos ilegibles y nombres que no coinciden con clientas existentes (se crearán como nuevas).
 4. El usuario corrige lo necesario y confirma; recién entonces se guardan las líneas, con las mismas reglas de RF-05.
 
@@ -371,7 +373,7 @@ Cada RF tiene un criterio de aceptación verificable. El criterio se automatiza 
 | RF-02 | El vendedor no ve Usuarios y la API le responde 403 si intenta usarla. | Filtro de roles (JUnit); rutas protegidas (Vitest) | E2E-02 | UAT-01 |
 | RF-03 | El admin crea un vendedor que luego inicia sesión; un correo repetido se rechaza. | UsuarioService (JUnit) | E2E-03 | UAT-01 |
 | RF-04 | Con un live Abierto no se puede abrir otro; la lista muestra los totales de cada live. | SesionService (JUnit) | E2E-04 | UAT-02 |
-| RF-05 | "flo 6-4" suma $10.000 a la línea existente de Florencia; "ana 5" crea clienta y línea; "flo 6-" muestra error y conserva el texto. | Intérprete de sintaxis (Vitest); LineaService (JUnit) | E2E-05 | UAT-02 |
+| RF-05 | "flo 6000 4000" suma $10.000 a la línea existente de Florencia; "ana 5000" crea clienta y línea; "flo 6000-" y "flo 6 4" muestran error y conservan el texto. | Intérprete de sintaxis (Vitest); LineaService (JUnit) | E2E-05 | UAT-02 |
 | RF-06 | Quitar una prenda de $6.000 baja la línea y el total del live en $6.000; restaurarla los repone. | Cálculo de totales (JUnit) | E2E-06 | UAT-02 |
 | RF-07 | Marcar Pagada una línea de $17.000 la destaca y sube el total pagado en $17.000. | LineaService (JUnit) | E2E-07 | UAT-02 |
 | RF-08 | Tras cada acción, el total del live es igual a la suma de las líneas visibles. | Componente de totales (Vitest) | E2E-08 | UAT-02 |
@@ -393,12 +395,12 @@ Cada RF tiene un criterio de aceptación verificable. El criterio se automatiza 
 
 ## Pendientes por confirmar
 
-* ☐ ¿Hay precios que no sean miles exactos (ej: $3.500)? Si existen, la sintaxis debería aceptar un decimal (3,5).
-* ☐ ¿El despacho tiene costo para la clienta? Si es así, ¿se suma a su total?
-* ☐ ¿Hay pagos parciales o abonos? Hoy una línea está Pendiente o Pagada completa.
-* ☐ Si una clienta ya pagó y luego se cancela una de sus prendas, ¿se le devuelve el dinero o queda a favor? Hoy la línea sigue Pagada (D-20).
-* ☐ ¿La entrega en feria necesita registrar qué feria y qué día?
+* ☑ ¿Hay precios que no sean miles exactos (ej: $3.500)? Sí, aunque no son habituales: los precios se anotan completos (D-39).
+* ☑ ¿El despacho tiene costo para la clienta? Sí, pero no se suma a su total: lo ve la dueña con cada clienta (D-40).
+* ☑ ¿Hay pagos parciales o abonos? Sí, pero los ve la dueña con cada clienta (D-40).
+* ☑ Si una clienta ya pagó y luego se cancela una de sus prendas, el dinero queda a favor y lo lleva la dueña; la línea sigue Pagada (D-20, D-40).
+* ☑ ¿La entrega en feria necesita registrar qué feria y qué día? No, basta con elegir Feria en el cierre (D-40).
 * ☐ ¿Anota una sola persona por live? El sistema asume que sí.
 * ☐ ¿Se necesita registrar las ventas del local físico? Hoy quedan fuera de alcance.
 * ☐ ¿60 días sin comprar es un buen criterio de clienta inactiva? (RF-14)
-* ☐ Dónde se desplegará el sistema (servidor, nube o solo entorno local para el ramo).
+* ☐ Despliegue en AWS, como pide el ramo: falta definir la cuenta y si la tienda seguirá usando el sistema después de la entrega.

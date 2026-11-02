@@ -29,10 +29,10 @@ Van de lo más pequeño y rápido a lo más completo y lento. Hay muchas abajo y
 
 | Tipo | Qué revisa | Cómo | Ejemplo |
 | --- | --- | --- | --- |
-| **Lógica** (unitaria) | Una función pura: recibe datos y devuelve un resultado. Sin pantalla ni datos guardados. | Vitest. Archivo `*.test.ts` junto a la función. | `parseAnotacion("flo 6-4")` devuelve nombre `flo` y precios `[6000, 4000]`. |
+| **Lógica** (unitaria) | Una función pura: recibe datos y devuelve un resultado. Sin pantalla ni datos guardados. | Vitest. Archivo `*.test.ts` junto a la función. | `parseAnotacion("flo 6000 4000")` devuelve nombre `flo` y precios `[6000, 4000]`. |
 | **Servicio** | Las operaciones que leen y guardan datos (hoy en memoria; mañana la API). | Vitest. `src/services/*.test.ts`. | `anotar()` para Florencia suma a su línea y no crea otra. |
-| **Componente** | Una pantalla dibujada en un navegador simulado (jsdom), usada como lo haría la persona: escribir, tocar botones. | Vitest + Testing Library + user-event. Archivo `*.test.tsx`. | Escribir `flo 6-` y Enter muestra el error y conserva el texto. |
-| **E2E** (extremo a extremo) | La app completa en un navegador Chrome real, en tamaño celular (360×740) y computador (1280×800). | Playwright. `e2e/rf-XX.spec.ts`. | Anotar `flo 6-4` en el live y ver que su línea y el total suben $10.000. |
+| **Componente** | Una pantalla dibujada en un navegador simulado (jsdom), usada como lo haría la persona: escribir, tocar botones. | Vitest + Testing Library + user-event. Archivo `*.test.tsx`. | Escribir `flo 6000-` y Enter muestra el error y conserva el texto. |
+| **E2E** (extremo a extremo) | La app completa en un navegador Chrome real, en tamaño celular (360×740) y computador (1280×800). | Playwright. `e2e/rf-XX.spec.ts`. | Anotar `flo 6000 4000` en el live y ver que su línea y el total suben $10.000. |
 
 Vitest reemplaza a Jasmine + Karma con la aprobación del profesor (D-10). Se escribe igual: `describe`, `it`, `expect`; `vi.fn()` equivale a `jasmine.createSpy()`.
 
@@ -89,13 +89,13 @@ Cada error encontrado en la revisión de código se corrigió en dos pasos: una 
 
 ### Tablas de casos (`it.each`)
 
-El parser tiene 24 casos. En vez de 24 pruebas casi iguales, una tabla; agregar un caso es agregar una fila:
+El parser tiene 49 casos. En vez de 49 pruebas casi iguales, una tabla; agregar un caso es agregar una fila:
 
 ```ts
 it.each([
-  ['flo 6-4', 'flo', [6000, 4000]],
-  ['flo 6 - 4', 'flo', [6000, 4000]],
-  ['Cami 2 6-4', 'Cami 2', [6000, 4000]], // D-12: nombres con números
+  ['flo 6000 4000', 'flo', [6000, 4000]],
+  ['flo 6000 - 4000', 'flo', [6000, 4000]],
+  ['Cami 2 6000 4000', 'Cami 2', [6000, 4000]], // D-12: nombres con números
 ])('"%s" → nombre "%s"', (texto, nombre, precios) => {
   expect(parseAnotacion(texto)).toEqual({ nombre, precios });
 });
@@ -106,9 +106,9 @@ it.each([
 Las pruebas de pantalla buscan por lo que se ve (un botón llamado "Guardar", un campo llamado "Nombre"), no por detalles internos como clases CSS. Así una prueba solo falla si cambia algo que la persona notaría, y de paso se comprueba que la pantalla es accesible.
 
 ```ts
-await usuario.type(campo, 'flo 6-{Enter}');
+await usuario.type(campo, 'flo 6000-{Enter}');
 expect(screen.getByRole('alert')).toHaveTextContent('Falta un precio después del guion');
-expect(campo).toHaveValue('flo 6-'); // el texto no se pierde
+expect(campo).toHaveValue('flo 6000-'); // el texto no se pierde
 ```
 
 ### Mocks: reemplazar una parte para controlarla
@@ -120,9 +120,9 @@ Un *mock* reemplaza una pieza real por una controlada por la prueba. Se usan dos
 
 ```ts
 vi.mocked(anotar).mockRejectedValueOnce(new Error('Sin conexión.'));
-// ... la persona anota "flo 6-4" ...
+// ... la persona anota "flo 6000 4000" ...
 expect(await screen.findByRole('alert')).toHaveTextContent('No se guardó la anotación. Sin conexión.');
-expect(campo).toHaveValue('flo 6-4'); // no pierde lo que escribió
+expect(campo).toHaveValue('flo 6000 4000'); // no pierde lo que escribió
 ```
 
 ### Fecha fija
@@ -169,7 +169,7 @@ Cada E2E lleva la etiqueta de su requisito (`{ tag: '@RF-05' }`) y prueba su cri
 | --- | --- | --- | --- |
 | RF-01 | Con credenciales válidas entra; con inválidas ve un mensaje genérico; un usuario desactivado no entra. | `rf-01.spec.ts` | `usuarios.test.ts`, `LoginPage.test.tsx` |
 | RF-04 | Con un live Abierto no se puede abrir otro; la lista muestra los totales. | `rf-04.spec.ts` | `sesiones.test.ts`, `fechas.test.ts`, `LivesPage.test.tsx` |
-| RF-05 | "flo 6-4" suma $10.000 a Florencia; "ana 5" crea clienta; "flo 6-" muestra error y conserva el texto. | `rf-05.spec.ts` | `parseAnotacion.test.ts`, `sugerirClientas.test.ts`, `anotar.test.ts`, `LivePage.test.tsx` |
+| RF-05 | "flo 6000 4000" suma $10.000 a Florencia; "ana 5000" crea clienta; "flo 6000-" y "flo 6 4" muestran error y conservan el texto. | `rf-05.spec.ts` | `parseAnotacion.test.ts`, `sugerirClientas.test.ts`, `anotar.test.ts`, `LivePage.test.tsx` |
 | RF-06 | Quitar una prenda de $6.000 baja la línea y el total en $6.000; restaurarla los repone. | `rf-06.spec.ts` | `corregir.test.ts`, `corregirLinea.test.tsx` |
 | RF-07 | Marcar Pagada una línea de $17.000 la destaca y sube el pagado en $17.000. | `rf-07.spec.ts` | `pago.test.ts`, `pagoLinea.test.tsx` |
 | RF-08 | El total del live es siempre la suma de las líneas visibles. | `rf-08.spec.ts` | `montos.test.ts`, `TotalesLive.test.tsx`, `hojaYTotales.test.tsx` |

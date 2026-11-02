@@ -44,7 +44,7 @@ describe('Marcar estado de pago (RF-07)', () => {
     const usuario = await abrirLive();
     expect(screen.getByRole('button', { name: 'Pagado: Javiera Soto' })).toHaveAttribute('aria-pressed', 'true');
 
-    await usuario.type(screen.getByRole('combobox', { name: 'Anotación' }), 'javi 5{Enter}');
+    await usuario.type(screen.getByRole('combobox', { name: 'Anotación' }), 'javi 5000{Enter}');
 
     expect(await screen.findByRole('button', { name: 'Pagado: Javiera Soto', pressed: false })).toBeInTheDocument();
     expect(screen.getByTestId('total-pagado')).toHaveTextContent('$0');
@@ -52,7 +52,7 @@ describe('Marcar estado de pago (RF-07)', () => {
 
   it('cambiar el pago de la línea recién anotada cierra el aviso de Deshacer (D-22)', async () => {
     const usuario = await abrirLive();
-    await usuario.type(screen.getByRole('combobox', { name: 'Anotación' }), 'flo 6-4{Enter}');
+    await usuario.type(screen.getByRole('combobox', { name: 'Anotación' }), 'flo 6000 4000{Enter}');
     expect(await screen.findByRole('status')).toBeInTheDocument();
 
     await usuario.click(screen.getByRole('button', { name: 'Pagado: Florencia Ruiz' }));
@@ -63,7 +63,7 @@ describe('Marcar estado de pago (RF-07)', () => {
 
   it('cambiar el pago de otra línea mantiene el aviso', async () => {
     const usuario = await abrirLive();
-    await usuario.type(screen.getByRole('combobox', { name: 'Anotación' }), 'flo 6-4{Enter}');
+    await usuario.type(screen.getByRole('combobox', { name: 'Anotación' }), 'flo 6000 4000{Enter}');
     expect(await screen.findByRole('status')).toBeInTheDocument();
 
     await usuario.click(screen.getByRole('button', { name: 'Pagado: Gabriela Peña' }));
