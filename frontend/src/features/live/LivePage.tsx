@@ -208,6 +208,7 @@ export function LivePage() {
           void ejecutar(() => alternarPrenda(id, lineaId, prendaId), 'No se pudo corregir la prenda.');
         }}
         onCambiarClienta={alCambiarClienta}
+        onAgregarPrendas={sesion.estado === 'ABIERTA' ? (linea, precios) => alAnotar({ clientaId: linea.clientaId }, precios) : undefined}
         onAlternarPago={(lineaId) => {
           cerrarAvisoDe(lineaId);
           void ejecutar(() => alternarPago(id, lineaId), 'No se pudo cambiar el pago.');
@@ -216,7 +217,7 @@ export function LivePage() {
         onBuscar={setBusqueda}
       />
 
-      {aviso && <Aviso texto={aviso.texto} onDeshacer={() => void alDeshacer()} onCerrar={cerrarAviso} />}
+      {aviso && <Aviso key={aviso.anotacionId} texto={aviso.texto} onDeshacer={() => void alDeshacer()} onCerrar={cerrarAviso} />}
     </div>
   );
 }

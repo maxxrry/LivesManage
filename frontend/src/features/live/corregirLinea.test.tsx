@@ -53,19 +53,21 @@ describe('Corregir línea (RF-06)', () => {
   it('cambia la clienta de una línea a otra sin línea en el live', async () => {
     const usuario = await abrirLive();
 
-    await usuario.click(screen.getByRole('button', { name: 'Cambiar clienta de Gabriela Peña' }));
+    await usuario.click(screen.getByRole('button', { name: 'Editar línea de Gabriela Peña' }));
+    await usuario.click(screen.getByRole('button', { name: 'Cambiar clienta' }));
     await usuario.type(screen.getByRole('combobox', { name: 'Buscar la clienta correcta' }), 'valen');
     await usuario.click(screen.getByRole('option', { name: 'Valentina Soto' }));
 
-    expect(await screen.findByRole('button', { name: 'Cambiar clienta de Valentina Soto' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Editar línea de Valentina Soto' })).toBeInTheDocument();
     expect(lineaDe('Valentina Soto')).toHaveTextContent('6.000 6.000 5.000= $17.000');
-    expect(screen.queryByRole('button', { name: 'Cambiar clienta de Gabriela Peña' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Editar línea de Gabriela Peña' })).not.toBeInTheDocument();
   });
 
   it('si la clienta ya tiene línea, pide confirmación y une ambas (D-19)', async () => {
     const usuario = await abrirLive();
 
-    await usuario.click(screen.getByRole('button', { name: 'Cambiar clienta de Gabriela Peña' }));
+    await usuario.click(screen.getByRole('button', { name: 'Editar línea de Gabriela Peña' }));
+    await usuario.click(screen.getByRole('button', { name: 'Cambiar clienta' }));
     await usuario.type(screen.getByRole('combobox', { name: 'Buscar la clienta correcta' }), 'flo{Enter}');
 
     expect(screen.getByText('Florencia Ruiz ya tiene línea en este live. ¿Unirlas?')).toBeInTheDocument();
@@ -80,7 +82,8 @@ describe('Corregir línea (RF-06)', () => {
   it('Cancelar en la confirmación no une nada', async () => {
     const usuario = await abrirLive();
 
-    await usuario.click(screen.getByRole('button', { name: 'Cambiar clienta de Gabriela Peña' }));
+    await usuario.click(screen.getByRole('button', { name: 'Editar línea de Gabriela Peña' }));
+    await usuario.click(screen.getByRole('button', { name: 'Cambiar clienta' }));
     await usuario.type(screen.getByRole('combobox', { name: 'Buscar la clienta correcta' }), 'flo{Enter}');
     await usuario.click(within(screen.getByRole('group', { name: 'Confirmar unión' })).getByRole('button', { name: 'Cancelar' }));
 

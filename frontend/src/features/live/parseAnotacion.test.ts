@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nombreEscrito, parseAnotacion } from './parseAnotacion';
+import { nombreEscrito, parseAnotacion, parsePrecios } from './parseAnotacion';
 
 describe('nombreEscrito (sugerencias mientras se escribe)', () => {
   it.each([
@@ -13,6 +13,39 @@ describe('nombreEscrito (sugerencias mientras se escribe)', () => {
     ['', ''],
   ])('"%s" → "%s"', (texto, nombre) => {
     expect(nombreEscrito(texto)).toBe(nombre);
+  });
+});
+
+describe('parsePrecios (agregar prendas desde el lápiz, D-41)', () => {
+  it.each([
+    ['6000', [6000]],
+    ['6000 4000', [6000, 4000]],
+    ['6000-4000', [6000, 4000]],
+    ['6000 - 4000', [6000, 4000]],
+    ['6.000 3.500', [6000, 3500]],
+    ['  3500  ', [3500]],
+  ])('"%s" → %j', (texto, precios) => {
+    expect(parsePrecios(texto)).toEqual({ precios });
+  });
+
+  it.each([
+    ['', 'Escribe los precios'],
+    ['   ', 'Escribe los precios'],
+    ['6000-', 'Falta un precio después del guion'],
+    ['6 4', 'precios completos'],
+    ['6', 'precios completos'],
+    ['6-4', 'precios completos'],
+    ['3,5', 'precios completos'],
+    ['6000 4', 'precios completos'],
+    ['6000--4000', 'precios completos'],
+    ['flo 6000', 'solo los precios'],
+    ['flo', 'solo los precios'],
+    ['1000000', 'de $1.000 a $999.000'],
+    ['6550', 'múltiplos de $100'],
+  ])('"%s" → error que menciona "%s"', (texto, mensaje) => {
+    const resultado = parsePrecios(texto);
+    expect(resultado).toHaveProperty('error');
+    expect('error' in resultado && resultado.error).toContain(mensaje);
   });
 });
 

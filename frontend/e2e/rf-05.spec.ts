@@ -61,6 +61,27 @@ test('"flo 3.500" anota un precio que no es miles exactos', { tag: '@RF-05' }, a
   await expect(totalLive(page)).toHaveText('$61.500');
 });
 
+test('el lápiz agrega prendas a la línea sin escribir el nombre', { tag: '@RF-05' }, async ({ page }) => {
+  await page.getByRole('button', { name: 'Editar línea de Florencia Ruiz' }).click();
+  const precios = page.getByRole('textbox', { name: 'Agregar prendas' });
+  await expect(precios).toBeFocused();
+  const caja = await precios.boundingBox();
+  expect(caja!.height).toBeGreaterThanOrEqual(44);
+  // El panel no debe ensanchar la tarjeta: body recorta el desborde, así que el scroll no lo delata.
+  const tarjeta = await linea(page, 'Florencia Ruiz').boundingBox();
+  expect(tarjeta!.x + tarjeta!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+
+  await precios.fill('6000 3.500');
+  await precios.press('Enter');
+
+  await expect(page.getByRole('status')).toHaveText(/Florencia Ruiz: 6\.000 3\.500 = \$9\.500/);
+  await expect(linea(page, 'Florencia Ruiz')).toContainText('= $19.500');
+  await expect(totalLive(page)).toHaveText('$67.500');
+  await expect(precios).toBeHidden();
+  const scroll = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(scroll).toBe(0);
+});
+
 test('Deshacer quita lo recién anotado', { tag: '@RF-05' }, async ({ page }) => {
   await campo(page).fill('flo 6000 4000');
   await campo(page).press('Enter');

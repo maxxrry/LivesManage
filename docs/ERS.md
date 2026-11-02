@@ -9,6 +9,7 @@
 | 26/09/2026 | 1.0 | Maxi | Versión inicial: introducción, descripción general y requisitos (enfoque de inventario genérico). |
 | 30/09/2026 | 2.0 | Maxi | Reenfoque en el live de TikTok: se eliminan productos, categorías, stock y ventas; se agregan sesiones de live, anotación rápida, cierre del live e importación de cuaderno. 15 RF y matriz de trazabilidad. |
 | 02/11/2026 | 2.1 | Maxi | RF-05 y RF-08: los precios se anotan y se muestran completos, sin la sintaxis en miles. Se cierran los pendientes sobre precios, despacho, abonos, saldo a favor y feria, y el despliegue pasa a AWS. |
+| 02/11/2026 | 2.2 | Maxi | RF-05: el lápiz de una línea permite agregar prendas escribiendo solo los precios. |
 
 ## 1. Introducción
 
@@ -230,6 +231,7 @@ Estados de una sesión: **Abierta** (se anotan compras), **En cierre** (el live 
 4. Si la clienta ya tiene una línea en la sesión, las prendas se agregan a esa línea; si no, se crea una línea nueva en estado Pendiente.
 5. El sistema recalcula el total de la línea y del live, limpia el campo y lo deja listo para la siguiente anotación.
 6. Durante unos segundos muestra un aviso con el resultado (ej: "Florencia Ruiz: 6.000 4.000 = $10.000") y la opción Deshacer.
+7. Con una sesión Abierta, el lápiz de una línea permite agregar prendas a esa clienta escribiendo solo los precios, sin repetir su nombre. Se aplican las mismas reglas de esta sección.
 
 Validaciones y errores:
 
@@ -373,7 +375,7 @@ Cada RF tiene un criterio de aceptación verificable. El criterio se automatiza 
 | RF-02 | El vendedor no ve Usuarios y la API le responde 403 si intenta usarla. | Filtro de roles (JUnit); rutas protegidas (Vitest) | E2E-02 | UAT-01 |
 | RF-03 | El admin crea un vendedor que luego inicia sesión; un correo repetido se rechaza. | UsuarioService (JUnit) | E2E-03 | UAT-01 |
 | RF-04 | Con un live Abierto no se puede abrir otro; la lista muestra los totales de cada live. | SesionService (JUnit) | E2E-04 | UAT-02 |
-| RF-05 | "flo 6000 4000" suma $10.000 a la línea existente de Florencia; "ana 5000" crea clienta y línea; "flo 6000-" y "flo 6 4" muestran error y conservan el texto. | Intérprete de sintaxis (Vitest); LineaService (JUnit) | E2E-05 | UAT-02 |
+| RF-05 | "flo 6000 4000" suma $10.000 a la línea existente de Florencia; "ana 5000" crea clienta y línea; "flo 6000-" y "flo 6 4" muestran error y conservan el texto; desde el lápiz de Florencia, "6000 4000" suma $10.000 a su línea. | Intérprete de sintaxis (Vitest); LineaService (JUnit) | E2E-05 | UAT-02 |
 | RF-06 | Quitar una prenda de $6.000 baja la línea y el total del live en $6.000; restaurarla los repone. | Cálculo de totales (JUnit) | E2E-06 | UAT-02 |
 | RF-07 | Marcar Pagada una línea de $17.000 la destaca y sube el total pagado en $17.000. | LineaService (JUnit) | E2E-07 | UAT-02 |
 | RF-08 | Tras cada acción, el total del live es igual a la suma de las líneas visibles. | Componente de totales (Vitest) | E2E-08 | UAT-02 |

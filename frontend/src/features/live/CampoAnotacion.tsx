@@ -20,6 +20,7 @@ export function CampoAnotacion({ clientas, idsConLinea, onAnotar }: CampoAnotaci
   const [resaltada, setResaltada] = useState(0);
   const [enviando, setEnviando] = useState(false);
   const campo = useRef<HTMLInputElement>(null);
+  const formulario = useRef<HTMLFormElement>(null);
   const guardando = useRef(new Set<string>());
   const idLista = useId();
   const idError = useId();
@@ -49,7 +50,9 @@ export function CampoAnotacion({ clientas, idsConLinea, onAnotar }: CampoAnotaci
     } finally {
       guardando.current.delete(texto);
       setEnviando(false);
-      campo.current?.focus();
+      // Si mientras se guardaba ya pasó a otro campo, no le quita el foco.
+      const activo = document.activeElement;
+      if (!activo || activo === document.body || formulario.current?.contains(activo)) campo.current?.focus();
     }
   }
 
@@ -63,7 +66,7 @@ export function CampoAnotacion({ clientas, idsConLinea, onAnotar }: CampoAnotaci
   }
 
   return (
-    <form onSubmit={alEnviar} className="relative">
+    <form ref={formulario} onSubmit={alEnviar} className="relative">
       <div className="flex gap-2">
         <input
           ref={campo}

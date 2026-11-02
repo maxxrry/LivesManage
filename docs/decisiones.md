@@ -44,6 +44,7 @@ Registro de decisiones de diseño que complementan o precisan el ERS (`docs/ERS.
 | D-38 | 17/10/2026 | RF-09 a RF-11, RF-13, D-28 | Cierre en `ms-lives`, historial de compras, renombrar entre servicios y front conectado a lives y clientas. |
 | D-39 | 02/11/2026 | RF-05, RF-08, RF-13, D-12 | Los precios se anotan y se muestran completos ("flo 6000 4000"), en vez de en miles. |
 | D-40 | 02/11/2026 | RF-07, RF-10, D-20 | Costo de despacho, abonos y saldo a favor los lleva la dueña fuera del sistema; Feria sin detalle ni estado de entregada. |
+| D-41 | 02/11/2026 | RF-05, RF-06, RF-09 | El lápiz de una línea agrega prendas escribiendo solo los precios; Cambiar clienta queda dentro del mismo panel. |
 
 ## D-01 · Estilos con Tailwind CSS
 
@@ -455,3 +456,21 @@ Respuestas de la tienda a los pendientes del ERS (02/11/2026). Estos casos los r
 - **Abonos y pagos parciales:** existen, pero una línea sigue siendo Pendiente o Pagada completa.
 - **Saldo a favor:** si una clienta pagó y cancela una prenda, el dinero queda a favor y la línea sigue Pagada (D-20). Como los totales se calculan con las prendas vigentes, el total pagado puede ser menor que el dinero recibido.
 - **Feria:** basta con elegir Feria en el cierre (D-26). No se registra qué feria ni qué día, ni existe un estado de "entregada".
+
+## D-41 · Agregar prendas desde el lápiz
+
+Durante el live, una clienta suele pedir otra prenda cuando su línea ya está a la vista. Pedida por la tienda el 02/11/2026, esta opción evita repetir el nombre. Además, como se anota directo a la clienta de esa línea, no puede crear una ficha duplicada.
+
+- **Con el live Abierto:** el lápiz abre un panel con el cursor en "Agregar prendas" y, debajo, el botón "Cambiar clienta". Su nombre accesible pasa a ser "Editar línea de ...".
+- **Precios:** se escriben solos, con las reglas de D-39. Si son inválidos, el texto se conserva y no se anota nada.
+- **Al agregar:** funciona como una anotación de RF-05, con el mismo endpoint y `clientaId`. Muestra el aviso con Deshacer, actualiza los totales, sube la línea al primer lugar y vuelve a Pendiente una línea Pagada (D-20).
+- **Cerrar:** el panel se cierra al agregar, con Escape, tocando otra vez el lápiz o al buscar en la hoja, porque la búsqueda puede ocultar la línea. El foco vuelve al lápiz, salvo que ya haya pasado a otro campo mientras se guardaba.
+- **Mientras se guarda:** el panel no se puede cerrar ni se abre otro, para que un fallo se vea con su texto (RNF-13).
+- **En cierre:** el lápiz abre directo Cambiar clienta, porque ya no se anota (RF-09).
+
+**Alternativas descartadas:**
+
+- Un botón aparte, que deja el lápiz como está pero suma otro elemento a cada línea en un celular de 360 px. La petición era sobre el lápiz.
+- Copiar el nombre en el campo principal: obliga a volver arriba de la hoja y, con dos clientas de nombre parecido, puede elegir a la equivocada.
+
+**Lo que se acepta a cambio:** Cambiar clienta queda a un toque más, porque se usa mucho menos que agregar prendas.

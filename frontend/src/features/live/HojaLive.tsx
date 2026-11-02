@@ -1,8 +1,9 @@
-import { Fragment, useState, type ReactNode } from 'react';
+import { Fragment, useRef, useState, type ReactNode } from 'react';
 import type { DestinoAnotacion } from '../../services/sesionesService';
-import type { Clienta, Linea, Prenda } from '../../types/dominio';
+import type { Clienta, Linea, MontoClp, Prenda } from '../../types/dominio';
 import { ETIQUETAS_ESTADO_PAGO } from '../../types/etiquetas';
 import { formatearClp, formatearPrecio, totalLinea } from '../../utils/montos';
+import { AgregarPrendas } from './AgregarPrendas';
 import { CambiarClienta } from './CambiarClienta';
 import { coincideNombre } from './sugerirClientas';
 
@@ -13,6 +14,8 @@ interface HojaLiveProps {
   clientas: Clienta[];
   onAlternarPrenda: (lineaId: string, prendaId: string) => void;
   onCambiarClienta: (lineaId: string, destino: DestinoAnotacion) => Promise<void>;
+  /** D-41: si se entrega, el lápiz también agrega prendas a la línea (solo con el live Abierto). */
+  onAgregarPrendas?: (linea: Linea, precios: MontoClp[]) => Promise<void>;
   onAlternarPago: (lineaId: string) => void;
   /** Texto de búsqueda (RF-08). Lo controla LivePage, que lo borra al anotar. */
   busqueda: string;
@@ -101,7 +104,7 @@ function EstadoPagoLinea({
 
 /**
  * Hoja del live: "Gabriela Peña 6.000 6.000 5.000 = $17.000", la última modificada arriba.
- * RF-06: tocar una prenda la cancela o la restaura; el lápiz cambia la clienta de la línea.
+ * RF-06: tocar una prenda la cancela o la restaura; el lápiz cambia la clienta de la línea y, con el live Abierto, agrega prendas (D-41).
  * RF-07: el botón Pagado marca o desmarca el pago; la línea pagada se destaca en rosado, como en el cuaderno.
  */
 export function HojaLive({
@@ -110,6 +113,7 @@ export function HojaLive({
   clientas,
   onAlternarPrenda,
   onCambiarClienta,
+  onAgregarPrendas,
   onAlternarPago,
   busqueda,
   onBuscar,
@@ -117,7 +121,17 @@ export function HojaLive({
   onQuitarNoPago,
   pieLinea,
 }: HojaLiveProps) {
-  const [editando, setEditando] = useState<string | null>(null);
+  const [editando, setEditando] = useState<{ lineaId: string; cambiandoClienta: boolean } | null>(null);
+  const lapices = useRef(new Map<string, HTMLButtonElement>());
+  // Mientras se agregan prendas, el panel no se cierra: si falla, el error y el texto deben seguir a la vista (RNF-13).
+  const guardando = useRef(false);
+
+  function cerrarPanel(lineaId: string) {
+    setEditando(null);
+    // Si mientras se guardaba ya pasó a otro campo, no le quita el foco.
+    const activo = document.activeElement;
+    if (!activo || activo === document.body || activo.closest(`[data-panel="${lineaId}"]`)) lapices.current.get(lineaId)?.focus();
+  }
 
   if (lineas.length === 0) {
     return <p className="p-4 text-sm text-gray-500">Aún no hay anotaciones en este live.</p>;
@@ -134,7 +148,10 @@ export function HojaLive({
         <input
           type="search"
           value={busqueda}
-          onChange={(e) => onBuscar(e.target.value)}
+          onChange={(e) => {
+            onBuscar(e.target.value);
+            if (!guardando.current) setEditando(null); // la búsqueda puede ocultar la línea del panel
+          }}
           aria-label="Buscar en la hoja"
           placeholder="Buscar clienta en la hoja"
           autoComplete="off"
@@ -150,7 +167,7 @@ export function HojaLive({
       </div>
 
       {/* Una columna en celular, dos en computador. */}
-      <ul aria-label="Hoja del live" className="grid gap-2 px-4 pb-4 lg:grid-cols-2">
+      <ul aria-label="Hoja del live" className="grid grid-cols-1 items-start gap-2 px-4 pb-4 lg:grid-cols-2">
       {visibles.map((linea) => (
         <li
           key={linea.id}
@@ -163,9 +180,16 @@ export function HojaLive({
             {editable && (
               <button
                 type="button"
-                onClick={() => setEditando(editando === linea.id ? null : linea.id)}
-                aria-label={`Cambiar clienta de ${linea.clientaNombre}`}
-                aria-expanded={editando === linea.id}
+                ref={(boton) => {
+                  if (boton) lapices.current.set(linea.id, boton);
+                  else lapices.current.delete(linea.id);
+                }}
+                onClick={() => {
+                  if (guardando.current) return;
+                  setEditando(editando?.lineaId === linea.id ? null : { lineaId: linea.id, cambiandoClienta: false });
+                }}
+                aria-label={`${onAgregarPrendas ? 'Editar línea' : 'Cambiar clienta'} de ${linea.clientaNombre}`}
+                aria-expanded={editando?.lineaId === linea.id}
                 className="flex size-11 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100"
               >
                 <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
@@ -208,18 +232,34 @@ export function HojaLive({
 
           {pieLinea?.(linea)}
 
-          {editando === linea.id && (
-            <div className="mt-2">
-              <CambiarClienta
-                clientas={clientas}
-                idsConLinea={idsConLinea}
-                clientaActualId={linea.clientaId}
-                onCambiar={async (destino) => {
-                  await onCambiarClienta(linea.id, destino);
-                  setEditando(null);
-                }}
-                onCancelar={() => setEditando(null)}
-              />
+          {editando?.lineaId === linea.id && (
+            <div className="mt-2" data-panel={linea.id}>
+              {onAgregarPrendas && !editando.cambiandoClienta ? (
+                <AgregarPrendas
+                  onAgregar={async (precios) => {
+                    guardando.current = true;
+                    try {
+                      await onAgregarPrendas(linea, precios);
+                      cerrarPanel(linea.id);
+                    } finally {
+                      guardando.current = false;
+                    }
+                  }}
+                  onCambiarClienta={() => setEditando({ lineaId: linea.id, cambiandoClienta: true })}
+                  onCerrar={() => cerrarPanel(linea.id)}
+                />
+              ) : (
+                <CambiarClienta
+                  clientas={clientas}
+                  idsConLinea={idsConLinea}
+                  clientaActualId={linea.clientaId}
+                  onCambiar={async (destino) => {
+                    await onCambiarClienta(linea.id, destino);
+                    setEditando(null);
+                  }}
+                  onCancelar={() => cerrarPanel(linea.id)}
+                />
+              )}
             </div>
           )}
         </li>

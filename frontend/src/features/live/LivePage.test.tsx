@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
@@ -127,6 +127,47 @@ describe('Pantalla de live (RF-05)', () => {
 
     expect(await screen.findByRole('status')).toBeInTheDocument();
     expect(anotar).toHaveBeenCalledTimes(2);
+  });
+
+  it('si mientras se guarda ya pasó a otro campo, el campo de anotación no le quita el foco', async () => {
+    let terminar: () => void = () => {};
+    vi.mocked(anotar).mockImplementationOnce(async (...args) => {
+      await new Promise<void>((listo) => (terminar = listo)); // la API tarda
+      const { anotar: real } = await vi.importActual<typeof import('../../services/sesionesService')>('../../services/sesionesService');
+      return real(...args);
+    });
+    const { usuario, campo } = await abrirLive();
+
+    await usuario.type(campo!, 'flo 6000{Enter}');
+    const buscar = screen.getByRole('searchbox', { name: 'Buscar en la hoja' });
+    await usuario.click(buscar);
+    terminar();
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Florencia Ruiz');
+    expect(buscar).toHaveFocus();
+  });
+
+  it('anotar lo mismo otra vez reinicia el tiempo del aviso', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const usuario = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      render(<RouterProvider router={createMemoryRouter(rutas, { initialEntries: ['/lives/s-2'] })} />);
+      const campo = await screen.findByRole('combobox', { name: 'Anotación' });
+
+      await usuario.type(campo, 'flo 5000{Enter}');
+      await screen.findByRole('status');
+      await act(() => vi.advanceTimersByTimeAsync(4000));
+      await usuario.type(campo, 'flo 5000{Enter}');
+      await vi.waitFor(() => expect(lineaDe('Florencia Ruiz')).toHaveTextContent('= $20.000'));
+
+      await act(() => vi.advanceTimersByTimeAsync(2000)); // ya pasó el tiempo del primer aviso
+      expect(screen.getByRole('status')).toBeInTheDocument();
+
+      await act(() => vi.advanceTimersByTimeAsync(4000));
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('si falla la conexión, avisa y conserva el texto (RNF-13)', async () => {

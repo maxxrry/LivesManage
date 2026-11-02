@@ -34,7 +34,8 @@ test('las prendas son áreas táctiles de al menos 44×44 px', { tag: '@RF-06' }
 });
 
 test('cambiar la clienta a una que ya tiene línea une ambas', { tag: '@RF-06' }, async ({ page }) => {
-  await page.getByRole('button', { name: 'Cambiar clienta de Gabriela Peña' }).click();
+  await page.getByRole('button', { name: 'Editar línea de Gabriela Peña' }).click();
+  await page.getByRole('button', { name: 'Cambiar clienta', exact: true }).click();
   await page.getByRole('combobox', { name: 'Buscar la clienta correcta' }).fill('flo');
   await page.getByRole('option', { name: /Florencia Ruiz/ }).click();
   await page.getByRole('button', { name: 'Unir' }).click();
