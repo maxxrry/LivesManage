@@ -1,8 +1,12 @@
 package cl.livesmanage.clientas.cliente;
 
+import cl.livesmanage.clientas.dto.ResumenCompras;
 import java.time.Duration;
+import java.time.LocalDate;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -29,12 +33,37 @@ public class LivesCliente {
      */
     public void sincronizarNombre(String clientaId) {
         try {
-            var autenticacion = (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
             http.post().uri("/api/lives/clientas/{id}/sincronizar-nombre", clientaId)
-                    .header("Authorization", "Bearer " + autenticacion.getToken().getTokenValue())
+                    .header("Authorization", bearer())
                     .retrieve().toBodilessEntity();
         } catch (RuntimeException e) { // también sin sesión JWT: la ficha ya se guardó, no debe fallar la respuesta
             log.warn("No se pudo actualizar el nombre de la clienta {} en ms-lives: {}", clientaId, e.getMessage());
         }
+    }
+
+    /** RF-14 (D-42): compras por clienta en un período de días de Chile; sin fechas, todas. Si ms-lives falla, lanza la excepción. */
+    public List<ResumenCompras> comprasPorClienta(LocalDate desde, LocalDate hasta) {
+        return http.get()
+                .uri(uri -> {
+                    uri.path("/api/lives/compras-por-clienta");
+                    if (desde != null) uri.queryParam("desde", desde);
+                    if (hasta != null) uri.queryParam("hasta", hasta);
+                    return uri.build();
+                })
+                .header("Authorization", bearer())
+                .retrieve().body(new ParameterizedTypeReference<>() {});
+    }
+
+    /** D-37: una clienta con líneas no se borra. Si ms-lives falla, lanza la excepción. */
+    public boolean tieneLineas(String clientaId) {
+        List<Object> lineas = http.get().uri(uri -> uri.path("/api/lives/lineas").queryParam("clientaId", clientaId).build())
+                .header("Authorization", bearer())
+                .retrieve().body(new ParameterizedTypeReference<>() {});
+        return lineas != null && !lineas.isEmpty();
+    }
+
+    private static String bearer() {
+        var autenticacion = (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+        return "Bearer " + autenticacion.getToken().getTokenValue();
     }
 }

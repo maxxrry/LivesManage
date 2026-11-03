@@ -16,13 +16,15 @@ import { pedirConSesion, usuarioConectado } from './usuariosService';
 import { listarCompras } from './sesionesService';
 
 // Con VITE_API_URL, las fichas y los días de inactividad vienen de ms-clientas por el gateway (D-36, D-38);
-// sin ella, datos simulados en memoria. Ranking e inactivas se calculan aquí con los datos de la API (paso 7):
+// sin ella, datos simulados en memoria:
 //   GET   /api/clientas                    listarClientas
 //   GET   /api/clientas/{id}               obtenerClienta
 //   POST  /api/clientas                    crearClienta
 //   PUT   /api/clientas/{id}               actualizarClienta
 //   GET   /api/clientas/duplicados?...     buscarDuplicados
 //   PATCH /api/clientas/{id}/activa        cambiarActiva
+//   GET   /api/clientas/ranking?criterio=&desde=&hasta=   rankingClientas
+//   GET   /api/clientas/inactivas          listarInactivas
 //   GET   /api/configuracion/dias-inactividad   obtenerDiasInactividad
 //   PUT   /api/configuracion/dias-inactividad   cambiarDiasInactividad
 
@@ -110,18 +112,22 @@ export async function cambiarActiva(id: string, activa: boolean): Promise<Client
   return structuredClone(clienta);
 }
 
-/** RF-14: ranking en un rango de días "aaaa-mm-dd". Con backend, ms-clientas pide las líneas a ms-lives. */
+/** RF-14: ranking en un rango de días "aaaa-mm-dd". Con backend, lo calcula ms-clientas (D-42). */
 export async function rankingClientas(
   criterio: CriterioRanking,
   rango: { desde: string; hasta: string },
 ): Promise<PosicionRanking[]> {
+  if (urlApi()) {
+    const parametros = new URLSearchParams({ criterio, desde: rango.desde, hasta: rango.hasta });
+    return pedirConSesion(`/api/clientas/ranking?${parametros}`);
+  }
   const [todas, compras] = await Promise.all([listarClientas(), listarCompras()]);
   return structuredClone(rankingDeClientas(todas, compras, criterio, rango));
 }
 
 /** RF-14: clientas inactivas según los días configurados, contados hasta hoy. */
 export async function listarInactivas(): Promise<ClientaInactiva[]> {
-  // shortcut: con la API se calcula aquí con todas las fichas y compras; el paso 7 lo pasa a ms-clientas.
+  if (urlApi()) return pedirConSesion('/api/clientas/inactivas');
   const [todas, compras, dias] = await Promise.all([listarClientas(), listarCompras(), obtenerDiasInactividad()]);
   return structuredClone(clientasInactivas(todas, compras, new Date(), dias));
 }

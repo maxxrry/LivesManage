@@ -36,7 +36,6 @@ import { pedirConSesion, usuarioConectado } from './usuariosService';
 //   POST   /api/lives/{id}/finalizar                    finalizarCierre
 //   POST   /api/lives/{id}/reabrir                      reabrirSesion
 //   GET    /api/lives/lineas?clientaId={cid}           historialDeClienta
-//   GET    /api/lives/lineas                           listarCompras
 
 const ruta = encodeURIComponent;
 const rutaLinea = (sesionId: string, lineaId: string) => `/api/lives/${ruta(sesionId)}/lineas/${ruta(lineaId)}`;
@@ -407,9 +406,8 @@ export async function historialDeClienta(clientaId: string): Promise<CompraClien
   return comprasDe(lineas.filter((l) => l.clientaId === clientaId));
 }
 
-/** RF-14: las líneas de todas las clientas, para el ranking y las inactivas (las consulta ms-clientas). */
+/** RF-14: las líneas de todas las clientas, solo con datos simulados. Con backend, el cálculo lo hace ms-clientas (D-42). */
 export async function listarCompras(): Promise<CompraClienta[]> {
-  if (urlApi()) return pedirConSesion('/api/lives/lineas');
   return comprasDe(lineas);
 }
 

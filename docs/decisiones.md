@@ -45,6 +45,7 @@ Registro de decisiones de diseño que complementan o precisan el ERS (`docs/ERS.
 | D-39 | 02/11/2026 | RF-05, RF-08, RF-13, D-12 | Los precios se anotan y se muestran completos ("flo 6000 4000"), en vez de en miles. |
 | D-40 | 02/11/2026 | RF-07, RF-10, D-20 | Costo de despacho, abonos y saldo a favor los lleva la dueña fuera del sistema; Feria sin detalle ni estado de entregada. |
 | D-41 | 02/11/2026 | RF-05, RF-06, RF-09 | El lápiz de una línea agrega prendas escribiendo solo los precios; Cambiar clienta queda dentro del mismo panel. |
+| D-42 | 02/11/2026 | RF-14, RF-05, D-15, D-37 | Ranking, inactivas y `ultimaCompra` se calculan en el backend con un resumen de compras de `ms-lives`; una clienta con líneas no se borra. |
 
 ## D-01 · Estilos con Tailwind CSS
 
@@ -233,7 +234,7 @@ La app es mobile-first, pero también se usa en PC (Chrome, Edge y Firefox; ERS 
 - **Compras:** líneas Pagadas en lives Cerrados con monto mayor a $0 (las de $0 no cuentan, D-27). **Ticket promedio** = total gastado ÷ compras, redondeado a pesos enteros; $0 si no hay compras.
 - **Última compra:** fecha del último live Cerrado con una línea Pagada, calculada desde el historial. El campo `ultimaCompra` de la clienta (D-15) se sigue usando para ordenar las sugerencias al anotar; con backend, `ms-clientas` lo calcula con esta misma regla.
 - **Prendas canceladas** y **lives sin pago** (líneas No pagó): también solo en lives Cerrados.
-- **Historial:** todas sus líneas, también de lives Abiertos o En cierre (con su estado a la vista), el live más reciente primero. Cada fila enlaza al live. Las prendas se muestran como en el cuaderno (`8-5`), con las canceladas tachadas.
+- **Historial:** todas sus líneas, también de lives Abiertos o En cierre (con su estado a la vista), el live más reciente primero. Cada fila enlaza al live. Las prendas se muestran con sus precios (`8.000 5.000`, D-39), con las canceladas tachadas.
 - Con backend, el historial lo entrega `ms-lives` (`GET /api/lives/lineas?clientaId=`) y los indicadores se calculan en `ms-clientas` (prueba JUnit según la matriz del ERS).
 
 ## D-30 · Ranking y clientas inactivas
@@ -413,7 +414,7 @@ Paso 6 de `docs/plan-backend.md`.
   PUT   /api/lives/{id}/lineas/{lineaId}/no-pago       { noPago }             200 → Linea
   POST  /api/lives/{id}/finalizar                      200 → Sesion (Cerrada)   409 con lo que falta
   POST  /api/lives/{id}/reabrir                        solo Admin             200 → Sesion (En cierre)
-  GET   /api/lives/lineas?clientaId=                   200 → CompraClienta[] (sin clientaId, todas)
+  GET   /api/lives/lineas?clientaId=                   200 → CompraClienta[] (clientaId obligatorio desde D-42)
   POST  /api/lives/clientas/{clientaId}/sincronizar-nombre                    204 (lo llama ms-clientas)
   ```
 
@@ -474,3 +475,20 @@ Durante el live, una clienta suele pedir otra prenda cuando su línea ya está a
 - Copiar el nombre en el campo principal: obliga a volver arriba de la hoja y, con dos clientas de nombre parecido, puede elegir a la equivocada.
 
 **Lo que se acepta a cambio:** Cambiar clienta queda a un toque más, porque se usa mucho menos que agregar prendas.
+
+## D-42 · Ranking, inactivas y última compra en el backend
+
+Paso 7 de `docs/plan-backend.md`. Hasta ahora el front calculaba el ranking y las inactivas con todas las fichas y todas las líneas, y `ultimaCompra` no llegaba desde la API.
+
+- **Resumen de compras:** `ms-lives` entrega `GET /api/lives/compras-por-clienta?desde=&hasta=` con `{ clientaId, totalGastado, compras, ultimaCompra }`. Aplica la definición de compra de D-29 en una sola consulta. El período va en días de Chile, con ambos extremos incluidos, y es opcional.
+- **Rutas nuevas de `ms-clientas`:** `GET /api/clientas/ranking?criterio=&desde=&hasta=` y `GET /api/clientas/inactivas`, con las reglas y desempates de D-30 en la clase `Estadisticas`.
+- **`ultimaCompra`:** solo viene en `GET /api/clientas`, porque es lo único que usan las sugerencias de RF-05. `ms-lives` llama a `GET /api/clientas/{id}` en cada anotación, así que incluirla ahí haría un viaje de ida y vuelta entre ambos servicios.
+- **Si `ms-lives` no responde:** la lista de clientas sigue sin `ultimaCompra`, para que se pueda anotar. El ranking y las inactivas responden 503 con un mensaje, para no mostrar datos incompletos.
+- **`GET /api/lives/lineas`:** `clientaId` pasa a ser obligatorio, porque sin él ya nadie lo usaba.
+- **Borrar (D-37):** además del plazo de 10 minutos, `DELETE /api/clientas/{id}` exige que la clienta no tenga líneas en `ms-lives`. Con líneas responde 409, y si no se puede comprobar responde 503 y no borra. Deshacer pide el borrado después de confirmar su transacción, así que la línea ya no existe. Esto acota el límite conocido de D-37: solo queda el caso de que otra persona anote a esa clienta justo entre la revisión y el borrado, muy poco probable porque anota una persona por live. Para sacar de circulación una ficha duplicada se sigue usando Desactivar (RF-12).
+
+**Alternativa descartada:** que `ms-clientas` pidiera `GET /api/lives/lineas`, como decía el plan. Trae todas las líneas con sus prendas, y las fichas se recargan después de cada anotación, lo que pondría en riesgo RNF-02.
+
+**Lo que se acepta a cambio:** `ClientaService.listar` hace una llamada más a `ms-lives` cada vez que se recarga la lista. Es una sola consulta agregada, sin cargar prendas.
+
+**Pendiente:** D-29 y `docs/plan-backend.md` piden calcular los indicadores de la ficha (RF-13) en `ms-clientas`, con su prueba JUnit según la matriz del ERS. Este paso no lo hizo: siguen en el front, en `indicadoresDeClienta`.

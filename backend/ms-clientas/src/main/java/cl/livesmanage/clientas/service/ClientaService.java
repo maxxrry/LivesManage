@@ -5,6 +5,7 @@ import cl.livesmanage.clientas.dto.ClientaDto;
 import cl.livesmanage.clientas.dto.DatosClienta;
 import cl.livesmanage.clientas.dto.DireccionDto;
 import cl.livesmanage.clientas.dto.Duplicados;
+import cl.livesmanage.clientas.dto.ResumenCompras;
 import cl.livesmanage.clientas.exception.ReglaException;
 import cl.livesmanage.clientas.model.Clienta;
 import cl.livesmanage.clientas.model.Configuracion;
@@ -14,7 +15,9 @@ import cl.livesmanage.clientas.repository.ConfiguracionRepository;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Sort;
@@ -40,9 +43,21 @@ public class ClientaService {
     private final ConfiguracionRepository configuracion;
     private final LivesCliente lives;
 
-    @Transactional(readOnly = true)
+    /** Con la última compra de cada una (D-15, D-42). Sin transacción: no retiene la base mientras consulta a ms-lives. */
     public List<ClientaDto> listar() {
-        return clientas.findAll(Sort.by("nombre")).stream().map(ClientaDto::de).toList();
+        List<Clienta> todas = clientas.findAll(Sort.by("nombre"));
+        Map<String, Instant> ultimas = ultimasCompras();
+        return todas.stream().map(c -> ClientaDto.de(c, ultimas.get(c.getId()))).toList();
+    }
+
+    /** Si ms-lives no responde, la lista sigue sin este dato: sirve para anotar, y solo ordena las sugerencias. */
+    private Map<String, Instant> ultimasCompras() {
+        try {
+            return lives.comprasPorClienta(null, null).stream().collect(Collectors.toMap(ResumenCompras::clientaId, ResumenCompras::ultimaCompra));
+        } catch (RuntimeException e) {
+            log.warn("No se pudo leer la última compra desde ms-lives: {}", e.getMessage());
+            return Map.of();
+        }
     }
 
     @Transactional(readOnly = true)
@@ -96,16 +111,29 @@ public class ClientaService {
 
     /**
      * Deshacer una anotación borra la clienta que esa anotación creó (D-11). Solo en sus primeros minutos,
-     * para que no sirva para borrar fichas con historial: después, una clienta se desactiva (RF-12).
+     * y sin líneas, para que no sirva para borrar fichas con historial: después, una clienta se desactiva (RF-12).
+     * Sin transacción: no retiene la base mientras consulta a ms-lives.
      */
-    @Transactional
     public void borrarRecienCreada(String id) {
         Clienta clienta = buscar(id);
         if (clienta.getCreada() == null || clienta.getCreada().isBefore(Instant.now().minus(VENTANA_BORRADO))) {
             throw new ReglaException(HttpStatus.CONFLICT, null, "Solo se puede borrar una clienta recién creada. Desactívala en su ficha.");
         }
+        if (tieneLineas(id)) {
+            throw new ReglaException(HttpStatus.CONFLICT, null, "No se puede borrar una clienta con compras anotadas. Desactívala en su ficha.");
+        }
         clientas.delete(clienta);
         log.info("Clienta {} borrada al deshacer su anotación", id);
+    }
+
+    /** Si no se puede comprobar, no se borra: borrar por error es peor que dejar una ficha de más. */
+    private boolean tieneLineas(String id) {
+        try {
+            return lives.tieneLineas(id);
+        } catch (RuntimeException e) {
+            log.warn("No se pudieron revisar las líneas de la clienta {} en ms-lives: {}", id, e.getMessage());
+            throw new ReglaException(HttpStatus.SERVICE_UNAVAILABLE, null, "No se pudo comprobar si la clienta tiene compras. Intenta de nuevo.");
+        }
     }
 
     /** Baja lógica: conserva su historial (RF-12). */

@@ -3,6 +3,7 @@ package cl.livesmanage.clientas.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -11,6 +12,7 @@ import cl.livesmanage.clientas.dto.ClientaDto;
 import cl.livesmanage.clientas.dto.DatosClienta;
 import cl.livesmanage.clientas.dto.DireccionDto;
 import cl.livesmanage.clientas.dto.Duplicados;
+import cl.livesmanage.clientas.dto.ResumenCompras;
 import cl.livesmanage.clientas.exception.ReglaException;
 import cl.livesmanage.clientas.model.Clienta;
 import cl.livesmanage.clientas.model.Configuracion;
@@ -18,10 +20,12 @@ import cl.livesmanage.clientas.repository.ClientaRepository;
 import cl.livesmanage.clientas.repository.ConfiguracionRepository;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.data.domain.Sort;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
@@ -142,5 +146,47 @@ class ClientaServiceTest {
 
         when(configuracion.save(any())).thenAnswer(i -> i.getArgument(0));
         assertThat(servicio.cambiarDiasInactividad(90)).isEqualTo(90);
+    }
+
+    // Paso 7: última compra (D-15) y borrado solo sin líneas (D-37)
+
+    @Test
+    void laListaTraeLaUltimaCompraDeCadaClienta() {
+        Instant ultima = Instant.parse("2026-10-15T23:00:00Z");
+        when(clientas.findAll(any(Sort.class))).thenReturn(List.of(gabriela));
+        when(lives.comprasPorClienta(null, null)).thenReturn(List.of(new ResumenCompras("c-1", 5000, 1, ultima)));
+
+        assertThat(servicio.listar().get(0).ultimaCompra()).isEqualTo(ultima);
+    }
+
+    @Test
+    void siMsLivesNoRespondeLaListaSigueSinUltimaCompra() {
+        when(clientas.findAll(any(Sort.class))).thenReturn(List.of(gabriela));
+        when(lives.comprasPorClienta(null, null)).thenThrow(new IllegalStateException("sin conexión"));
+
+        assertThat(servicio.listar().get(0).nombre()).isEqualTo("Gabriela Peña");
+        assertThat(servicio.listar().get(0).ultimaCompra()).isNull();
+    }
+
+    @Test
+    void noSeBorraUnaClientaRecienCreadaQueTieneLineas() {
+        when(clientas.findById("c-1")).thenReturn(Optional.of(gabriela));
+        gabriela.setCreada(Instant.now().minusSeconds(30));
+        when(lives.tieneLineas("c-1")).thenReturn(true);
+
+        assertThatThrownBy(() -> servicio.borrarRecienCreada("c-1"))
+                .satisfies(e -> assertThat(((ReglaException) e).getEstado()).isEqualTo(HttpStatus.CONFLICT));
+        verify(clientas, never()).delete(any());
+    }
+
+    @Test
+    void siNoSePuedeComprobarSiTieneLineasNoSeBorra() {
+        when(clientas.findById("c-1")).thenReturn(Optional.of(gabriela));
+        gabriela.setCreada(Instant.now().minusSeconds(30));
+        when(lives.tieneLineas("c-1")).thenThrow(new IllegalStateException("sin conexión"));
+
+        assertThatThrownBy(() -> servicio.borrarRecienCreada("c-1"))
+                .satisfies(e -> assertThat(((ReglaException) e).getEstado()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE));
+        verify(clientas, never()).delete(any());
     }
 }

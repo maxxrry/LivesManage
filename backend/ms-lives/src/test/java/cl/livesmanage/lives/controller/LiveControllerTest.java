@@ -27,6 +27,8 @@ import cl.livesmanage.lives.model.Sesion;
 import com.jayway.jsonpath.JsonPath;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import java.nio.charset.StandardCharsets;
+import cl.livesmanage.lives.model.EstadoPago;
+import cl.livesmanage.lives.model.EstadoPrenda;
 import java.time.Instant;
 import java.util.List;
 import javax.crypto.spec.SecretKeySpec;
@@ -63,6 +65,9 @@ class LiveControllerTest {
 
     @Autowired
     private MockMvc mvc;
+
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     @Autowired
     private SesionRepository sesiones;
@@ -470,7 +475,7 @@ class LiveControllerTest {
                 .andExpect(jsonPath("$[0].sesion.id").value(live))
                 .andExpect(jsonPath("$[0].linea.id").value(flo))
                 .andExpect(jsonPath("$[0].entrega.tipo").value("RETIRO"));
-        mvc.perform(get("/api/lives/lineas").header("Authorization", VENDEDORA)).andExpect(jsonPath("$.length()").value(2));
+        mvc.perform(get("/api/lives/lineas").header("Authorization", VENDEDORA)).andExpect(status().isBadRequest());
     }
 
     @Test
@@ -492,5 +497,92 @@ class LiveControllerTest {
     @Test
     void swaggerEstaDisponibleSinToken() throws Exception {
         mvc.perform(get("/v3/api-docs")).andExpect(status().isOk()).andExpect(jsonPath("$.paths['/api/lives']").exists());
+    }
+
+    // RF-14: resumen de compras por clienta (D-29, D-30, D-42)
+
+    /** Un live Cerrado en la fecha dada, con líneas Pagadas para las clientas indicadas. */
+    private String liveCerrado(String inicio, String... pagadas) throws Exception {
+        String live = abrirLive();
+        for (String clienta : pagadas) anotar(live, "{\"clientaId\":\"" + clienta + "\"}", 6000, 4000).andExpect(status().isCreated());
+        for (var linea : lineas.findBySesionId(live)) {
+            linea.registrarPago(EstadoPago.PAGADO, "u-2", Instant.now());
+            lineas.save(linea);
+        }
+        cambiarEstado(live, EstadoSesion.CERRADA);
+        // El inicio no se puede cambiar por la API ni por la entidad: en la prueba se fija directo en la base.
+        jdbc.update("update sesion set inicio = ? where id = ?", java.sql.Timestamp.from(Instant.parse(inicio)), live);
+        return live;
+    }
+
+    private ResultActions resumenDe(String... rango) throws Exception {
+        var pedido = get("/api/lives/compras-por-clienta").header("Authorization", VENDEDORA);
+        if (rango.length > 0) pedido = pedido.param("desde", rango[0]).param("hasta", rango[1]);
+        return mvc.perform(pedido).andExpect(status().isOk());
+    }
+
+    @Test
+    void elResumenSumaLasComprasDeCadaClientaYSuUltimaFecha() throws Exception {
+        liveCerrado("2026-09-10T23:00:00Z", "c-flo", "c-gabi");
+        liveCerrado("2026-10-15T23:00:00Z", "c-flo");
+
+        resumenDe()
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[?(@.clientaId == 'c-flo')].totalGastado").value(20000))
+                .andExpect(jsonPath("$[?(@.clientaId == 'c-flo')].compras").value(2))
+                .andExpect(jsonPath("$[?(@.clientaId == 'c-flo')].ultimaCompra").value("2026-10-15T23:00:00Z"))
+                .andExpect(jsonPath("$[?(@.clientaId == 'c-gabi')].totalGastado").value(10000))
+                .andExpect(jsonPath("$[?(@.clientaId == 'c-gabi')].compras").value(1));
+    }
+
+    @Test
+    void elResumenSoloCuentaPagadasEnLivesCerradosYSinPrendasCanceladas() throws Exception {
+        // Live Cerrado con una línea Pagada con una prenda cancelada, una toda cancelada y una No pagó.
+        String live = abrirLive();
+        anotar(live, "{\"clientaId\":\"c-flo\"}", 6000, 4000);
+        anotar(live, "{\"clientaId\":\"c-gabi\"}", 5000);
+        anotar(live, "{\"nuevaClienta\":\"ana\"}", 7000);
+        for (var linea : lineas.findBySesionId(live)) {
+            switch (linea.getClientaId()) {
+                case "c-flo" -> {
+                    linea.getPrendas().getFirst().setEstado(EstadoPrenda.CANCELADA); // queda en $4.000
+                    linea.registrarPago(EstadoPago.PAGADO, "u-2", Instant.now());
+                }
+                case "c-gabi" -> {
+                    linea.getPrendas().getFirst().setEstado(EstadoPrenda.CANCELADA); // queda en $0: no es una compra
+                    linea.registrarPago(EstadoPago.PAGADO, "u-2", Instant.now());
+                }
+                default -> linea.registrarPago(EstadoPago.NO_PAGO, "u-2", Instant.now());
+            }
+            lineas.save(linea);
+        }
+        cambiarEstado(live, EstadoSesion.CERRADA);
+        // Un live Abierto con una línea Pagada todavía no cuenta.
+        String abierto = abrirLive();
+        anotar(abierto, "{\"clientaId\":\"c-flo\"}", 9000);
+        var linea = lineas.findBySesionId(abierto).getFirst();
+        linea.registrarPago(EstadoPago.PAGADO, "u-2", Instant.now());
+        lineas.save(linea);
+
+        resumenDe()
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].clientaId").value("c-flo"))
+                .andExpect(jsonPath("$[0].totalGastado").value(4000))
+                .andExpect(jsonPath("$[0].compras").value(1));
+    }
+
+    @Test
+    void elResumenFiltraPorDiasCompletosEnHoraDeChile() throws Exception {
+        // 02:00 UTC del 01/10 todavía es 30/09 en Chile.
+        liveCerrado("2026-10-01T02:00:00Z", "c-flo");
+
+        resumenDe("2026-09-30", "2026-09-30").andExpect(jsonPath("$.length()").value(1));
+        resumenDe("2026-10-01", "2026-10-31").andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void elResumenRechazaUnaFechaInvalida() throws Exception {
+        mvc.perform(get("/api/lives/compras-por-clienta").header("Authorization", VENDEDORA).param("desde", "01/10/2026"))
+                .andExpect(status().isBadRequest());
     }
 }

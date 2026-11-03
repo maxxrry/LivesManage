@@ -107,7 +107,7 @@ Tablas: `clienta` (nombre, usuario_tiktok, telefono, activa), con la dirección 
 | `GET/PUT /api/configuracion/dias-inactividad` | `obtenerDiasInactividad` / `cambiarDiasInactividad` | Estadísticas (Admin) |
 
 - Las reglas que hoy están en `frontend/src/utils/clientas.ts` (normalizar TikTok y teléfono, ranking, inactivas, indicadores) se pasan a Java en `ClientaService` y `EstadisticasService`, con sus pruebas JUnit.
-- `ultimaCompra` (D-15), el ranking y las inactivas necesitan las compras, que viven en ms-lives: ms-clientas las pide con `GET /api/lives/lineas` (interno).
+- `ultimaCompra` (D-15), el ranking y las inactivas necesitan las compras, que viven en ms-lives: ms-clientas las pide con `GET /api/lives/compras-por-clienta` (D-42).
 
 ### 4.4 ms-lives (:8082): el corazón — RF-04 a RF-11
 

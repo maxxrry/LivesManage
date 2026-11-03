@@ -1,6 +1,8 @@
 package cl.livesmanage.lives.repository;
 
 import cl.livesmanage.lives.model.Linea;
+import cl.livesmanage.lives.dto.ResumenCompras;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -30,10 +32,21 @@ public interface LineaRepository extends JpaRepository<Linea, String> {
     @EntityGraph(attributePaths = "prendas")
     List<Linea> findByClientaId(String clientaId);
 
-    /** Todas las líneas, para el ranking y las inactivas (RF-14). */
-    @Override
-    @EntityGraph(attributePaths = "prendas")
-    List<Linea> findAll();
+    /**
+     * RF-14 (D-29, D-42): compras por clienta en una sola consulta, para no cargar todas las prendas. Al sumar solo las
+     * prendas vigentes, una línea que quedó en $0 no cuenta como compra.
+     */
+    @Query("""
+            select new cl.livesmanage.lives.dto.ResumenCompras(l.clientaId, sum(p.precio), count(distinct l.id), max(s.inicio))
+            from Linea l join l.prendas p, Sesion s
+            where s.id = l.sesionId
+              and s.estado = cl.livesmanage.lives.model.EstadoSesion.CERRADA
+              and l.estadoPago = cl.livesmanage.lives.model.EstadoPago.PAGADO
+              and p.estado = cl.livesmanage.lives.model.EstadoPrenda.VIGENTE
+              and s.inicio >= :desde and s.inicio < :hasta
+            group by l.clientaId
+            """)
+    List<ResumenCompras> comprasPorClienta(@Param("desde") Instant desde, @Param("hasta") Instant hasta);
 
     /** D-28: al renombrar una clienta se actualiza la copia del nombre en todas sus líneas, también en lives Cerrados. */
     @Modifying

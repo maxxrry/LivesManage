@@ -12,6 +12,7 @@ import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 /** Mensajes comprensibles para el usuario; el detalle técnico queda solo en el log (RNF-14). Mismo formato que ms-auth (D-33). */
 @Slf4j
@@ -30,6 +31,12 @@ public class ManejadorErrores {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     ResponseEntity<ErrorRespuesta> cuerpoIlegible(HttpMessageNotReadableException e) {
         return ResponseEntity.badRequest().body(new ErrorRespuesta("La petición no tiene el formato esperado."));
+    }
+
+    /** Un parámetro con otro tipo o formato, como una fecha o un criterio inválidos. */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    ResponseEntity<ErrorRespuesta> parametroInvalido(MethodArgumentTypeMismatchException e) {
+        return ResponseEntity.badRequest().body(new ErrorRespuesta("La petición no es válida."));
     }
 
     @ExceptionHandler(ReglaException.class)

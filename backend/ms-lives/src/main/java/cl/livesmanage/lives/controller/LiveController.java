@@ -10,6 +10,7 @@ import cl.livesmanage.lives.dto.LineaDto;
 import cl.livesmanage.lives.dto.NuevaAnotacion;
 import cl.livesmanage.lives.dto.NuevaSesion;
 import cl.livesmanage.lives.dto.ResultadoAnotar;
+import cl.livesmanage.lives.dto.ResumenCompras;
 import cl.livesmanage.lives.dto.SesionDetalleDto;
 import cl.livesmanage.lives.dto.SesionDto;
 import cl.livesmanage.lives.dto.SesionResumenDto;
@@ -17,6 +18,7 @@ import cl.livesmanage.lives.service.LiveService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
+import java.time.LocalDate;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -30,6 +32,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -141,10 +144,19 @@ public class LiveController {
 
     // Historial (RF-13, RF-14) y renombrar (D-28)
 
-    @Operation(summary = "Líneas con su live y su entrega, el live más reciente primero", description = "Con clientaId, solo las de esa clienta.")
+    @Operation(summary = "Líneas de una clienta con su live y su entrega, el live más reciente primero")
     @GetMapping("/lineas")
-    public ResponseEntity<List<CompraClienta>> compras(@RequestParam(required = false) String clientaId) {
+    public ResponseEntity<List<CompraClienta>> compras(@RequestParam String clientaId) {
         return ResponseEntity.ok(servicio.compras(clientaId));
+    }
+
+    @Operation(summary = "Compras por clienta para el ranking y las inactivas (lo llama ms-clientas, D-42)",
+            description = "Solo líneas Pagadas de más de $0 en lives Cerrados. Período en días de Chile (aaaa-mm-dd), opcional.")
+    @GetMapping("/compras-por-clienta")
+    public ResponseEntity<List<ResumenCompras>> comprasPorClienta(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
+        return ResponseEntity.ok(servicio.comprasPorClienta(desde, hasta));
     }
 
     @Operation(summary = "Igualar el nombre de la clienta en sus líneas al de su ficha (lo llama ms-clientas al editarla, D-28)")

@@ -9,6 +9,7 @@ import cl.livesmanage.lives.dto.DireccionDto;
 import cl.livesmanage.lives.dto.EntregaDto;
 import cl.livesmanage.lives.dto.LineaDto;
 import cl.livesmanage.lives.dto.NuevaAnotacion;
+import cl.livesmanage.lives.dto.ResumenCompras;
 import cl.livesmanage.lives.dto.ResultadoAnotar;
 import cl.livesmanage.lives.dto.SesionDetalleDto;
 import cl.livesmanage.lives.dto.SesionDto;
@@ -29,6 +30,8 @@ import cl.livesmanage.lives.repository.EntregaRepository;
 import cl.livesmanage.lives.repository.LineaRepository;
 import cl.livesmanage.lives.repository.SesionRepository;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -61,6 +64,9 @@ public class LiveService {
     private final ClientasCliente clientas;
 
     static final String REGION_POR_DEFECTO = "Metropolitana";
+
+    private static final ZoneId CHILE = ZoneId.of("America/Santiago");
+    private static final Instant SIN_LIMITE = Instant.parse("9999-01-01T00:00:00Z");
 
     // RF-04
 
@@ -371,13 +377,20 @@ public class LiveService {
 
     // RF-13 y RF-14: historial de compras, y D-28: renombrar
 
+    /** RF-14 (D-42): compras por clienta. El período es en días de Chile, con ambos extremos incluidos; sin él, todas. */
+    @Transactional(readOnly = true)
+    public List<ResumenCompras> comprasPorClienta(LocalDate desde, LocalDate hasta) {
+        Instant inicio = desde == null ? Instant.EPOCH : desde.atStartOfDay(CHILE).toInstant();
+        Instant fin = hasta == null ? SIN_LIMITE : hasta.plusDays(1).atStartOfDay(CHILE).toInstant();
+        return lineas.comprasPorClienta(inicio, fin);
+    }
+
     /**
-     * Las líneas de una clienta (o de todas, sin clientaId) con su live y su entrega, el live más reciente primero.
-     * shortcut: sin clientaId trae todas las líneas; con años de lives, filtrar por período en la consulta.
+     * Las líneas de una clienta con su live y su entrega, el live más reciente primero.
      */
     @Transactional(readOnly = true)
     public List<CompraClienta> compras(String clientaId) {
-        List<Linea> deLineas = clientaId == null ? lineas.findAll() : lineas.findByClientaId(clientaId);
+        List<Linea> deLineas = lineas.findByClientaId(clientaId);
         Map<String, Sesion> porSesion = sesiones.findByIdIn(deLineas.stream().map(Linea::getSesionId).collect(Collectors.toSet())).stream()
                 .collect(Collectors.toMap(Sesion::getId, s -> s));
         Map<String, Entrega> porEntrega = entregas.findAllById(deLineas.stream().map(Linea::getEntregaId).filter(Objects::nonNull).toList())

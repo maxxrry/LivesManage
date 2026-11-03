@@ -34,8 +34,10 @@ Proyecto del ramo Desarrollo FullStack 2 (Duoc UC) y para un cliente real.
 - Hecho: backend paso 6. Cierre en `ms-lives` (terminar, bolsa, entrega con dirección a la ficha vía `PUT /api/clientas/{id}/direccion`, agrupar, No pagó, finalizar con `RevisionCierre`, reabrir solo Admin), historial `GET /api/lives/lineas` y renombrar (ms-clientas avisa a ms-lives tras confirmar). Front conectado: con `VITE_API_URL`, `sesionesService` y `clientasService` usan la API vía `pedirConSesion`; ranking e inactivas se calculan en el front con datos reales hasta el paso 7. Probado un live completo en Chromium contra MySQL (D-38).
 - Hecho: precios completos en la anotación y en pantalla ("flo 6000 4000", D-39), con `formatearPrecio` y validación de múltiplos de $100 en `ms-lives`. Costo de despacho, abonos y saldo a favor los lleva la dueña fuera del sistema (D-40).
 - Hecho: agregar prendas desde el lápiz de una línea, escribiendo solo los precios (`AgregarPrendas`, `parsePrecios`, D-41). Cambiar clienta queda en el mismo panel; en el cierre, el lápiz abre directo Cambiar clienta.
-- Decisiones D-01 a D-41 en `docs/decisiones.md`.
-- Siguiente: paso 7 de `docs/plan-backend.md` (`ultimaCompra`, ranking e inactivas en `ms-clientas`; borrar solo clientas sin compras). Después, despliegue en AWS (cuenta por definir); entrega del ramo el 22/11/2026.
+- Hecho: backend paso 7. `ms-lives` entrega el resumen `GET /api/lives/compras-por-clienta`; `ms-clientas` calcula ranking e inactivas (`Estadisticas`, `EstadisticasService`), agrega `ultimaCompra` a la lista y no borra clientas con líneas. El front usa esas rutas con `VITE_API_URL` (D-42).
+- Decisiones D-01 a D-42 en `docs/decisiones.md`.
+- Pendiente: indicadores de la ficha (RF-13) en `ms-clientas`, como piden D-29 y la matriz del ERS (ver D-42).
+- Siguiente: despliegue en AWS (cuenta por definir), paso 9 de `docs/plan-backend.md` y RF-15 si alcanza el tiempo. Entrega del ramo: 22/11/2026.
 
 ## Estructura
 

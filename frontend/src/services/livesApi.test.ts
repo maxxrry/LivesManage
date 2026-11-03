@@ -1,7 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Clienta, CompraClienta } from '../types/dominio';
-import { clientasInactivas } from '../utils/clientas';
-import { listarInactivas } from './clientasService';
+import { listarInactivas, rankingClientas } from './clientasService';
 import { anotar, deshacerAnotacion, finalizarCierre, registrarEntrega } from './sesionesService';
 import { cerrarSesion } from './usuariosService';
 
@@ -57,16 +55,16 @@ describe('lives y clientas con el backend', () => {
     expect(llamada(1)).toMatchObject({ url: 'http://gateway/api/lives/s-1/finalizar', metodo: 'POST' });
   });
 
-  it('las inactivas se calculan con las fichas, las compras y los días de la API', async () => {
-    const clientas: Clienta[] = [{ id: 'c-1', nombre: 'Flo', activa: true }];
-    const compras: CompraClienta[] = [];
-    fetchFalso.mockImplementation(async (url) => {
-      if (String(url).endsWith('/api/clientas')) return respuesta(200, clientas);
-      if (String(url).endsWith('/api/lives/lineas')) return respuesta(200, compras);
-      return respuesta(200, { dias: 30 });
-    });
+  it('el ranking y las inactivas los calcula ms-clientas (D-42)', async () => {
+    const posiciones = [{ clienta: { id: 'c-1', nombre: 'Flo', activa: true }, totalGastado: 5000, compras: 1 }];
+    fetchFalso.mockResolvedValueOnce(respuesta(200, posiciones));
+    fetchFalso.mockResolvedValueOnce(respuesta(200, []));
 
-    expect(await listarInactivas()).toEqual(clientasInactivas(clientas, compras, new Date(), 30));
-    expect(fetchFalso.mock.calls.map(([url]) => url)).toContain('http://gateway/api/configuracion/dias-inactividad');
+    expect(await rankingClientas('TOTAL', { desde: '2026-10-01', hasta: '2026-10-31' })).toEqual(posiciones);
+    expect(await listarInactivas()).toEqual([]);
+
+    expect(fetchFalso).toHaveBeenCalledTimes(2);
+    expect(llamada(0)).toMatchObject({ url: 'http://gateway/api/clientas/ranking?criterio=TOTAL&desde=2026-10-01&hasta=2026-10-31', metodo: 'GET' });
+    expect(llamada(1)).toMatchObject({ url: 'http://gateway/api/clientas/inactivas', metodo: 'GET' });
   });
 });
