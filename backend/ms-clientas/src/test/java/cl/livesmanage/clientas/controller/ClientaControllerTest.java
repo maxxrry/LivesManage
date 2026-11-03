@@ -15,6 +15,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.jayway.jsonpath.JsonPath;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import java.nio.charset.StandardCharsets;
+import cl.livesmanage.clientas.dto.CompraClienta;
 import cl.livesmanage.clientas.dto.ResumenCompras;
 import java.time.Duration;
 import java.time.Instant;
@@ -320,5 +321,49 @@ class ClientaControllerTest {
 
         mvc.perform(delete("/api/clientas/" + id).header("Authorization", VENDEDORA)).andExpect(status().isConflict());
         mvc.perform(get("/api/clientas/" + id).header("Authorization", VENDEDORA)).andExpect(status().isOk());
+    }
+
+    // RF-13: indicadores de la ficha, con ms-lives simulado
+
+    @Test
+    void laFichaEntregaSusIndicadoresDesdeElHistorial() throws Exception {
+        String id = idDe(crear(VENDEDORA, "{\"nombre\":\"Con historial\"}"));
+        when(lives.historial(id)).thenReturn(List.of(new CompraClienta(
+                new CompraClienta.SesionCompra(Instant.parse("2026-10-15T23:00:00Z"), "CERRADA"),
+                new CompraClienta.LineaCompra("PAGADO", List.of(new CompraClienta.PrendaCompra(6000, "VIGENTE"), new CompraClienta.PrendaCompra(4000, "CANCELADA"))))));
+
+        mvc.perform(get("/api/clientas/" + id + "/indicadores").header("Authorization", VENDEDORA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalGastado").value(6000))
+                .andExpect(jsonPath("$.compras").value(1))
+                .andExpect(jsonPath("$.ticketPromedio").value(6000))
+                .andExpect(jsonPath("$.ultimaCompra").value("2026-10-15T23:00:00Z"))
+                .andExpect(jsonPath("$.prendasCanceladas").value(1))
+                .andExpect(jsonPath("$.livesSinPago").value(0));
+    }
+
+    @Test
+    void losIndicadoresSinComprasNoTraenUltimaCompra() throws Exception {
+        String id = idDe(crear(VENDEDORA, "{\"nombre\":\"Sin compras\"}"));
+
+        mvc.perform(get("/api/clientas/" + id + "/indicadores").header("Authorization", VENDEDORA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalGastado").value(0))
+                .andExpect(jsonPath("$.ultimaCompra").doesNotExist());
+    }
+
+    @Test
+    void losIndicadoresDeUnaClientaInexistenteResponden404() throws Exception {
+        mvc.perform(get("/api/clientas/no-existe/indicadores").header("Authorization", VENDEDORA)).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void siMsLivesNoRespondeLosIndicadoresDanUnErrorClaro() throws Exception {
+        String id = idDe(crear(VENDEDORA, "{\"nombre\":\"Sin ms-lives\"}"));
+        when(lives.historial(id)).thenThrow(new IllegalStateException("sin conexión"));
+
+        mvc.perform(get("/api/clientas/" + id + "/indicadores").header("Authorization", VENDEDORA))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.mensaje").value("No se pudieron calcular las estadísticas. Intenta de nuevo."));
     }
 }

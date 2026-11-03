@@ -491,4 +491,4 @@ Paso 7 de `docs/plan-backend.md`. Hasta ahora el front calculaba el ranking y la
 
 **Lo que se acepta a cambio:** `ClientaService.listar` hace una llamada más a `ms-lives` cada vez que se recarga la lista. Es una sola consulta agregada, sin cargar prendas.
 
-**Pendiente:** D-29 y `docs/plan-backend.md` piden calcular los indicadores de la ficha (RF-13) en `ms-clientas`, con su prueba JUnit según la matriz del ERS. Este paso no lo hizo: siguen en el front, en `indicadoresDeClienta`.
+**Indicadores de la ficha (RF-13):** como pide D-29, los calcula `ms-clientas` en `GET /api/clientas/{id}/indicadores` (`Estadisticas.indicadores`, con JUnit según la matriz del ERS), con el historial de `GET /api/lives/lineas`. Si `ms-lives` no responde, responde 503 como el ranking. `indicadoresDeClienta` queda en el front solo para los datos simulados.

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { listarInactivas, rankingClientas } from './clientasService';
+import { indicadoresClienta, listarInactivas, rankingClientas } from './clientasService';
 import { anotar, deshacerAnotacion, finalizarCierre, registrarEntrega } from './sesionesService';
 import { cerrarSesion } from './usuariosService';
 
@@ -53,6 +53,16 @@ describe('lives y clientas con el backend', () => {
 
     expect(llamada(0)).toMatchObject({ url: 'http://gateway/api/lives/s-1/lineas/l-1/entrega', metodo: 'PUT', cuerpo: { tipo: 'DESPACHO', direccion } });
     expect(llamada(1)).toMatchObject({ url: 'http://gateway/api/lives/s-1/finalizar', metodo: 'POST' });
+  });
+
+  it('los indicadores de la ficha los calcula ms-clientas (D-29)', async () => {
+    const indicadores = { totalGastado: 6000, compras: 1, ticketPromedio: 6000, prendasCanceladas: 0, livesSinPago: 0 };
+    fetchFalso.mockResolvedValueOnce(respuesta(200, indicadores));
+
+    expect(await indicadoresClienta('c 1')).toEqual(indicadores);
+
+    expect(fetchFalso).toHaveBeenCalledTimes(1);
+    expect(llamada(0)).toMatchObject({ url: 'http://gateway/api/clientas/c%201/indicadores', metodo: 'GET' });
   });
 
   it('el ranking y las inactivas los calcula ms-clientas (D-42)', async () => {

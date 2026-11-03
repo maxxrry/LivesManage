@@ -2,11 +2,14 @@ package cl.livesmanage.clientas.service;
 
 import cl.livesmanage.clientas.dto.ClientaDto;
 import cl.livesmanage.clientas.dto.ClientaInactiva;
+import cl.livesmanage.clientas.dto.CompraClienta;
 import cl.livesmanage.clientas.dto.CriterioRanking;
+import cl.livesmanage.clientas.dto.IndicadoresClienta;
 import cl.livesmanage.clientas.dto.PosicionRanking;
 import cl.livesmanage.clientas.dto.ResumenCompras;
 import cl.livesmanage.clientas.model.Clienta;
 import java.text.Collator;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
@@ -17,12 +20,29 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/** RF-14: mismas reglas que rankingDeClientas y clientasInactivas del frontend (D-30), sin acceso a datos. */
+/** RF-13 y RF-14: mismas reglas que indicadoresDeClienta, rankingDeClientas y clientasInactivas del frontend (D-29, D-30), sin acceso a datos. */
 final class Estadisticas {
 
     private static final ZoneId CHILE = ZoneId.of("America/Santiago");
 
     private Estadisticas() {}
+
+    /** Solo cuentan los lives Cerrados. Una compra es una línea Pagada de más de $0 (D-29). El total sale de las prendas vigentes (RNF-11). */
+    static IndicadoresClienta indicadores(List<CompraClienta> historial) {
+        List<CompraClienta> cerradas = historial.stream().filter(c -> "CERRADA".equals(c.sesion().estado())).toList();
+        List<CompraClienta> compras = cerradas.stream().filter(c -> "PAGADO".equals(c.linea().estadoPago()) && monto(c) > 0).toList();
+        long total = compras.stream().mapToLong(Estadisticas::monto).sum();
+        // Redondeo a pesos enteros sin decimales: sumar la mitad antes de dividir.
+        long ticket = compras.isEmpty() ? 0 : (total + compras.size() / 2) / compras.size();
+        Instant ultima = compras.stream().map(c -> c.sesion().inicio()).max(Comparator.naturalOrder()).orElse(null);
+        long canceladas = cerradas.stream().flatMap(c -> c.linea().prendas().stream()).filter(p -> "CANCELADA".equals(p.estado())).count();
+        long sinPago = cerradas.stream().filter(c -> "NO_PAGO".equals(c.linea().estadoPago())).count();
+        return new IndicadoresClienta(total, compras.size(), ticket, ultima, canceladas, sinPago);
+    }
+
+    private static long monto(CompraClienta compra) {
+        return compra.linea().prendas().stream().filter(p -> "VIGENTE".equals(p.estado())).mapToLong(CompraClienta.PrendaCompra::precio).sum();
+    }
 
     /** Quienes tienen compras en el período, también las desactivadas. Desempata con el otro criterio y luego por nombre. */
     static List<PosicionRanking> ranking(List<Clienta> clientas, List<ResumenCompras> compras, CriterioRanking criterio) {

@@ -4,12 +4,18 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 import { rutas } from '../../app/router';
 import { clientas, lineas, sesiones, usuarios } from '../../services/mock/datos';
+import { indicadoresClienta } from '../../services/clientasService';
 import { historialDeClienta } from '../../services/sesionesService';
 
 // El historial real, salvo en el test que simula una falla.
 vi.mock('../../services/sesionesService', async (original) => {
   const real = await original<typeof import('../../services/sesionesService')>();
   return { ...real, historialDeClienta: vi.fn(real.historialDeClienta) };
+});
+
+vi.mock('../../services/clientasService', async (original) => {
+  const real = await original<typeof import('../../services/clientasService')>();
+  return { ...real, indicadoresClienta: vi.fn(real.indicadoresClienta) };
 });
 
 function abrir(ruta: string) {
@@ -225,6 +231,15 @@ describe('Ficha: historial e indicadores (RF-13)', () => {
 
     expect(await screen.findByText('Aún no tiene compras.')).toBeInTheDocument();
     expect(indicador('Compras')).toBe('0');
+  });
+
+  it('si los indicadores no cargan, lo dice en su sección y el historial se sigue viendo', async () => {
+    vi.mocked(indicadoresClienta).mockRejectedValueOnce(new Error('No se pudieron calcular las estadísticas.'));
+    abrir('/clientas/c-3');
+
+    const seccion = await screen.findByRole('region', { name: 'Indicadores' });
+    expect(await within(seccion).findByRole('alert')).toHaveTextContent('No se pudieron calcular las estadísticas.');
+    expect((await filasHistorial())[0]).toMatch(/Live martes/);
   });
 
   it('si el historial no carga, lo dice en su sección y no bajo Desactivar', async () => {

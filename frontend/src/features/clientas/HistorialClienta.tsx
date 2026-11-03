@@ -2,7 +2,7 @@ import { Fragment } from 'react';
 import { Link } from 'react-router';
 import type { CompraClienta, Linea } from '../../types/dominio';
 import { ETIQUETAS_ESTADO_PAGO, ETIQUETAS_ESTADO_SESION, ETIQUETAS_TIPO_ENTREGA } from '../../types/etiquetas';
-import { indicadoresDeClienta } from '../../utils/clientas';
+import type { IndicadoresClienta } from '../../utils/clientas';
 import { formatearFecha } from '../../utils/fechas';
 import { formatearClp, formatearPrecio, totalLinea } from '../../utils/montos';
 import { nombreSesion, rutaDeSesion } from '../../utils/sesion';
@@ -49,9 +49,8 @@ function Live({ compra }: { compra: CompraClienta }) {
 
 const entregaDe = (c: CompraClienta) => (c.entrega ? ETIQUETAS_TIPO_ENTREGA[c.entrega.tipo] : '—');
 
-/** RF-13: indicadores e historial por live de la ficha. */
-export function HistorialClienta({ historial }: { historial: CompraClienta[] }) {
-  const ind = indicadoresDeClienta(historial);
+/** RF-13: indicadores de la ficha. */
+export function IndicadoresFicha({ indicadores: ind }: { indicadores: IndicadoresClienta }) {
   const indicadores = [
     ['Total gastado', formatearClp(ind.totalGastado)],
     ['Compras', String(ind.compras)],
@@ -62,20 +61,25 @@ export function HistorialClienta({ historial }: { historial: CompraClienta[] }) 
   ];
 
   return (
-    <>
-      <section aria-labelledby="titulo-indicadores" className="rounded-lg border border-gray-200 bg-white p-4">
-        <h2 id="titulo-indicadores" className="font-semibold">Indicadores</h2>
-        <p className="text-sm text-gray-500">Solo cuentan los lives cerrados.</p>
-        <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {indicadores.map(([etiqueta, valor]) => (
-            <div key={etiqueta}>
-              <dt className="text-sm text-gray-600">{etiqueta}</dt>
-              <dd className="text-lg font-bold tabular-nums">{valor}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
+    <section aria-labelledby="titulo-indicadores" className="rounded-lg border border-gray-200 bg-white p-4">
+      <h2 id="titulo-indicadores" className="font-semibold">Indicadores</h2>
+      <p className="text-sm text-gray-500">Solo cuentan los lives cerrados.</p>
+      <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {indicadores.map(([etiqueta, valor]) => (
+          <div key={etiqueta}>
+            <dt className="text-sm text-gray-600">{etiqueta}</dt>
+            <dd className="text-lg font-bold tabular-nums">{valor}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
 
+/** RF-13: historial por live de la ficha. */
+export function HistorialClienta({ historial }: { historial: CompraClienta[] }) {
+  return (
+    <>
       <section aria-labelledby="titulo-historial" className="space-y-2">
         <h2 id="titulo-historial" className="font-semibold">Historial por live</h2>
         {historial.length === 0 ? (

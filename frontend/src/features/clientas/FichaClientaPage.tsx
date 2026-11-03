@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { Pantalla } from '../../components/Pantalla';
-import { actualizarClienta, cambiarActiva, obtenerClienta } from '../../services/clientasService';
+import { actualizarClienta, cambiarActiva, indicadoresClienta, obtenerClienta } from '../../services/clientasService';
 import { historialDeClienta } from '../../services/sesionesService';
 import { usuarioActual } from '../../services/usuariosService';
 import type { Clienta, CompraClienta, Rol } from '../../types/dominio';
-import { textoDireccion } from '../../utils/clientas';
+import { textoDireccion, type IndicadoresClienta } from '../../utils/clientas';
 import { FormularioClienta } from './FormularioClienta';
-import { HistorialClienta } from './HistorialClienta';
+import { HistorialClienta, IndicadoresFicha } from './HistorialClienta';
 
 /**
  * Ficha de la clienta. RF-12: datos de contacto, Editar (D-14) y desactivar o reactivar (Admin, D-28).
@@ -24,6 +24,8 @@ function Ficha({ id }: { id: string }) {
   const [clienta, setClienta] = useState<Clienta | null>(null);
   const [rol, setRol] = useState<Rol | null>(null);
   const [historial, setHistorial] = useState<CompraClienta[] | null>(null);
+  const [indicadores, setIndicadores] = useState<IndicadoresClienta | null>(null);
+  const [errorIndicadores, setErrorIndicadores] = useState('');
   const [errorHistorial, setErrorHistorial] = useState('');
   const [error, setError] = useState('');
   const [editando, setEditando] = useState(false);
@@ -38,6 +40,10 @@ function Ficha({ id }: { id: string }) {
     historialDeClienta(id).then(
       (h) => vigente && setHistorial(h),
       (e: Error) => vigente && setErrorHistorial(e.message),
+    );
+    indicadoresClienta(id).then(
+      (i) => vigente && setIndicadores(i),
+      (e: Error) => vigente && setErrorIndicadores(e.message),
     );
     usuarioActual().then(
       (u) => vigente && setRol(u.rol),
@@ -167,6 +173,18 @@ function Ficha({ id }: { id: string }) {
             </p>
           )}
         </section>
+
+        {errorIndicadores ? (
+          <section aria-label="Indicadores">
+            <p role="alert" className="text-sm text-red-700">
+              No se pudieron cargar los indicadores: {errorIndicadores}
+            </p>
+          </section>
+        ) : indicadores ? (
+          <IndicadoresFicha indicadores={indicadores} />
+        ) : (
+          <p className="text-sm text-gray-500">Cargando indicadores…</p>
+        )}
 
         {errorHistorial ? (
           <section aria-label="Historial por live">

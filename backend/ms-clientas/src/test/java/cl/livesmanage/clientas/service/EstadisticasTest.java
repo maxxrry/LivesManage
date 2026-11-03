@@ -3,7 +3,9 @@ package cl.livesmanage.clientas.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cl.livesmanage.clientas.dto.ClientaInactiva;
+import cl.livesmanage.clientas.dto.CompraClienta;
 import cl.livesmanage.clientas.dto.CriterioRanking;
+import cl.livesmanage.clientas.dto.IndicadoresClienta;
 import cl.livesmanage.clientas.dto.PosicionRanking;
 import cl.livesmanage.clientas.dto.ResumenCompras;
 import cl.livesmanage.clientas.model.Clienta;
@@ -122,5 +124,85 @@ class EstadisticasTest {
         List<ClientaInactiva> inactivas = Estadisticas.inactivas(List.of(javi, flo, gabi), compras, LocalDate.parse("2026-11-30"), 60);
 
         assertThat(inactivas.stream().map(i -> i.clienta().nombre()).toList()).containsExactly("Gabriela", "Florencia", "Javiera");
+    }
+
+    // RF-13: mismas reglas que indicadoresDeClienta del frontend (D-29)
+
+    private static CompraClienta.PrendaCompra vigente(int precio) {
+        return new CompraClienta.PrendaCompra(precio, "VIGENTE");
+    }
+
+    private static CompraClienta.PrendaCompra cancelada(int precio) {
+        return new CompraClienta.PrendaCompra(precio, "CANCELADA");
+    }
+
+    private static CompraClienta compra(String inicio, String estadoLive, String estadoPago, CompraClienta.PrendaCompra... prendas) {
+        return new CompraClienta(new CompraClienta.SesionCompra(Instant.parse(inicio), estadoLive), new CompraClienta.LineaCompra(estadoPago, List.of(prendas)));
+    }
+
+    @Test
+    void sinHistorialLosIndicadoresEstanEnCero() {
+        assertThat(Estadisticas.indicadores(List.of())).isEqualTo(new IndicadoresClienta(0, 0, 0, null, 0, 0));
+    }
+
+    @Test
+    void elTotalGastadoEsLaSumaDeSusLineasPagadasEnLivesCerrados() {
+        IndicadoresClienta indicadores = Estadisticas.indicadores(List.of(
+                compra("2026-09-01T23:00:00Z", "CERRADA", "PAGADO", vigente(6000), vigente(6000), vigente(5000)),
+                compra("2026-09-08T23:00:00Z", "CERRADA", "PAGADO", vigente(10000)),
+                compra("2026-09-15T23:00:00Z", "CERRADA", "PENDIENTE", vigente(7000)),
+                compra("2026-09-22T23:00:00Z", "CERRADA", "NO_PAGO", vigente(8000)),
+                compra("2026-09-29T23:00:00Z", "ABIERTA", "PAGADO", vigente(9000)),
+                compra("2026-10-06T23:00:00Z", "EN_CIERRE", "PAGADO", vigente(4000))));
+
+        assertThat(indicadores.totalGastado()).isEqualTo(27000);
+        assertThat(indicadores.compras()).isEqualTo(2);
+    }
+
+    @Test
+    void unaLineaPagadaDeCeroPesosNoEsUnaCompra() {
+        IndicadoresClienta indicadores = Estadisticas.indicadores(List.of(
+                compra("2026-09-01T23:00:00Z", "CERRADA", "PAGADO", cancelada(6000)),
+                compra("2026-09-08T23:00:00Z", "CERRADA", "PAGADO", vigente(5000), cancelada(3000))));
+
+        assertThat(indicadores.compras()).isEqualTo(1);
+        assertThat(indicadores.totalGastado()).isEqualTo(5000);
+        assertThat(indicadores.ticketPromedio()).isEqualTo(5000);
+        assertThat(indicadores.ultimaCompra()).isEqualTo(Instant.parse("2026-09-08T23:00:00Z"));
+    }
+
+    @Test
+    void elTicketPromedioSeRedondeaAPesosEnteros() {
+        assertThat(Estadisticas.indicadores(List.of(
+                compra("2026-09-01T23:00:00Z", "CERRADA", "PAGADO", vigente(6000)),
+                compra("2026-09-08T23:00:00Z", "CERRADA", "PAGADO", vigente(5000)),
+                compra("2026-09-15T23:00:00Z", "CERRADA", "PAGADO", vigente(5000)))).ticketPromedio()).isEqualTo(5333);
+        // 16.000 ÷ 3 = 5.333,33 baja y 12.200 ÷ 3 = 4.066,67 sube.
+        assertThat(Estadisticas.indicadores(List.of(
+                compra("2026-09-01T23:00:00Z", "CERRADA", "PAGADO", vigente(6100)),
+                compra("2026-09-08T23:00:00Z", "CERRADA", "PAGADO", vigente(3000)),
+                compra("2026-09-15T23:00:00Z", "CERRADA", "PAGADO", vigente(3100)))).ticketPromedio()).isEqualTo(4067);
+    }
+
+    @Test
+    void laUltimaCompraEsLaDelLiveCerradoMasReciente() {
+        IndicadoresClienta indicadores = Estadisticas.indicadores(List.of(
+                compra("2026-09-01T23:00:00Z", "CERRADA", "PAGADO", vigente(5000)),
+                compra("2026-09-08T23:00:00Z", "CERRADA", "PAGADO", vigente(5000)),
+                compra("2026-09-15T23:00:00Z", "CERRADA", "NO_PAGO", vigente(5000)),
+                compra("2026-09-22T23:00:00Z", "ABIERTA", "PAGADO", vigente(5000))));
+
+        assertThat(indicadores.ultimaCompra()).isEqualTo(Instant.parse("2026-09-08T23:00:00Z"));
+    }
+
+    @Test
+    void lasCanceladasYLosLivesSinPagoSoloCuentanEnLivesCerrados() {
+        IndicadoresClienta indicadores = Estadisticas.indicadores(List.of(
+                compra("2026-09-01T23:00:00Z", "CERRADA", "PAGADO", vigente(5000), cancelada(3000)),
+                compra("2026-09-08T23:00:00Z", "CERRADA", "NO_PAGO", cancelada(4000), cancelada(2000)),
+                compra("2026-09-15T23:00:00Z", "ABIERTA", "NO_PAGO", cancelada(9000))));
+
+        assertThat(indicadores.prendasCanceladas()).isEqualTo(3);
+        assertThat(indicadores.livesSinPago()).isEqualTo(1);
     }
 }

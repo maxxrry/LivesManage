@@ -10,6 +10,7 @@
 | 30/09/2026 | 2.0 | Maxi | Reenfoque en el live de TikTok: se eliminan productos, categorías, stock y ventas; se agregan sesiones de live, anotación rápida, cierre del live e importación de cuaderno. 15 RF y matriz de trazabilidad. |
 | 02/11/2026 | 2.1 | Maxi | RF-05 y RF-08: los precios se anotan y se muestran completos, sin la sintaxis en miles. Se cierran los pendientes sobre precios, despacho, abonos, saldo a favor y feria, y el despliegue pasa a AWS. |
 | 02/11/2026 | 2.2 | Maxi | RF-05: el lápiz de una línea permite agregar prendas escribiendo solo los precios. |
+| 03/11/2026 | 2.3 | Maxi | Despliegue: AWS deja de ser obligatorio y el alojamiento queda por definir. |
 
 ## 1. Introducción
 
@@ -149,7 +150,7 @@ Lo usarán entre 2 y 3 personas: el desarrollador durante el proyecto y 1 o 2 pe
 * Los precios se anotan completos (6000 o 6.000), de $1.000 a $999.000 y en múltiplos de $100.
 * Los pagos se reciben fuera del sistema (transferencia o efectivo); el sistema solo registra si se pagó. El costo de despacho, los abonos y los saldos a favor los lleva la dueña con cada clienta, fuera del sistema.
 * La foto del cuaderno debe ser legible; la extracción automática puede equivocarse y siempre requiere revisión humana.
-* El despliegue será en AWS, como pide el ramo. Falta definir la cuenta y si la tienda seguirá usando el sistema después de la entrega.
+* El alojamiento del despliegue está por definir. AWS no es obligatorio para el ramo.
 
 ### 2.6. Requisitos futuros
 
@@ -405,4 +406,4 @@ Cada RF tiene un criterio de aceptación verificable. El criterio se automatiza 
 * ☐ ¿Anota una sola persona por live? El sistema asume que sí.
 * ☐ ¿Se necesita registrar las ventas del local físico? Hoy quedan fuera de alcance.
 * ☐ ¿60 días sin comprar es un buen criterio de clienta inactiva? (RF-14)
-* ☐ Despliegue en AWS, como pide el ramo: falta definir la cuenta y si la tienda seguirá usando el sistema después de la entrega.
+* ☐ Dónde se desplegará el sistema (AWS no es obligatorio para el ramo) y si la tienda lo seguirá usando después de la entrega.

@@ -1,9 +1,11 @@
 package cl.livesmanage.clientas.cliente;
 
+import cl.livesmanage.clientas.dto.CompraClienta;
 import cl.livesmanage.clientas.dto.ResumenCompras;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -43,7 +45,7 @@ public class LivesCliente {
 
     /** RF-14 (D-42): compras por clienta en un período de días de Chile; sin fechas, todas. Si ms-lives falla, lanza la excepción. */
     public List<ResumenCompras> comprasPorClienta(LocalDate desde, LocalDate hasta) {
-        return http.get()
+        return Objects.requireNonNull(http.get()
                 .uri(uri -> {
                     uri.path("/api/lives/compras-por-clienta");
                     if (desde != null) uri.queryParam("desde", desde);
@@ -51,15 +53,19 @@ public class LivesCliente {
                     return uri.build();
                 })
                 .header("Authorization", bearer())
-                .retrieve().body(new ParameterizedTypeReference<>() {});
+                .retrieve().body(new ParameterizedTypeReference<>() {}));
+    }
+
+    /** RF-13: las líneas de una clienta con su live. Si ms-lives falla, lanza la excepción. */
+    public List<CompraClienta> historial(String clientaId) {
+        return Objects.requireNonNull(http.get().uri(uri -> uri.path("/api/lives/lineas").queryParam("clientaId", clientaId).build())
+                .header("Authorization", bearer())
+                .retrieve().body(new ParameterizedTypeReference<>() {}));
     }
 
     /** D-37: una clienta con líneas no se borra. Si ms-lives falla, lanza la excepción. */
     public boolean tieneLineas(String clientaId) {
-        List<Object> lineas = http.get().uri(uri -> uri.path("/api/lives/lineas").queryParam("clientaId", clientaId).build())
-                .header("Authorization", bearer())
-                .retrieve().body(new ParameterizedTypeReference<>() {});
-        return lineas != null && !lineas.isEmpty();
+        return !historial(clientaId).isEmpty();
     }
 
     private static String bearer() {

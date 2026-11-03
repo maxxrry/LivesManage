@@ -36,8 +36,8 @@ Proyecto del ramo Desarrollo FullStack 2 (Duoc UC) y para un cliente real.
 - Hecho: agregar prendas desde el lápiz de una línea, escribiendo solo los precios (`AgregarPrendas`, `parsePrecios`, D-41). Cambiar clienta queda en el mismo panel; en el cierre, el lápiz abre directo Cambiar clienta.
 - Hecho: backend paso 7. `ms-lives` entrega el resumen `GET /api/lives/compras-por-clienta`; `ms-clientas` calcula ranking e inactivas (`Estadisticas`, `EstadisticasService`), agrega `ultimaCompra` a la lista y no borra clientas con líneas. El front usa esas rutas con `VITE_API_URL` (D-42).
 - Decisiones D-01 a D-42 en `docs/decisiones.md`.
-- Pendiente: indicadores de la ficha (RF-13) en `ms-clientas`, como piden D-29 y la matriz del ERS (ver D-42).
-- Siguiente: despliegue en AWS (cuenta por definir), paso 9 de `docs/plan-backend.md` y RF-15 si alcanza el tiempo. Entrega del ramo: 22/11/2026.
+- Hecho: RF-13 en el backend. `ms-clientas` calcula los indicadores de la ficha en `GET /api/clientas/{id}/indicadores` (`Estadisticas.indicadores`, D-29, D-42).
+- Siguiente: paso 9 de `docs/plan-backend.md`, RF-15 si alcanza el tiempo y despliegue (AWS no es obligatorio; alojamiento por decidir). Entrega del ramo: 22/11/2026.
 
 ## Estructura
 

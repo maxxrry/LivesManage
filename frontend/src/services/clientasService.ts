@@ -2,18 +2,20 @@ import type { Clienta, Direccion } from '../types/dominio';
 import {
   clientasInactivas,
   duplicadosDe,
+  indicadoresDeClienta,
   normalizarDireccion,
   normalizarTiktok,
   rankingDeClientas,
   type ClientaInactiva,
   type CriterioRanking,
   type Duplicados,
+  type IndicadoresClienta,
   type PosicionRanking,
 } from '../utils/clientas';
 import { clientas, configuracion, lineas, nuevoId } from './mock/datos';
 import { urlApi } from './api';
 import { pedirConSesion, usuarioConectado } from './usuariosService';
-import { listarCompras } from './sesionesService';
+import { historialDeClienta, listarCompras } from './sesionesService';
 
 // Con VITE_API_URL, las fichas y los días de inactividad vienen de ms-clientas por el gateway (D-36, D-38);
 // sin ella, datos simulados en memoria:
@@ -23,6 +25,7 @@ import { listarCompras } from './sesionesService';
 //   PUT   /api/clientas/{id}               actualizarClienta
 //   GET   /api/clientas/duplicados?...     buscarDuplicados
 //   PATCH /api/clientas/{id}/activa        cambiarActiva
+//   GET   /api/clientas/{id}/indicadores   indicadoresClienta
 //   GET   /api/clientas/ranking?criterio=&desde=&hasta=   rankingClientas
 //   GET   /api/clientas/inactivas          listarInactivas
 //   GET   /api/configuracion/dias-inactividad   obtenerDiasInactividad
@@ -110,6 +113,12 @@ export async function cambiarActiva(id: string, activa: boolean): Promise<Client
   const clienta = buscar(id);
   clienta.activa = activa;
   return structuredClone(clienta);
+}
+
+/** RF-13: indicadores de la ficha. Con backend, los calcula ms-clientas (D-29). */
+export async function indicadoresClienta(id: string): Promise<IndicadoresClienta> {
+  if (urlApi()) return pedirConSesion(`/api/clientas/${encodeURIComponent(id)}/indicadores`);
+  return indicadoresDeClienta(await historialDeClienta(id));
 }
 
 /** RF-14: ranking en un rango de días "aaaa-mm-dd". Con backend, lo calcula ms-clientas (D-42). */
