@@ -80,6 +80,29 @@ cp .env.example .env     # completar los valores; el .env nunca se sube
 
 **Front con el backend real:** crear `frontend/.env.local` con `VITE_API_URL=http://localhost:8080` y levantar MySQL, los cuatro servicios (`ms-auth`, `ms-clientas`, `ms-lives`, `api-gateway`) y `npm run dev`. Todo se guarda en MySQL: usuarios, clientas, lives y cierres. Se entra con la Admin de `ADMIN_CORREO`. Sin ese archivo, el front funciona como antes, solo con datos simulados (los usuarios de prueba de arriba).
 
+## Respaldos
+
+`scripts/respaldar.sh` guarda las tres bases en `respaldos/diario_aaaa-mm-dd_hhmm.sql` y conserva los últimos 7 días con respaldo. La carpeta no se sube a git porque tiene datos personales.
+
+```bash
+bash scripts/respaldar.sh        # un respaldo ahora (en Windows, desde Git Bash)
+bash scripts/respaldar.test.sh   # prueba del script; no necesita MySQL
+```
+
+Para que corra solo todos los días a las 23:00 en Windows, una sola vez desde PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\programar-respaldo.ps1
+```
+
+Para revisar si funciona, mira `respaldos/respaldo.log`: cada corrida deja una línea `OK` o `ERROR`.
+
+**Restaurar reemplaza los datos actuales de las tres bases.** Con la app detenida, en Windows desde **cmd** (no Git Bash, donde `-p` no suele poder pedir la contraseña), desde la raíz del repo y como root de MySQL:
+
+```bat
+"C:\Program Files\MySQL\MySQL Server 8.4\bin\mysql.exe" -u root -p < respaldos\diario_aaaa-mm-dd_hhmm.sql
+```
+
 ## Pruebas
 
 Desde `frontend/`:

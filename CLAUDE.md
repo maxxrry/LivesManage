@@ -36,9 +36,10 @@ Proyecto del ramo Desarrollo FullStack 2 (Duoc UC) y para un cliente real.
 - Hecho: agregar prendas desde el lápiz de una línea, escribiendo solo los precios (`AgregarPrendas`, `parsePrecios`, D-41). Cambiar clienta queda en el mismo panel; en el cierre, el lápiz abre directo Cambiar clienta.
 - Hecho: backend paso 7. `ms-lives` entrega el resumen `GET /api/lives/compras-por-clienta`; `ms-clientas` calcula ranking e inactivas (`Estadisticas`, `EstadisticasService`), agrega `ultimaCompra` a la lista y no borra clientas con líneas. El front usa esas rutas con `VITE_API_URL` (D-42).
 - Hecho: backend paso 9, parte de pruebas (D-43). `npm run e2e:backend` recorre un live completo contra los servicios reales con H2 y puertos propios; JaCoCo con mínimo de 60 % en `service` (`./mvnw verify`); `e2e/sin-recortes.spec.ts` mide los bordes de cada pantalla (`overflow-x: hidden` esconde lo cortado).
-- Decisiones D-01 a D-43 en `docs/decisiones.md`.
+- Hecho: respaldos (RNF-19, D-44). `scripts/respaldar.sh` guarda las tres bases en `respaldos/` y conserva los últimos 7 días con respaldo; `scripts/programar-respaldo.ps1` crea la tarea diaria de Windows. Restauración comprobada en un MySQL desechable.
+- Decisiones D-01 a D-44 en `docs/decisiones.md`.
 - Hecho: RF-13 en el backend. `ms-clientas` calcula los indicadores de la ficha en `GET /api/clientas/{id}/indicadores` (`Estadisticas.indicadores`, D-29, D-42).
-- Siguiente: respaldos automáticos (RNF-19), RF-15 si alcanza el tiempo y despliegue (AWS no es obligatorio; alojamiento por decidir). Entrega del ramo: 22/11/2026.
+- Siguiente: RF-15 si alcanza el tiempo, pruebas con la tienda (UAT) y despliegue (AWS no es obligatorio; alojamiento por decidir). Entrega del ramo: 22/11/2026.
 
 ## Estructura
 
@@ -73,6 +74,10 @@ npm run lint
 ./mvnw spring-boot:run
 ./mvnw test
 ./mvnw verify                     # + cobertura JaCoCo, mínimo 60 % en service
+
+# raíz del repo (en Windows, Git Bash)
+bash scripts/respaldar.sh         # respaldo de las tres bases en respaldos/
+bash scripts/respaldar.test.sh    # prueba del script, sin MySQL
 ```
 
 ## Reglas del dominio (no romper)

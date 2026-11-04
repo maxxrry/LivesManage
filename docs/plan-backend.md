@@ -172,7 +172,7 @@ El front se puede seguir mejorando durante todo el proceso: mientras no cambie l
 | 6 | **ms-lives**: terminar, bolsas, entregas, finalizar y reabrir (RF-09 a RF-11), y conexión de `clientasService` y `sesionesService` en el front (D-38) | Live, cierre y clientas con datos reales |
 | 7 | `ultimaCompra` (D-15), ranking e inactivas en ms-clientas (hoy se calculan en el front con datos reales), y borrar solo clientas sin compras (D-37) | Estadísticas calculadas en el backend |
 | 8 | **ms-importacion** (RF-15) | Importar cuaderno |
-| 9 | Swagger revisado, README del backend y E2E contra el backend (D-43), y respaldos (RNF-19) | Entrega final |
+| 9 | Swagger revisado, README del backend y E2E contra el backend (D-43), y respaldos (RNF-19, D-44) | Entrega final |
 
 ## 8. Decisiones que tomar en el camino
 

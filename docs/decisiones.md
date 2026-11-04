@@ -47,6 +47,7 @@ Registro de decisiones de diseño que complementan o precisan el ERS (`docs/ERS.
 | D-41 | 02/11/2026 | RF-05, RF-06, RF-09 | El lápiz de una línea agrega prendas escribiendo solo los precios; Cambiar clienta queda dentro del mismo panel. |
 | D-42 | 02/11/2026 | RF-14, RF-05, D-15, D-37 | Ranking, inactivas y `ultimaCompra` se calculan en el backend con un resumen de compras de `ms-lives`; una clienta con líneas no se borra. |
 | D-43 | 03/11/2026 | RNF-15, RNF-22, RNF-23 | E2E contra el backend real con H2 en memoria, cobertura con JaCoCo (mínimo 60 % en `service`) y prueba de contenido cortado en cada pantalla. |
+| D-44 | 04/11/2026 | RNF-19 | Respaldo diario con `scripts/respaldar.sh`: las tres bases en un archivo, los últimos 7 días con respaldo, en `respaldos/` dentro de OneDrive. |
 
 ## D-01 · Estilos con Tailwind CSS
 
@@ -512,3 +513,25 @@ Paso 9 de `docs/plan-backend.md`. Las E2E existentes usan datos simulados y las 
 - H2 no es MySQL, aunque corra en `MODE=MySQL`: por ejemplo, compara mayúsculas y tildes de otra forma. La prueba en MySQL real es la de D-38 y las pruebas con la tienda.
 
 **A revisar al desplegar:** con backend real, el check de bolsa se marca recién cuando responde el servidor. Con un servidor lejano se puede notar la demora.
+
+## D-44 · Respaldos diarios
+
+RNF-19 pide un respaldo diario de cada base, conservando al menos los últimos 7 días. Hasta ahora se hacían a mano, y el último era del 17/10/2026.
+
+- **Script:** `scripts/respaldar.sh` guarda `livesmanage_auth`, `livesmanage_clientas` y `livesmanage_lives` en un solo archivo `respaldos/diario_aaaa-mm-dd_hhmm.sql`, con una misma foto de los datos (`--single-transaction`), sin detener la app. Está en bash para que el mismo script sirva en Windows, con Git Bash, y en un servidor Linux.
+- **Cuántos conserva:** todos los archivos de los 7 días con respaldo más nuevos. Se cuentan los días que tienen respaldo y no el calendario, porque con el PC apagado varias semanas se borrarían todos. Varias corridas en un mismo día no borran días anteriores. Solo rota los `diario_*`: los respaldos manuales no se tocan.
+- **Si falla:** escribe primero en un `.parcial` y exige la línea final de `mysqldump`. Un respaldo fallido o cortado no reemplaza ni borra nada, y queda en `respaldos/respaldo.log`. Lo que deje una corrida interrumpida, como un apagón, se limpia en la siguiente.
+- **Contraseña:** se lee de `backend/ms-lives/.env` y se pasa por variable de entorno, no por la línea de comandos.
+- **Cuándo:** `scripts/programar-respaldo.ps1` crea una tarea de Windows a las 23:00. Corre con la sesión iniciada: si a esa hora el PC estaba apagado o sin sesión, corre al iniciar sesión.
+- **Dónde:** `respaldos/` queda fuera de git y dentro de OneDrive, decidido el 04/11/2026: así hay una copia fuera del PC, en la cuenta personal de quien administra la app.
+
+**Comprobado:** el respaldo se restauró en un MySQL desechable y las 8 tablas coincidieron con los datos originales, en filas y `CHECKSUM TABLE`.
+
+**Alternativa descartada:** PowerShell, porque no serviría en un servidor Linux.
+
+**Lo que se acepta a cambio:**
+
+- Los archivos contienen datos personales de las clientas y los hash de las contraseñas, y quedan en la nube de OneDrive.
+- Si un respaldo falla, solo queda en el registro: nadie recibe un aviso.
+- Usa el MySQL local e ignora `DB_URL`. Si al desplegar la base queda en otro equipo, hay que agregar `--host`.
+- Si el disco del PC y OneDrive fallan a la vez, se pierde todo. Con el despliegue habrá que respaldar desde el servidor.
