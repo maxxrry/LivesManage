@@ -75,7 +75,7 @@ function Ficha({ id }: { id: string }) {
   const dato = (etiqueta: string, valor?: string) => (
     <div className="flex justify-between gap-3 border-b border-gray-100 py-2 sm:block sm:border-0">
       <dt className="text-sm text-gray-600">{etiqueta}</dt>
-      <dd className="text-right font-medium sm:text-left">{valor || <span className="font-normal text-gray-400">Sin dato</span>}</dd>
+      <dd className="min-w-0 text-right font-medium wrap-anywhere sm:text-left">{valor || <span className="font-normal text-gray-400">Sin dato</span>}</dd>
     </div>
   );
 

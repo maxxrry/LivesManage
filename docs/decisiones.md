@@ -46,6 +46,7 @@ Registro de decisiones de diseño que complementan o precisan el ERS (`docs/ERS.
 | D-40 | 02/11/2026 | RF-07, RF-10, D-20 | Costo de despacho, abonos y saldo a favor los lleva la dueña fuera del sistema; Feria sin detalle ni estado de entregada. |
 | D-41 | 02/11/2026 | RF-05, RF-06, RF-09 | El lápiz de una línea agrega prendas escribiendo solo los precios; Cambiar clienta queda dentro del mismo panel. |
 | D-42 | 02/11/2026 | RF-14, RF-05, D-15, D-37 | Ranking, inactivas y `ultimaCompra` se calculan en el backend con un resumen de compras de `ms-lives`; una clienta con líneas no se borra. |
+| D-43 | 03/11/2026 | RNF-15, RNF-22, RNF-23 | E2E contra el backend real con H2 en memoria, cobertura con JaCoCo (mínimo 60 % en `service`) y prueba de contenido cortado en cada pantalla. |
 
 ## D-01 · Estilos con Tailwind CSS
 
@@ -492,3 +493,22 @@ Paso 7 de `docs/plan-backend.md`. Hasta ahora el front calculaba el ranking y la
 **Lo que se acepta a cambio:** `ClientaService.listar` hace una llamada más a `ms-lives` cada vez que se recarga la lista. Es una sola consulta agregada, sin cargar prendas.
 
 **Indicadores de la ficha (RF-13):** como pide D-29, los calcula `ms-clientas` en `GET /api/clientas/{id}/indicadores` (`Estadisticas.indicadores`, con JUnit según la matriz del ERS), con el historial de `GET /api/lives/lineas`. Si `ms-lives` no responde, responde 503 como el ranking. `indicadoresDeClienta` queda en el front solo para los datos simulados.
+
+## D-43 · Cierre técnico de las pruebas
+
+Paso 9 de `docs/plan-backend.md`. Las E2E existentes usan datos simulados y las pruebas JUnit simulan las llamadas entre servicios, así que nada probaba la app completa junta.
+
+- **E2E contra el backend real:** `npm run e2e:backend` (`playwright.backend.config.ts`, `e2e-backend/`) levanta `ms-auth`, `ms-clientas`, `ms-lives`, `api-gateway` y el front, y recorre un live completo en un celular de 360 px: login, anotar, Deshacer, lápiz, cierre, ficha, ranking, inactivas y roles, incluido el 403 de la API.
+- **Nunca toca MySQL:** cada servicio recibe una URL de H2 en memoria por variable de entorno y parte desde una carpeta temporal, para no leer su `.env`. Usa puertos propios (18080 a 18083 y 5175). Comparte la carpeta `target` con la app, así que si hay código recién editado conviene cerrarla antes: Maven recompila ahí mismo.
+- **Cobertura:** JaCoCo en los cuatro servicios (`./mvnw verify`, reporte en `target/site/jacoco/index.html`). En `ms-auth`, `ms-clientas` y `ms-lives`, el build falla si el paquete `service` baja de 60 % de líneas (RNF-22), y en `ms-lives` también si baja `Totales` o `RevisionCierre`, porque el promedio del paquete no las protege. `api-gateway` solo tiene el reporte. Las clases `cliente` salen bajas porque JUnit las simula: las cubre el recorrido E2E.
+- **Contenido cortado:** `e2e/sin-recortes.spec.ts` mide el borde de cada elemento visible y lo que esconde cada contenedor, en cada pantalla, a 360, 1024 y 1280 px y con los datos más largos que acepta la ficha. Los "…" de `truncate` son intencionales y no cuentan. Medir el scroll no sirve, porque `index.css` recorta con `overflow-x: hidden`.
+- **Swagger:** cada ruta de los tres servicios tiene su `@Operation`. El gateway no tiene Swagger porque no tiene rutas propias.
+
+**Alternativa descartada:** correr las E2E existentes contra el backend. Dependen de los datos simulados, y duplicarían casos ya cubiertos. Un recorrido basta para probar que las piezas funcionan juntas.
+
+**Lo que se acepta a cambio:**
+
+- El recorrido tarda más de un minuto, porque levanta todos los servicios, así que se corre a mano y no en cada cambio.
+- H2 no es MySQL, aunque corra en `MODE=MySQL`: por ejemplo, compara mayúsculas y tildes de otra forma. La prueba en MySQL real es la de D-38 y las pruebas con la tienda.
+
+**A revisar al desplegar:** con backend real, el check de bolsa se marca recién cuando responde el servidor. Con un servidor lejano se puede notar la demora.

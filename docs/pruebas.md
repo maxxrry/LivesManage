@@ -142,6 +142,8 @@ Desde `frontend/`:
 | `npm run e2e` | Todas las E2E, en celular y computador (levanta la app sola). |
 | `npx playwright test --grep @RF-05` | Solo las E2E de un requisito. |
 | `npx playwright test --ui` | E2E en modo visual, paso a paso. |
+| `npx playwright test --grep @RNF-15` | Solo las que revisan que nada quede cortado en cada pantalla (`e2e/sin-recortes.spec.ts`). |
+| `npm run e2e:backend` | Un live completo contra el backend real, con H2 en memoria y sin MySQL (`e2e-backend/`, D-43). |
 
 La configuración está en `vite.config.ts` (bloque `test`), `src/test/setup.ts` y `playwright.config.ts`.
 
@@ -186,7 +188,6 @@ Además, las E2E de las pantallas con botones (RF-06, 07, 09, 10 y 11) revisan q
 
 | Pendiente | Por qué | Cuándo |
 | --- | --- | --- |
-| Login contra el backend real, usuarios y roles (RF-01 a RF-03) e importar cuaderno (RF-15) | Necesitan backend; el login ya se prueba con datos simulados. | Con cada microservicio. |
-| Pruebas del backend (JUnit) | El backend aún no existe. | Con el backend (RNF-22). |
+| Importar cuaderno (RF-15) | Todavía no existe. El login, los usuarios y los roles contra el backend real ya están en `e2e-backend/` (D-43). | Con RF-15. |
 | Safari en iPhone (WebKit) | El navegador de prueba de Safari no arranca en Windows (D-16). | En CI con Linux (GitHub Actions). |
 | Rendimiento (RNF-01 a RNF-04) y facilidad de uso (RNF-16, RNF-17) | Se miden con el backend real y con la tienda (pruebas de aceptación con usuarias). | Al desplegar. |

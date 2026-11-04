@@ -69,6 +69,7 @@ Después, desde la carpeta de cada servicio (`backend/ms-auth`, `backend/ms-clie
 cp .env.example .env     # completar los valores; el .env nunca se sube
 ./mvnw spring-boot:run   # en Windows: .\mvnw.cmd spring-boot:run
 ./mvnw test              # pruebas (usan H2 en memoria, no necesitan MySQL)
+./mvnw verify            # pruebas + cobertura en target/site/jacoco/index.html; falla si la lógica baja de 60 % (salvo api-gateway: solo reporte)
 ```
 
 `ms-auth` corre en http://localhost:8081 y su Swagger está en http://localhost:8081/swagger-ui.html. La primera vez crea la Admin definida en `ADMIN_CORREO` y `ADMIN_CONTRASENA`.
@@ -89,6 +90,7 @@ Desde `frontend/`:
 | `npm run coverage` | Lo mismo, con reporte de cobertura en `coverage/index.html`. |
 | `npm run e2e` | Pruebas E2E (Playwright) en celular (360×740) y computador (1280×800). Levanta la app sola. |
 | `npx playwright test --grep @RF-05` | Solo las E2E de un requisito. |
+| `npm run e2e:backend` | Un live completo contra el backend real. Levanta todos los servicios con H2 en memoria y puertos propios: no necesita ni toca MySQL. Requiere JDK 21. |
 | `npx playwright test --ui` | E2E en modo visual, paso a paso. |
 | `npm run lint` | ESLint. |
 | `npm run build` | Revisión de tipos y build de producción en `dist/`. |
