@@ -14,7 +14,6 @@ flowchart LR
   G --> A[ms-auth :8081] --> DA[(livesmanage_auth)]
   G --> L[ms-lives :8082] --> DL[(livesmanage_lives)]
   G --> C[ms-clientas :8083] --> DC[(livesmanage_clientas)]
-  G --> I[ms-importacion :8084] --> CL[API de Claude]
   L <-. REST interno .-> C
 ```
 
@@ -85,7 +84,7 @@ Tabla `usuario`: id, nombre, correo (único), contrasena_hash (BCrypt, RNF-05), 
 
 ### 4.2 api-gateway (:8080) — RF-02, RNF-07
 
-- No tiene base de datos. Rutas: `/api/auth/**` y `/api/usuarios/**` → ms-auth; `/api/lives/**` (incluye `/api/lives/lineas` para historial y compras) → ms-lives; `/api/clientas/**` y `/api/configuracion/**` → ms-clientas; `/api/importaciones/**` → ms-importacion.
+- No tiene base de datos. Rutas: `/api/auth/**` y `/api/usuarios/**` → ms-auth; `/api/lives/**` (incluye `/api/lives/lineas` para historial y compras) → ms-lives; `/api/clientas/**` y `/api/configuracion/**` → ms-clientas.
 - Valida el JWT en todas las rutas salvo el login. Sin token o con un token vencido responde 401.
 - Configura **CORS** para que el navegador acepte las respuestas del front (`localhost:5173` y la URL de GitHub Pages).
 - Además, cada microservicio vuelve a revisar el rol (RNF-07): una Vendedora que llama directo a `/api/usuarios` recibe 403. Para eso todos comparten la clave del JWT (`JWT_SECRET`, por variable de entorno).
@@ -138,9 +137,9 @@ Tablas: `sesion`, `linea` (con copia de `clienta_nombre`, D-03), `prenda`, `anot
   - Registrar un **despacho con dirección nueva**: ms-lives se la manda a ms-clientas para que quede en la ficha (D-26).
   - **Renombrar** una clienta: ms-clientas avisa a ms-lives para actualizar `clienta_nombre` en todas sus líneas (D-28).
 
-### 4.5 ms-importacion (:8084): foto del cuaderno — RF-15 (al final)
+### 4.5 ms-importacion: descartado
 
-Recibe la foto, la manda a la API de Claude y devuelve las anotaciones para revisarlas. La clave `ANTHROPIC_API_KEY` vive solo aquí (RNF-10) y la foto no se guarda después de procesarla. Se planifica en detalle cuando llegue su turno.
+RF-15 se descartó y este servicio no se creó (D-45).
 
 ## 5. Qué cambia en el frontend
 
@@ -171,7 +170,7 @@ El front se puede seguir mejorando durante todo el proceso: mientras no cambie l
 | 5 | **ms-lives**: sesiones, anotar, Deshacer, corregir y pago (RF-04 a RF-08) | Probado con JUnit y Swagger (el front sigue simulado, D-37) |
 | 6 | **ms-lives**: terminar, bolsas, entregas, finalizar y reabrir (RF-09 a RF-11), y conexión de `clientasService` y `sesionesService` en el front (D-38) | Live, cierre y clientas con datos reales |
 | 7 | `ultimaCompra` (D-15), ranking e inactivas en ms-clientas (hoy se calculan en el front con datos reales), y borrar solo clientas sin compras (D-37) | Estadísticas calculadas en el backend |
-| 8 | **ms-importacion** (RF-15) | Importar cuaderno |
+| 8 | ~~**ms-importacion** (RF-15)~~ Descartado (D-45) | — |
 | 9 | Swagger revisado, README del backend y E2E contra el backend (D-43), y respaldos (RNF-19, D-44) | Entrega final |
 
 ## 8. Decisiones que tomar en el camino

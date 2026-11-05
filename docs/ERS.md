@@ -11,6 +11,7 @@
 | 02/11/2026 | 2.1 | Maxi | RF-05 y RF-08: los precios se anotan y se muestran completos, sin la sintaxis en miles. Se cierran los pendientes sobre precios, despacho, abonos, saldo a favor y feria, y el despliegue pasa a AWS. |
 | 02/11/2026 | 2.2 | Maxi | RF-05: el lápiz de una línea permite agregar prendas escribiendo solo los precios. |
 | 03/11/2026 | 2.3 | Maxi | Despliegue: AWS deja de ser obligatorio y el alojamiento queda por definir. |
+| 05/11/2026 | 2.4 | Maxi | Se descarta RF-15 (importar cuaderno desde foto), con RNF-04, RNF-10 y UAT-05, y se quita `ms-importacion` de la arquitectura. |
 
 ## 1. Introducción
 
@@ -35,7 +36,6 @@ Se compone de un frontend en React, usado principalmente desde el celular, y un 
 * Registrar si cada clienta pagó, y mostrar siempre el total del live y el total pagado.
 * Guiar el cierre del live: revisión de bolsas, cobro y forma de entrega (despacho, retiro o feria), con la dirección cuando corresponda.
 * Mantener la ficha de cada clienta con su historial, total gastado, cancelaciones y no pagos, además de un ranking y la lista de clientas inactivas.
-* Como función secundaria, importar un live desde una foto del cuaderno usando un modelo con visión, con revisión antes de guardar.
 
 **Lo que el sistema no hará:**
 
@@ -75,7 +75,6 @@ Se compone de un frontend en React, usado principalmente desde el celular, y un 
 
 * IEEE Std 830-1998, Recommended Practice for Software Requirements Specifications.
 * Documentación oficial de React, Spring Boot, Spring Cloud Gateway y Playwright.
-* Documentación de la API de Claude (Anthropic) para análisis de imágenes.
 * Ley 19.628 sobre protección de la vida privada y Ley 21.719 que la reforma.
 * Material del ramo Desarrollo FullStack 2, Duoc UC.
 
@@ -99,7 +98,7 @@ LivesManage reemplaza un proceso manual en papel y no se integra con otro softwa
 | Cierre: revisar bolsas, sacar el total, cobrar y preguntar la forma de entrega. | Se hace a mano, sin registro del cobro ni de las direcciones. | Pantalla de cierre guiada (RF-09 a RF-11). |
 | Solo se anota nombre y precio. | No se sabe quién compra más, quién cancela o quién no paga. | Ficha, ranking y clientas inactivas (RF-12 a RF-14). |
 
-**Arquitectura:** cliente-servidor con frontend React (SPA) y backend de microservicios Spring Boot. El frontend solo se comunica con el API Gateway, que valida el JWT y enruta cada petición. Se proponen cuatro microservicios, cada uno con su propia base MySQL: autenticación y usuarios, lives (sesiones, líneas, prendas, pagos y entregas), clientas (fichas, direcciones y estadísticas) e importación (llamada al modelo con visión).
+**Arquitectura:** cliente-servidor con frontend React (SPA) y backend de microservicios Spring Boot. El frontend solo se comunica con el API Gateway, que valida el JWT y enruta cada petición. Son tres microservicios, cada uno con su propia base MySQL: autenticación y usuarios, lives (sesiones, líneas, prendas, pagos y entregas) y clientas (fichas, direcciones y estadísticas).
 
 ```mermaid
 flowchart LR
@@ -108,7 +107,6 @@ flowchart LR
  G --> A[ms-auth] --> DA[(MySQL auth)]
  G --> L[ms-lives] --> DL[(MySQL lives)]
  G --> C[ms-clientas] --> DC[(MySQL clientas)]
- G --> I[ms-importacion] --> V[API de Claude]
  L -. REST .-> C
 ```
 
@@ -121,7 +119,6 @@ flowchart LR
 | Pantalla de live | Anotación rápida con la sintaxis del cuaderno, corrección de líneas, estado de pago y totales siempre visibles. | RF-05 a RF-08 |
 | Cierre del live | Revisión de bolsas, cobro, forma de entrega y dirección, y cierre de la sesión. | RF-09 a RF-11 |
 | Clientas | Ficha con historial, total gastado, cancelaciones y no pagos; ranking y clientas inactivas. | RF-12 a RF-14 |
-| Importar cuaderno (secundaria) | Extraer las líneas de una foto del cuaderno con un modelo con visión, para revisarlas antes de guardar. | RF-15 |
 
 ### 2.3. Características de los usuarios
 
@@ -138,7 +135,6 @@ Lo usarán entre 2 y 3 personas: el desarrollador durante el proyecto y 1 o 2 pe
 * Comunicación mediante API REST con JSON sobre HTTP (HTTPS en producción) y autenticación con JWT.
 * Diseño mobile-first: el uso principal es desde el celular durante el live.
 * Pruebas exigidas por el ramo: unitarias (Vitest o Jasmine) y de aceptación automatizadas con Playwright, con evidencia de trazabilidad entre requisitos y pruebas.
-* La llamada al modelo con visión (API de Claude) se hace solo desde el backend; la clave nunca llega al navegador.
 * Plazo acotado al semestre académico.
 * El sistema maneja datos personales de clientas, por lo que requiere autenticación obligatoria.
 
@@ -149,7 +145,6 @@ Lo usarán entre 2 y 3 personas: el desarrollador durante el proyecto y 1 o 2 pe
 * Las prendas no se identifican: cada una es solo un precio. Si la tienda quiere registrar talla o descripción, habrá que revisar el modelo de datos.
 * Los precios se anotan completos (6000 o 6.000), de $1.000 a $999.000 y en múltiplos de $100.
 * Los pagos se reciben fuera del sistema (transferencia o efectivo); el sistema solo registra si se pagó. El costo de despacho, los abonos y los saldos a favor los lleva la dueña con cada clienta, fuera del sistema.
-* La foto del cuaderno debe ser legible; la extracción automática puede equivocarse y siempre requiere revisión humana.
 * El alojamiento del despliegue está por definir. AWS no es obligatorio para el ramo.
 
 ### 2.6. Requisitos futuros
@@ -171,7 +166,7 @@ Cada requisito tiene un código único (RF-XX funcional, RNF-XX no funcional) y 
 #### 3.1.1. Interfaces de usuario
 
 * Aplicación web SPA diseñada primero para celular en vertical (desde 360 px de ancho), usable también en tablet y PC.
-* Pantallas principales: Inicio de sesión, Lives, Pantalla de live, Cierre del live, Clientas, Ficha de clienta, Ranking e inactivas, Importar cuaderno y Usuarios (solo administrador).
+* Pantallas principales: Inicio de sesión, Lives, Pantalla de live, Cierre del live, Clientas, Ficha de clienta, Ranking e inactivas y Usuarios (solo administrador).
 * Pantalla de live: totales fijos arriba, campo de anotación siempre visible y lista de líneas debajo. Las acciones frecuentes (quitar prenda, marcar pago) se hacen con un toque, con áreas táctiles de al menos 44 × 44 px.
 * Menú visible según rol: el vendedor no ve la gestión de usuarios.
 * Confirmación antes de acciones importantes (terminar live, finalizar cierre, desactivar) y mensajes de error claros.
@@ -179,7 +174,7 @@ Cada requisito tiene un código único (RF-XX funcional, RNF-XX no funcional) y 
 
 #### 3.1.2. Interfaces de hardware
 
-No requiere hardware especial: funciona en celular, tablet o PC con navegador. Para importar el cuaderno se puede usar la cámara del celular.
+No requiere hardware especial: funciona en celular, tablet o PC con navegador.
 
 #### 3.1.3. Interfaces de software
 
@@ -189,7 +184,6 @@ No requiere hardware especial: funciona en celular, tablet o PC con navegador. P
 | API Gateway (Spring Cloud Gateway) | Punto de entrada único, enrutamiento y validación del JWT | API REST, JSON |
 | Microservicios Spring Boot | Lógica de negocio por dominio | API REST, JSON |
 | MySQL 8 (una base por microservicio) | Persistencia de datos | JDBC / JPA |
-| API de Claude (Anthropic) | Extraer las líneas de una foto del cuaderno | HTTPS, JSON; solo desde el backend |
 
 #### 3.1.4. Interfaces de comunicación
 
@@ -276,24 +270,11 @@ Las estadísticas de una clienta se calculan con sus líneas de lives Cerrados: 
 | RF-13 | Ver ficha de la clienta | Ambos | Datos de contacto, dirección e historial por live (fecha, prendas, total, estado de pago y forma de entrega). Indicadores: total gastado, número de compras, ticket promedio, última compra, prendas canceladas y lives sin pago. | Esencial |
 | RF-14 | Ranking y clientas inactivas | Ambos (configurar días: Admin) | Ranking por total gastado o por número de compras en un rango de fechas. Lista de clientas inactivas con días sin comprar, usuario de TikTok y teléfono para contactarlas. El administrador configura los días de inactividad (60 por defecto). | Esencial |
 
-#### 3.2.6. Importar cuaderno (función secundaria)
+#### 3.2.6. Importar cuaderno (descartada)
 
 | **ID** | **Requisito** | **Actor** | **Descripción** | **Prioridad** |
 | --- | --- | --- | --- | --- |
-| RF-15 | Importar cuaderno desde foto | Ambos | Ver detalle abajo. No reemplaza la anotación en vivo; sirve para pasar al sistema lives anotados en papel. | Deseable |
-
-**RF-15 · Importar cuaderno desde foto**
-
-1. El usuario elige Importar cuaderno, selecciona la sesión de destino (una que no esté Cerrada, o una nueva) y sube una foto de la página (JPG o PNG) o la toma con la cámara.
-2. El backend envía la imagen al modelo con visión (API de Claude) y recibe un JSON con las líneas detectadas: nombre, precios, total escrito, prendas tachadas y si la línea estaba destacada (pagada). Los precios del cuaderno, escritos en miles, se convierten a pesos.
-3. El sistema muestra las líneas en una tabla editable y marca las que requieren atención: total escrito distinto de la suma de precios, textos ilegibles y nombres que no coinciden con clientas existentes (se crearán como nuevas).
-4. El usuario corrige lo necesario y confirma; recién entonces se guardan las líneas, con las mismas reglas de RF-05.
-
-Validaciones y errores:
-
-* Nada se guarda sin la confirmación del usuario.
-* Si el modelo falla o no reconoce la imagen, se informa y se puede anotar a mano.
-* La foto no se conserva después de procesarla.
+| RF-15 | Importar cuaderno desde foto | — | Se descartó (D-45). Los lives anotados en papel se pasan al sistema con la anotación rápida (RF-05). | Descartado |
 
 ### 3.3. Requisitos no funcionales
 
@@ -304,7 +285,7 @@ Validaciones y errores:
 | RNF-01 | El sistema soporta al menos 5 usuarios conectados simultáneamente. |
 | RNF-02 | Anotar una compra, quitar una prenda o marcar un pago se refleja en pantalla en menos de 1 segundo; el resto de las operaciones responde en menos de 2 segundos en el 95% de los casos. |
 | RNF-03 | El ranking y la lista de clientas inactivas con hasta 12 meses de datos se generan en menos de 5 segundos. |
-| RNF-04 | La extracción de una foto del cuaderno tarda menos de 60 segundos y muestra el progreso mientras se procesa. |
+| RNF-04 | No aplica: correspondía a RF-15, descartado (D-45). |
 
 #### 3.3.2. Seguridad
 
@@ -315,7 +296,7 @@ Validaciones y errores:
 | RNF-07 | Todos los endpoints, salvo el de inicio de sesión, exigen token válido: el API Gateway valida el token y cada microservicio verifica el rol. |
 | RNF-08 | Toda entrada del usuario se valida en frontend y backend para prevenir datos inválidos e inyección SQL. |
 | RNF-09 | Cada anotación, corrección, cambio de pago y cierre registra el usuario y la fecha y hora (trazabilidad). |
-| RNF-10 | La clave de la API de Claude se define por variable de entorno en el backend; nunca se incluye en el frontend ni en el repositorio. |
+| RNF-10 | No aplica: correspondía a RF-15, descartado (D-45). |
 
 #### 3.3.3. Fiabilidad
 
@@ -364,7 +345,6 @@ Validaciones y errores:
 * Interfaz y mensajes en español de Chile.
 * Montos en CLP como números enteros; fechas y horas en zona horaria America/Santiago.
 * El sistema almacena datos personales de clientas (nombre, usuario de TikTok, teléfono y dirección), por lo que debe cumplir la Ley 19.628 y considerar la Ley 21.719, que la reforma y entra en vigencia el 1 de diciembre de 2026: usarlos solo para la gestión comercial de la tienda, restringir su acceso a usuarios autenticados y permitir anonimizar a una clienta que lo solicite sin alterar los totales de los lives.
-* Las fotos del cuaderno contienen nombres de clientas y se envían a un proveedor externo (Anthropic) solo para extraer los datos; la tienda debe estar informada de ello.
 
 ### 3.5. Matriz de trazabilidad (borrador)
 
@@ -386,7 +366,7 @@ Cada RF tiene un criterio de aceptación verificable. El criterio se automatiza 
 | RF-12 | Crear una clienta con un usuario de TikTok ya registrado muestra aviso de duplicado. | ClientaService (JUnit) | E2E-12 | UAT-04 |
 | RF-13 | El total gastado de la ficha es igual a la suma de sus líneas Pagadas en lives cerrados. | Cálculo de estadísticas (JUnit) | E2E-13 | UAT-04 |
 | RF-14 | Una clienta sin compras hace 61 días aparece como inactiva; el ranking ordena por total gastado. | Consultas de ranking e inactividad (JUnit) | E2E-14 | UAT-04 |
-| RF-15 | Con una foto de prueba se muestran las líneas extraídas para editar y nada se guarda hasta confirmar. | Validación del JSON extraído (JUnit) | E2E-15 (modelo simulado) | UAT-05 |
+| RF-15 | Descartado (D-45). | — | — | — |
 
 **Escenarios UAT** (con la tienda, idealmente con la persona que hoy anota):
 
@@ -394,7 +374,6 @@ Cada RF tiene un criterio de aceptación verificable. El criterio se automatiza 
 * **UAT-02 Live simulado:** la persona que anota registra en el sistema las compras de un live anterior (desde la grabación o el cuaderno). Se acepta si los totales coinciden con el cuaderno y anotar no le toma más tiempo que escribir a mano.
 * **UAT-03 Cierre:** se revisan las bolsas, se cobra y se registra la entrega de ese live hasta cerrarlo.
 * **UAT-04 Clientas:** la tienda revisa fichas, ranking e inactivas y confirma que reflejan lo que conoce de sus clientas.
-* **UAT-05 Importar:** se importa una página real del cuaderno y se corrige antes de guardar.
 
 ## Pendientes por confirmar
 

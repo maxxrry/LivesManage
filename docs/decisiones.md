@@ -48,6 +48,7 @@ Registro de decisiones de diseño que complementan o precisan el ERS (`docs/ERS.
 | D-42 | 02/11/2026 | RF-14, RF-05, D-15, D-37 | Ranking, inactivas y `ultimaCompra` se calculan en el backend con un resumen de compras de `ms-lives`; una clienta con líneas no se borra. |
 | D-43 | 03/11/2026 | RNF-15, RNF-22, RNF-23 | E2E contra el backend real con H2 en memoria, cobertura con JaCoCo (mínimo 60 % en `service`) y prueba de contenido cortado en cada pantalla. |
 | D-44 | 04/11/2026 | RNF-19 | Respaldo diario con `scripts/respaldar.sh`: las tres bases en un archivo, los últimos 7 días con respaldo, en `respaldos/` dentro de OneDrive. |
+| D-45 | 05/11/2026 | RF-15, RNF-04, RNF-10 | Se descarta importar el cuaderno desde una foto, y con ello `ms-importacion`. |
 
 ## D-01 · Estilos con Tailwind CSS
 
@@ -440,7 +441,7 @@ En la primera prueba en un live real (17/10/2026), a veces se duplicó una clien
 - **Cómo se muestran:** completos en la hoja, el aviso y el historial (`6.000 6.000 5.000 = $17.000`), para que se lean igual que se escriben. Los precios largos pasan a otra fila, sin scroll horizontal a 360 px.
 - **Doble toque:** volver a tocar una sugerencia mientras esa misma anotación se guarda no hace nada. Antes, dos toques en "Nueva clienta" podían crear dos fichas. Una anotación distinta sí se guarda, para no perder ventas si la conexión está lenta.
 - **Datos existentes:** no cambian, porque los precios ya se guardaban en pesos.
-- **RF-15:** el cuaderno de papel sigue en miles, así que la importación tendrá que convertir esos precios a pesos.
+- **RF-15:** el cuaderno de papel sigue en miles, así que la importación habría tenido que convertir esos precios a pesos. Se descartó (D-45).
 
 **Alternativa descartada:** mantener los miles, aceptar un decimal (`3,5`) y tratar los espacios como separadores. Obligaba a una excepción para nombres como "Cami 2", y `Cami 2 6` podía guardarse como $2.000 y $6.000.
 
@@ -535,3 +536,19 @@ RNF-19 pide un respaldo diario de cada base, conservando al menos los últimos 7
 - Si un respaldo falla, solo queda en el registro: nadie recibe un aviso.
 - Usa el MySQL local e ignora `DB_URL`. Si al desplegar la base queda en otro equipo, hay que agregar `--host`.
 - Si el disco del PC y OneDrive fallan a la vez, se pierde todo. Con el despliegue habrá que respaldar desde el servidor.
+
+## D-45 · Se descarta importar el cuaderno desde una foto
+
+RF-15 era Deseable y la única función sin construir. Se evaluó el 04/11/2026 y la persona a cargo del proyecto decidió no hacerlo el 05/11/2026.
+
+- **Lo que exigía:** una clave de pago de la API de Claude, enviar los nombres y montos de las clientas a un proveedor externo, y un microservicio más que mantener y desplegar.
+- **Lo que se quita:** la pantalla y la entrada "Importar cuaderno" del menú, y `ms-importacion`, que nunca se llegó a crear. RNF-04, RNF-10 y UAT-05 dejan de aplicar. Se conservan sus ID en el ERS para no renumerar.
+- **Los lives en papel:** se pasan con la anotación rápida (RF-05).
+
+**Alternativas descartadas:**
+
+- OCR local o un modelo en el propio PC: evitan la clave, pero el primero lee mal la letra manuscrita y el segundo pide un equipo que complicaría el despliegue.
+- Otro proveedor de visión: también exige una clave y enviar los datos afuera.
+- Escribir o pegar el texto de la página con la foto a la vista: no necesita clave, pero no cumple RF-15 tal como estaba escrito y agrega una pantalla y una ruta en `ms-lives` a pocas semanas de la entrega.
+
+**Lo que se acepta a cambio:** pasar una página de papel al sistema sigue siendo manual.

@@ -188,6 +188,5 @@ Además, las E2E de las pantallas con botones (RF-06, 07, 09, 10 y 11) revisan q
 
 | Pendiente | Por qué | Cuándo |
 | --- | --- | --- |
-| Importar cuaderno (RF-15) | Todavía no existe. El login, los usuarios y los roles contra el backend real ya están en `e2e-backend/` (D-43). | Con RF-15. |
 | Safari en iPhone (WebKit) | El navegador de prueba de Safari no arranca en Windows (D-16). | En CI con Linux (GitHub Actions). |
-| Rendimiento (RNF-01 a RNF-04) y facilidad de uso (RNF-16, RNF-17) | Se miden con el backend real y con la tienda (pruebas de aceptación con usuarias). | Al desplegar. |
+| Rendimiento (RNF-01 a RNF-03) y facilidad de uso (RNF-16, RNF-17) | Se miden con el backend real y con la tienda (pruebas de aceptación con usuarias). | Al desplegar. |

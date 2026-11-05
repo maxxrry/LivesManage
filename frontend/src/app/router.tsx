@@ -6,7 +6,6 @@ import { CierrePage } from '../features/cierre/CierrePage';
 import { ClientasPage } from '../features/clientas/ClientasPage';
 import { FichaClientaPage } from '../features/clientas/FichaClientaPage';
 import { EstadisticasPage } from '../features/estadisticas/EstadisticasPage';
-import { ImportarPage } from '../features/importar/ImportarPage';
 import { LivePage } from '../features/live/LivePage';
 import { LivesPage } from '../features/lives/LivesPage';
 import { UsuariosPage } from '../features/usuarios/UsuariosPage';
@@ -25,7 +24,6 @@ export const rutas: RouteObject[] = [
       { path: 'clientas/:id', element: <FichaClientaPage /> },
       { path: 'estadisticas', element: <EstadisticasPage /> },
       { path: 'ranking', element: <Navigate to="/estadisticas" replace /> }, // enlaces guardados de antes de D-32
-      { path: 'importar', element: <ImportarPage /> },
       { path: 'usuarios', element: <UsuariosPage /> },
       { path: '*', element: <Pantalla titulo="Página no encontrada">{null}</Pantalla> },
     ],

@@ -21,7 +21,7 @@ describe('Layout (humo)', () => {
 
     await usuario.click(await screen.findByRole('button', { name: 'Abrir menú' }));
     const menu = screen.getByRole('navigation', { name: 'Menú principal' });
-    for (const texto of ['Lives', 'Clientas', 'Estadísticas', 'Importar cuaderno', 'Usuarios']) {
+    for (const texto of ['Lives', 'Clientas', 'Estadísticas', 'Usuarios']) {
       expect(within(menu).getByRole('link', { name: texto })).toBeInTheDocument();
     }
 

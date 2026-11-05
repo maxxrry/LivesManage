@@ -37,14 +37,15 @@ Proyecto del ramo Desarrollo FullStack 2 (Duoc UC) y para un cliente real.
 - Hecho: backend paso 7. `ms-lives` entrega el resumen `GET /api/lives/compras-por-clienta`; `ms-clientas` calcula ranking e inactivas (`Estadisticas`, `EstadisticasService`), agrega `ultimaCompra` a la lista y no borra clientas con líneas. El front usa esas rutas con `VITE_API_URL` (D-42).
 - Hecho: backend paso 9, parte de pruebas (D-43). `npm run e2e:backend` recorre un live completo contra los servicios reales con H2 y puertos propios; JaCoCo con mínimo de 60 % en `service` (`./mvnw verify`); `e2e/sin-recortes.spec.ts` mide los bordes de cada pantalla (`overflow-x: hidden` esconde lo cortado).
 - Hecho: respaldos (RNF-19, D-44). `scripts/respaldar.sh` guarda las tres bases en `respaldos/` y conserva los últimos 7 días con respaldo; `scripts/programar-respaldo.ps1` crea la tarea diaria de Windows. Restauración comprobada en un MySQL desechable.
-- Decisiones D-01 a D-44 en `docs/decisiones.md`.
+- RF-15 (importar cuaderno desde foto) se descartó: no existen `ms-importacion` ni su pantalla (D-45).
+- Decisiones D-01 a D-45 en `docs/decisiones.md`.
 - Hecho: RF-13 en el backend. `ms-clientas` calcula los indicadores de la ficha en `GET /api/clientas/{id}/indicadores` (`Estadisticas.indicadores`, D-29, D-42).
-- Siguiente: RF-15 si alcanza el tiempo, pruebas con la tienda (UAT) y despliegue (AWS no es obligatorio; alojamiento por decidir). Entrega del ramo: 22/11/2026.
+- Siguiente: pruebas con la tienda (UAT) y despliegue (AWS no es obligatorio; alojamiento por decidir). Entrega del ramo: 22/11/2026.
 
 ## Estructura
 
 ```
-docs/ERS.md            requisitos (RF-01 a RF-15, RNF, matriz de trazabilidad)
+docs/ERS.md            requisitos (RF-01 a RF-14, RNF, matriz de trazabilidad)
 docs/decisiones.md     decisiones que precisan el ERS (D-01, D-02, ...)
 docs/pruebas.md        cómo se organizan y corren las pruebas del frontend
 frontend/              React + Vite + TypeScript, Vitest, Playwright
@@ -53,7 +54,6 @@ backend/
   ms-auth/             usuarios, roles, login                  :8081
   ms-lives/            sesiones, líneas, prendas, pagos, entregas  :8082
   ms-clientas/         fichas, direcciones, estadísticas        :8083
-  ms-importacion/      foto del cuaderno → API de Claude        :8084
 ```
 
 Cada microservicio tiene su propia base MySQL (`livesmanage_auth`, `livesmanage_lives`, ...). Nada de joins entre bases: se consulta por REST (RestClient, D-37).
@@ -151,10 +151,7 @@ Precios: de $1.000 a $999.000, en múltiplos de $100. Un número menor a 1000 es
 | Decisiones nuevas en `docs/decisiones.md` | `agent-skills:documentation-and-adrs` |
 | Backend: contratos REST y DTOs | `agent-skills:api-and-interface-design` |
 | Backend: login, JWT, roles, datos personales | `agent-skills:security-and-hardening` (Ley 19.628 / 21.719) |
-| `ms-importacion` (RF-15) | `claude-api` |
 
 ## Límites
 
 - Nunca subir `.env` ni secretos.
-- La clave de la API de Claude (`ANTHROPIC_API_KEY`) vive solo en `ms-importacion`. El frontend nunca llama a `api.anthropic.com`.
-- La foto del cuaderno no se guarda después de procesarla.

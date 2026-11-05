@@ -137,7 +137,6 @@ const PANTALLAS: [string, (page: Page) => Promise<unknown>][] = [
       await page.getByRole('button', { name: 'Nuevo usuario' }).click();
     },
   ],
-  ['Importar cuaderno', (page) => page.goto('/importar')],
 ];
 
 for (const [nombre, abrir] of PANTALLAS) {

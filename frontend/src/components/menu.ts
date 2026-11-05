@@ -3,6 +3,5 @@ export const ENTRADAS_MENU: readonly { ruta: string; texto: string; soloAdmin?: 
   { ruta: '/lives', texto: 'Lives' },
   { ruta: '/clientas', texto: 'Clientas' },
   { ruta: '/estadisticas', texto: 'Estadísticas' },
-  { ruta: '/importar', texto: 'Importar cuaderno' },
   { ruta: '/usuarios', texto: 'Usuarios', soloAdmin: true },
 ];
