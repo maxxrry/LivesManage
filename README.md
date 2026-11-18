@@ -1,6 +1,6 @@
 # LivesManage
 
-Aplicación web para una tienda de ropa que vende por lives de TikTok. Reemplaza el cuaderno donde se anota, durante el live, quién compra y cuánto ("Gabriela Peña 6-6-5 = 17.000"), y guía el cierre posterior: revisión de bolsas, cobro y forma de entrega.
+Aplicación web para una tienda de ropa que vende por lives de TikTok. Reemplaza el cuaderno donde se anota, durante el live, quién compra y cuánto ("Gabriela Peña 6-6-5 = 17.000"), y guía el cierre posterior: cobro, y en la ficha de cada clienta sus bolsas y su forma de entrega.
 
 Proyecto del ramo Desarrollo FullStack 2 (Duoc UC), para un cliente real.
 

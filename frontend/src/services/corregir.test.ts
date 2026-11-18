@@ -88,10 +88,10 @@ describe('cambiarClienta (RF-06)', () => {
     expect(resultado).toMatchObject({ id: 'l-6', estadoPago: 'PENDIENTE', entregaId: 'e-2' });
   });
 
-  it('al unir, la bolsa queda revisada solo si ambas lo estaban (D-19)', async () => {
-    lineas.find((l) => l.id === 'l-4')!.bolsaRevisada = true;
-    lineas.find((l) => l.id === 'l-5')!.bolsaRevisada = false;
-    expect((await cambiarClienta('s-2', 'l-4', { clientaId: 'c-2' })).bolsaRevisada).toBe(false);
+  it('al unir, las bolsas se suman y quedan entregadas solo si ambas lo estaban (D-47)', async () => {
+    Object.assign(lineas.find((l) => l.id === 'l-4')!, { bolsas: 1, entregada: true });
+    Object.assign(lineas.find((l) => l.id === 'l-5')!, { bolsas: 2, entregada: false });
+    expect(await cambiarClienta('s-2', 'l-4', { clientaId: 'c-2' })).toMatchObject({ bolsas: 3, entregada: false });
   });
 
   it('elegir la misma clienta no cambia nada', async () => {

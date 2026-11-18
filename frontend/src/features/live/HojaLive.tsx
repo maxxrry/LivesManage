@@ -1,4 +1,4 @@
-import { Fragment, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useRef, useState } from 'react';
 import type { DestinoAnotacion } from '../../services/sesionesService';
 import type { Clienta, Linea, MontoClp, Prenda } from '../../types/dominio';
 import { ETIQUETAS_ESTADO_PAGO } from '../../types/etiquetas';
@@ -20,12 +20,8 @@ interface HojaLiveProps {
   /** Texto de búsqueda (RF-08). Lo controla LivePage, que lo borra al anotar. */
   busqueda: string;
   onBuscar: (texto: string) => void;
-  /** RF-09: si se entrega, cada línea muestra el check de bolsa revisada (solo en el cierre). */
-  onAlternarBolsa?: (lineaId: string) => void;
   /** RF-11: si se entrega, una línea No pagó muestra Deshacer para volverla a Pendiente (solo en el cierre). */
   onQuitarNoPago?: (lineaId: string) => void;
-  /** Contenido extra al pie de cada línea; el cierre muestra ahí la entrega (RF-10). */
-  pieLinea?: (linea: Linea) => ReactNode;
 }
 
 function PrendaHoja({ prenda, editable, onAlternar }: { prenda: Prenda; editable: boolean; onAlternar: () => void }) {
@@ -117,9 +113,7 @@ export function HojaLive({
   onAlternarPago,
   busqueda,
   onBuscar,
-  onAlternarBolsa,
   onQuitarNoPago,
-  pieLinea,
 }: HojaLiveProps) {
   const [editando, setEditando] = useState<{ lineaId: string; cambiandoClienta: boolean } | null>(null);
   const lapices = useRef(new Map<string, HTMLButtonElement>());
@@ -209,18 +203,6 @@ export function HojaLive({
             <span className="ml-auto font-semibold tabular-nums">= {formatearClp(totalLinea(linea.prendas))}</span>
             {/* Las prendas no se encogen: si no caben con los botones, bajan los botones y no se parten las prendas. */}
             <div className={`flex gap-2 ${editable ? 'order-last ml-auto' : ''}`}>
-              {onAlternarBolsa && (
-                <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-md border border-gray-300 bg-white px-3 text-sm font-semibold has-checked:border-green-700 has-checked:bg-green-50 has-checked:text-green-800">
-                  <input
-                    type="checkbox"
-                    checked={linea.bolsaRevisada}
-                    onChange={() => onAlternarBolsa(linea.id)}
-                    aria-label={`Bolsa revisada: ${linea.clientaNombre}`}
-                    className="size-5 accent-green-700"
-                  />
-                  Bolsa
-                </label>
-              )}
               <EstadoPagoLinea
                 linea={linea}
                 editable={editable}
@@ -229,8 +211,6 @@ export function HojaLive({
               />
             </div>
           </div>
-
-          {pieLinea?.(linea)}
 
           {editando?.lineaId === linea.id && (
             <div className="mt-2" data-panel={linea.id}>

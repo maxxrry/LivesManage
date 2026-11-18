@@ -29,13 +29,13 @@ import { pedirConSesion, usuarioConectado } from './usuariosService';
 //   PATCH  /api/lives/{id}/lineas/{lid}/clienta         cambiarClienta
 //   PATCH  /api/lives/{id}/lineas/{lid}/pago            alternarPago
 //   POST   /api/lives/{id}/terminar                     terminarSesion
-//   PATCH  /api/lives/{id}/lineas/{lid}/bolsa           alternarBolsa
+//   PUT    /api/lives/{id}/lineas/{lid}/bolsas          registrarBolsas { bolsas, entregada }
 //   PUT    /api/lives/{id}/lineas/{lid}/entrega         registrarEntrega
-//   PATCH  /api/lives/{id}/lineas/{lid}/entrega         agruparEntrega { entregaId }
 //   PUT    /api/lives/{id}/lineas/{lid}/no-pago         marcarNoPago { noPago }
 //   POST   /api/lives/{id}/finalizar                    finalizarCierre
 //   POST   /api/lives/{id}/reabrir                      reabrirSesion
 //   GET    /api/lives/lineas?clientaId={cid}           historialDeClienta
+//   GET    /api/lives/en-bodega                         bolsasEnBodega
 
 const ruta = encodeURIComponent;
 const rutaLinea = (sesionId: string, lineaId: string) => `/api/lives/${ruta(sesionId)}/lineas/${ruta(lineaId)}`;
@@ -121,13 +121,19 @@ const precioValido = (p: MontoClp) => Number.isInteger(p) && p >= 1000 && p <= 9
 
 /**
  * RF-05: agrega prendas a la línea de la clienta en el live, o crea la línea (y la clienta si es nueva).
+ * En cierre solo se agregan prendas a una línea que ya existe, desde el lápiz (D-48).
  * Valida todo antes de modificar, para que la anotación se guarde completa o no se guarde (RNF-12).
  */
 export async function anotar(sesionId: string, destino: DestinoAnotacion, precios: MontoClp[]): Promise<ResultadoAnotar> {
   if (urlApi()) return pedirConSesion(`/api/lives/${ruta(sesionId)}/anotaciones`, { metodo: 'POST', cuerpo: { destino, precios } });
   const sesion = sesiones.find((s) => s.id === sesionId);
   if (!sesion) throw new Error('Live no encontrado');
-  if (sesion.estado !== 'ABIERTA') throw new Error('El live no está abierto; no se puede anotar.');
+  if (sesion.estado === 'EN_CIERRE') {
+    const tieneLinea = 'clientaId' in destino && lineas.some((l) => l.sesionId === sesionId && l.clientaId === destino.clientaId);
+    if (!tieneLinea) throw new Error('En el cierre solo se agregan prendas a una clienta que ya está en la hoja.');
+  } else if (sesion.estado !== 'ABIERTA') {
+    throw new Error('El live no está abierto; no se puede anotar.');
+  }
   if (precios.length === 0 || !precios.every(precioValido)) throw new Error('Precios no válidos.');
 
   const clienta = resolverClienta(destino);
@@ -160,7 +166,8 @@ export async function anotar(sesionId: string, destino: DestinoAnotacion, precio
       clientaNombre: clienta.nombre,
       prendas: nuevas,
       estadoPago: 'PENDIENTE',
-      bolsaRevisada: false,
+      bolsas: 0,
+      entregada: false,
       actualizada: ahora,
     };
     lineas.push(linea);
@@ -258,7 +265,8 @@ export async function cambiarClienta(sesionId: string, lineaId: string, destino:
 
   otra.prendas.push(...linea.prendas);
   otra.estadoPago = otra.estadoPago === 'PAGADO' && linea.estadoPago === 'PAGADO' ? 'PAGADO' : 'PENDIENTE';
-  otra.bolsaRevisada = otra.bolsaRevisada && linea.bolsaRevisada;
+  otra.bolsas += linea.bolsas; // D-47: al unir, las bolsas se suman
+  otra.entregada = otra.entregada && linea.entregada;
   otra.entregaId = otra.entregaId ?? linea.entregaId;
   otra.actualizada = ahora;
   lineas.splice(lineas.indexOf(linea), 1);
@@ -276,27 +284,40 @@ export async function terminarSesion(sesionId: string): Promise<Sesion> {
   return structuredClone(sesion);
 }
 
-/** RF-09: marca o desmarca la bolsa revisada. Solo En cierre (D-25); no reordena la hoja. */
-export async function alternarBolsa(sesionId: string, lineaId: string): Promise<Linea> {
-  if (urlApi()) return pedirConSesion(`${rutaLinea(sesionId, lineaId)}/bolsa`, { metodo: 'PATCH' });
-  const sesion = sesiones.find((s) => s.id === sesionId);
-  if (sesion?.estado !== 'EN_CIERRE') throw new Error('Las bolsas se revisan en el cierre del live.');
-  const linea = lineaEditable(sesionId, lineaId);
-  linea.bolsaRevisada = !linea.bolsaRevisada;
+/** D-47: bolsas de la clienta y si ya se entregaron. Desde el cierre en adelante, también con el live Cerrado. */
+export async function registrarBolsas(sesionId: string, lineaId: string, datos: { bolsas: number; entregada: boolean }): Promise<Linea> {
+  if (urlApi()) return pedirConSesion(`${rutaLinea(sesionId, lineaId)}/bolsas`, { metodo: 'PUT', cuerpo: datos });
+  const linea = lineaTerminada(sesionId, lineaId);
+  if (!Number.isInteger(datos.bolsas) || datos.bolsas < 0 || datos.bolsas > 99) throw new Error('Las bolsas van de 0 a 99.');
+  linea.bolsas = datos.bolsas;
+  linea.entregada = datos.entregada;
   return structuredClone(linea);
 }
 
-/** Lo que se elige para una clienta en el cierre (RF-10). La dirección solo cuenta para Despacho. */
+/** D-47: clientas con bolsas en bodega (no entregadas), sumando todos sus lives. */
+export async function bolsasEnBodega(): Promise<{ clientaId: string; bolsas: number }[]> {
+  if (urlApi()) return pedirConSesion('/api/lives/en-bodega');
+  const porClienta = new Map<string, number>();
+  for (const l of lineas) {
+    if (l.bolsas > 0 && !l.entregada) porClienta.set(l.clientaId, (porClienta.get(l.clientaId) ?? 0) + l.bolsas);
+  }
+  return [...porClienta].map(([clientaId, bolsas]) => ({ clientaId, bolsas }));
+}
+
+/** Forma de entrega que se elige en la ficha de la clienta (RF-10, D-47). La dirección solo cuenta para Despacho. */
 export interface DatosEntrega {
   tipo: TipoEntrega;
   direccion?: Direccion;
 }
 
-/** Línea de un live En cierre: solo ahí se registran entregas (RF-10). */
-function lineaEnCierre(sesionId: string, lineaId: string): Linea {
+/** Línea de un live ya terminado (En cierre o Cerrado): bolsas y entrega se registran desde la ficha (D-47). */
+function lineaTerminada(sesionId: string, lineaId: string): Linea {
   const sesion = sesiones.find((s) => s.id === sesionId);
-  if (sesion?.estado !== 'EN_CIERRE') throw new Error('La entrega se registra en el cierre del live.');
-  return lineaEditable(sesionId, lineaId);
+  if (!sesion) throw new Error('Live no encontrado');
+  if (sesion.estado === 'ABIERTA') throw new Error('Las bolsas y la entrega se registran cuando termina el live.');
+  const linea = lineas.find((l) => l.id === lineaId && l.sesionId === sesionId);
+  if (!linea) throw new Error('Línea no encontrada');
+  return linea;
 }
 
 /** Despacho exige calle y comuna; la región es Metropolitana si no se indica (D-04). */
@@ -314,13 +335,12 @@ function quitarEntregasVacias(sesionId: string): void {
 }
 
 /**
- * RF-10: registra la forma de entrega de una clienta. Despacho exige dirección, que queda en su ficha.
- * Si la clienta compartía la entrega con otras, sale del grupo y las demás no cambian (D-26).
- * No reordena la hoja.
+ * RF-10: registra la forma de entrega de una clienta desde su ficha, también con el live Cerrado (D-47).
+ * Despacho exige dirección, que queda en su ficha. Si compartía una entrega de antes de D-47, sale del grupo.
  */
 export async function registrarEntrega(sesionId: string, lineaId: string, datos: DatosEntrega): Promise<Entrega> {
   if (urlApi()) return pedirConSesion(`${rutaLinea(sesionId, lineaId)}/entrega`, { metodo: 'PUT', cuerpo: datos });
-  const linea = lineaEnCierre(sesionId, lineaId);
+  const linea = lineaTerminada(sesionId, lineaId);
   const direccion = datos.tipo === 'DESPACHO' ? direccionValida(datos.direccion) : undefined;
 
   const actual = entregas.find((e) => e.id === linea.entregaId);
@@ -345,18 +365,6 @@ export async function registrarEntrega(sesionId: string, lineaId: string, datos:
   return structuredClone(entrega);
 }
 
-/** RF-10: suma la clienta al despacho de otra del mismo live (ej: hermanas). Cada una conserva su línea. */
-export async function agruparEntrega(sesionId: string, lineaId: string, entregaId: string): Promise<Entrega> {
-  if (urlApi()) return pedirConSesion(`${rutaLinea(sesionId, lineaId)}/entrega`, { metodo: 'PATCH', cuerpo: { entregaId } });
-  const linea = lineaEnCierre(sesionId, lineaId);
-  const entrega = entregas.find((e) => e.id === entregaId && e.sesionId === sesionId);
-  if (!entrega) throw new Error('Entrega no encontrada');
-  if (entrega.tipo !== 'DESPACHO') throw new Error('Solo se puede agrupar con un despacho.');
-  linea.entregaId = entrega.id;
-  quitarEntregasVacias(sesionId);
-  return structuredClone(entrega);
-}
-
 /**
  * RF-11: marca una línea Pendiente como No pagó (noPago = true) o la devuelve a Pendiente (si pagó después).
  * Fija el estado en vez de alternarlo: repetir la llamada (doble toque) no la deshace. Solo En cierre.
@@ -373,7 +381,7 @@ export async function marcarNoPago(sesionId: string, lineaId: string, noPago: bo
 }
 
 /**
- * RF-11: finaliza el cierre. Exige bolsas revisadas, ninguna línea Pendiente y entrega en toda línea Pagada.
+ * RF-11: finaliza el cierre. Exige que no quede ninguna línea Pendiente (D-47: bolsas y entrega van en la ficha).
  * Con backend, la validación y el cambio de estado van en una transacción.
  */
 export async function finalizarCierre(sesionId: string): Promise<Sesion> {
@@ -381,10 +389,8 @@ export async function finalizarCierre(sesionId: string): Promise<Sesion> {
   const sesion = sesiones.find((s) => s.id === sesionId);
   if (sesion?.estado !== 'EN_CIERRE') throw new Error('Solo se finaliza un live En cierre.');
   const delLive = lineas.filter((l) => l.sesionId === sesionId);
-  const { faltan } = revisarCierre(delLive, entregas.filter((e) => e.sesionId === sesionId));
-  if (faltan.bolsas.length) throw new Error(`Falta revisar ${faltan.bolsas.length} bolsa(s).`);
+  const { faltan } = revisarCierre(delLive);
   if (faltan.pendientes.length) throw new Error(`Hay ${faltan.pendientes.length} línea(s) Pendiente(s): cóbralas o márcalas No pagó.`);
-  if (faltan.sinEntrega.length) throw new Error(`Falta la forma de entrega de ${faltan.sinEntrega.length} clienta(s) que pagaron.`);
   sesion.estado = 'CERRADA';
   return structuredClone(sesion);
 }

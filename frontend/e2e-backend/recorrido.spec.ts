@@ -23,7 +23,8 @@ test(
       await page.goto('/');
       await expect(page).toHaveURL(/\/login$/);
       await ingresar(page, ADMIN.correo, 'contrasena-mala');
-      await expect(page.getByRole('alert')).toBeVisible();
+      // shortcut: el primer pedido recorre gateway y ms-auth recién encendidos (BCrypt sin calentar); en un PC cargado pasa de 5 s.
+      await expect(page.getByRole('alert')).toBeVisible({ timeout: 30_000 });
       await ingresar(page, ADMIN.correo, ADMIN.contrasena);
       await expect(page).toHaveURL(/\/lives$/);
     });
@@ -77,17 +78,11 @@ test(
       await expect(total).toHaveText('$15.000');
     });
 
-    await test.step('terminar y cerrar: bolsa, pago y entrega', async () => {
+    await test.step('terminar y cerrar: solo se cobra (D-47)', async () => {
       await page.getByRole('button', { name: 'Terminar live' }).click();
       await page.getByRole('group', { name: 'Confirmar término' }).getByRole('button', { name: 'Terminar' }).click();
       await expect(page).toHaveURL(/\/cierre$/);
-      // Se marca cuando responde el servidor: check() lo revisaría antes de tiempo.
-      await page.getByRole('checkbox', { name: 'Bolsa revisada: flo' }).click();
-      await expect(page.getByTestId('avance-bolsas')).toHaveText('1 de 1');
       await page.getByRole('button', { name: 'Pagado: flo' }).click();
-      const entrega = page.getByRole('group', { name: 'Entrega de flo' });
-      await entrega.getByRole('button', { name: 'Retiro' }).click();
-      await expect(entrega.getByRole('button', { name: 'Retiro' })).toHaveAttribute('aria-pressed', 'true');
       await page.getByRole('button', { name: 'Finalizar cierre' }).click();
       await page.getByRole('button', { name: 'Cerrar el live' }).click();
       await expect(page.getByText('Estado: Cerrada. Ya no se puede anotar.')).toBeVisible();
@@ -103,6 +98,18 @@ test(
       await expect(indicador(page, 'Ticket promedio')).toHaveText('$15.000');
       await expect(indicador(page, 'Prendas canceladas')).toHaveText('1');
       await expect(indicador(page, 'Lives sin pago')).toHaveText('0');
+    });
+
+    await test.step('con el live Cerrado, la ficha registra bolsas y entrega (D-47)', async () => {
+      const compra = page.getByRole('group', { name: /Bolsas y entrega del live/ });
+      await compra.getByRole('button', { name: 'Agregar una bolsa' }).click();
+      await expect(compra.getByLabel('Bolsas')).toHaveText('1');
+      const entrega = compra.getByRole('group', { name: /Entrega de flo/ });
+      await entrega.getByRole('button', { name: 'Retiro' }).click();
+      await expect(entrega.getByRole('button', { name: 'Retiro' })).toHaveAttribute('aria-pressed', 'true');
+      await page.goto('/clientas');
+      await page.getByRole('checkbox', { name: 'Con bolsas en bodega' }).check();
+      await expect(page.getByRole('list', { name: 'Lista de clientas' })).toContainText('1 bolsa en bodega');
     });
 
     await test.step('ranking e inactivas', async () => {

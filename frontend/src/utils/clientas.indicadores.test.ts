@@ -15,7 +15,7 @@ function compra(dia: number, estado: EstadoSesion, pago: EstadoPago, ...miles: n
       clientaNombre: 'Gabriela Peña',
       prendas: miles.map((m, i) => ({ id: `p-${id}-${i}`, precio: Math.abs(m) * 1000, estado: m < 0 ? 'CANCELADA' : 'VIGENTE' })),
       estadoPago: pago,
-      bolsaRevisada: true,
+      bolsas: 1, entregada: true,
       actualizada: '2026-09-01T00:00:00-03:00',
     },
   };

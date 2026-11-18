@@ -27,6 +27,9 @@ export const ETIQUETAS_TIPO_ENTREGA: Record<TipoEntrega, string> = {
   FERIA: 'Feria',
 };
 
+/** Estado de las bolsas de una línea (D-47): `Linea.entregada`. */
+export const ETIQUETAS_BOLSAS = { enBodega: 'En bodega', entregada: 'Entregada' } as const;
+
 export const ETIQUETAS_ROL: Record<Rol, string> = {
   ADMIN: 'Administrador',
   VENDEDOR: 'Vendedor',

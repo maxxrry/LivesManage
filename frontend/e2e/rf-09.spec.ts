@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test';
 
-// Criterio de aceptación de RF-09 (ERS 3.5): al terminar el live desaparece el campo
-// de anotación y el avance cuenta las bolsas revisadas.
+// Criterio de aceptación de RF-09 (ERS 3.5, D-47): al terminar el live desaparece el campo de anotación.
+// Las bolsas ya no se revisan en el cierre: se registran en la ficha de la clienta.
 
-test('al terminar desaparece la anotación y el avance cuenta las bolsas', { tag: '@RF-09' }, async ({ page }) => {
+test('al terminar desaparece la anotación y el cierre no pide bolsas', { tag: '@RF-09' }, async ({ page }) => {
   await page.goto('/lives/s-2');
   await expect(page.getByRole('combobox', { name: 'Anotación' })).toBeVisible();
 
@@ -12,14 +12,8 @@ test('al terminar desaparece la anotación y el avance cuenta las bolsas', { tag
 
   await expect(page).toHaveURL(/\/lives\/s-2\/cierre$/);
   await expect(page.getByRole('combobox', { name: 'Anotación' })).toHaveCount(0);
-  await expect(page.getByTestId('avance-bolsas')).toHaveText('0 de 5');
-
-  await page.getByRole('checkbox', { name: 'Bolsa revisada: Gabriela Peña' }).check();
-  await page.getByRole('checkbox', { name: 'Bolsa revisada: Javiera Soto' }).check();
-  await expect(page.getByTestId('avance-bolsas')).toHaveText('2 de 5');
-
-  await page.getByRole('checkbox', { name: 'Bolsa revisada: Gabriela Peña' }).uncheck();
-  await expect(page.getByTestId('avance-bolsas')).toHaveText('1 de 5');
+  await expect(page.getByRole('checkbox', { name: /Bolsa/ })).toHaveCount(0);
+  await expect(page.getByRole('progressbar')).toHaveCount(0);
 });
 
 test('tras terminar se puede abrir un live nuevo', { tag: '@RF-09' }, async ({ page, isMobile }) => {
@@ -34,13 +28,18 @@ test('tras terminar se puede abrir un live nuevo', { tag: '@RF-09' }, async ({ p
   await expect(page.getByRole('button', { name: 'Abrir live' })).toBeVisible();
 });
 
-test('el check de bolsa mide al menos 44 px de alto', { tag: '@RF-09' }, async ({ page }) => {
+test('en el cierre, el lápiz agrega prendas a la línea (D-48)', { tag: '@RF-09' }, async ({ page }) => {
   await page.goto('/lives/s-2');
   await page.getByRole('button', { name: 'Terminar live' }).click();
   await page.getByRole('group', { name: 'Confirmar término' }).getByRole('button', { name: 'Terminar' }).click();
+  await expect(page).toHaveURL(/\/cierre$/);
 
-  const etiqueta = page.locator('label').filter({ has: page.getByRole('checkbox', { name: 'Bolsa revisada: Gabriela Peña' }) });
-  const caja = (await etiqueta.boundingBox())!;
-  expect(caja.height).toBeGreaterThanOrEqual(44);
-  expect(caja.width).toBeGreaterThanOrEqual(44);
+  await page.getByRole('button', { name: 'Editar línea de Florencia Ruiz' }).click();
+  await expect(page.getByRole('button', { name: 'Cambiar clienta', exact: true })).toBeVisible();
+  const precios = page.getByRole('textbox', { name: 'Agregar prendas' });
+  await precios.fill('3000');
+  await precios.press('Enter');
+
+  const hoja = page.getByRole('list', { name: 'Hoja del live' });
+  await expect(hoja.getByRole('listitem').filter({ hasText: 'Florencia Ruiz' })).toContainText('3.000');
 });

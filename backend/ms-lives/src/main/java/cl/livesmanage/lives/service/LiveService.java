@@ -2,7 +2,9 @@ package cl.livesmanage.lives.service;
 
 import cl.livesmanage.lives.cliente.ClientasCliente;
 import cl.livesmanage.lives.cliente.ClientasCliente.ClientaRef;
+import cl.livesmanage.lives.dto.BolsasEnBodega;
 import cl.livesmanage.lives.dto.CompraClienta;
+import cl.livesmanage.lives.dto.DatosBolsas;
 import cl.livesmanage.lives.dto.DatosEntrega;
 import cl.livesmanage.lives.dto.Destino;
 import cl.livesmanage.lives.dto.DireccionDto;
@@ -106,22 +108,34 @@ public class LiveService {
 
     /**
      * Agrega las prendas a la línea de la clienta en el live, o crea la línea (y la clienta en ms-clientas si es nueva).
+     * En cierre solo se agregan prendas a una línea que ya existe, desde el lápiz (D-48).
      * Valida todo antes de modificar: la anotación se guarda completa o no se guarda (RNF-12).
      */
     @Transactional
     public ResultadoAnotar anotar(String sesionId, NuevaAnotacion datos, String usuarioId) {
-        Sesion sesion = buscarSesion(sesionId);
-        if (sesion.getEstado() != EstadoSesion.ABIERTA) {
+        Sesion sesion = sesionParaCambiar(sesionId);
+        boolean enCierre = sesion.getEstado() == EstadoSesion.EN_CIERRE;
+        if (!enCierre && sesion.getEstado() != EstadoSesion.ABIERTA) {
             throw new ReglaException(HttpStatus.CONFLICT, null, "El live no está abierto; no se puede anotar.");
         }
         if (datos.precios().stream().anyMatch(p -> p % 100 != 0)) {
             throw new ReglaException(HttpStatus.BAD_REQUEST, "precios", "Precios no válidos.");
         }
-        ClientaRef clienta = resolverClienta(sesionId, datos.destino());
-        boolean clientaNueva = datos.destino().nuevaClienta() != null && !datos.destino().nuevaClienta().isBlank();
+        ClientaRef clienta;
+        Linea linea;
+        if (enCierre) {
+            linea = Optional.ofNullable(datos.destino().clientaId())
+                    .flatMap(id -> lineas.findBySesionIdAndClientaId(sesionId, id))
+                    .orElseThrow(() -> new ReglaException(HttpStatus.CONFLICT, null,
+                            "En el cierre solo se agregan prendas a una clienta que ya está en la hoja."));
+            clienta = new ClientaRef(linea.getClientaId(), linea.getClientaNombre(), true);
+        } else {
+            clienta = resolverClienta(sesionId, datos.destino());
+            linea = lineas.findBySesionIdAndClientaId(sesionId, clienta.id()).orElse(null);
+        }
+        boolean clientaNueva = !enCierre && datos.destino().nuevaClienta() != null && !datos.destino().nuevaClienta().isBlank();
         List<Integer> precios = datos.precios();
         Instant ahora = Instant.now();
-        Linea linea = lineas.findBySesionIdAndClientaId(sesionId, clienta.id()).orElse(null);
         if (linea != null) anotaciones.anularDeshacer(List.of(linea.getId())); // D-22: una anotación nueva cambia la línea
         Anotacion anotacion = new Anotacion();
         anotacion.setSesionId(sesionId);
@@ -167,7 +181,7 @@ public class LiveService {
         Anotacion anotacion = anotaciones.findById(anotacionId)
                 .filter(a -> a.getSesionId().equals(sesionId) && a.isDeshacible())
                 .orElseThrow(() -> new ReglaException(HttpStatus.CONFLICT, null, "La anotación ya no se puede deshacer."));
-        if (buscarSesion(sesionId).getEstado() != EstadoSesion.ABIERTA) {
+        if (sesionParaCambiar(sesionId).getEstado() != EstadoSesion.ABIERTA) {
             throw new ReglaException(HttpStatus.CONFLICT, null, "La anotación ya no se puede deshacer.");
         }
         anotacion.setDeshacible(false); // queda registrada (RNF-09), pero no se deshace dos veces
@@ -194,7 +208,7 @@ public class LiveService {
     /** Cancela una prenda vigente o restaura una cancelada. Nunca se borra ni reordena la hoja (D-18). */
     @Transactional
     public LineaDto alternarPrenda(String sesionId, String lineaId, String prendaId, String usuarioId) {
-        Linea linea = lineaEditable(sesionId, lineaId);
+        Linea linea = lineaSi(sesionId, lineaId, NO_CERRADA, "El live está cerrado: es solo lectura.");
         Prenda prenda = linea.getPrendas().stream().filter(p -> p.getId().equals(prendaId)).findFirst()
                 .orElseThrow(() -> new ReglaException(HttpStatus.NOT_FOUND, null, "La prenda no existe."));
         anotaciones.anularDeshacer(List.of(lineaId));
@@ -209,7 +223,7 @@ public class LiveService {
     /** Pasa la línea de Pendiente a Pagado o al revés, con fecha y usuario. No reordena la hoja (D-21). */
     @Transactional
     public LineaDto alternarPago(String sesionId, String lineaId, String usuarioId) {
-        Linea linea = lineaEditable(sesionId, lineaId);
+        Linea linea = lineaSi(sesionId, lineaId, NO_CERRADA, "El live está cerrado: es solo lectura.");
         if (linea.getEstadoPago() == EstadoPago.NO_PAGO) {
             throw new ReglaException(HttpStatus.CONFLICT, null, "\"No pagó\" se revisa en el cierre del live.");
         }
@@ -224,7 +238,7 @@ public class LiveService {
      */
     @Transactional
     public LineaDto cambiarClienta(String sesionId, String lineaId, Destino destino, String usuarioId) {
-        Linea linea = lineaEditable(sesionId, lineaId);
+        Linea linea = lineaSi(sesionId, lineaId, NO_CERRADA, "El live está cerrado: es solo lectura.");
         if (linea.getClientaId().equals(destino.clientaId())) return LineaDto.de(linea);
 
         ClientaRef clienta = resolverClienta(sesionId, destino);
@@ -248,7 +262,8 @@ public class LiveService {
         EstadoPago pago = otra.getEstadoPago() == EstadoPago.PAGADO && linea.getEstadoPago() == EstadoPago.PAGADO
                 ? EstadoPago.PAGADO : EstadoPago.PENDIENTE;
         if (pago != otra.getEstadoPago()) otra.registrarPago(pago, usuarioId, ahora);
-        otra.setBolsaRevisada(otra.isBolsaRevisada() && linea.isBolsaRevisada());
+        otra.setBolsas(otra.getBolsas() + linea.getBolsas()); // D-47: al unir, las bolsas se suman
+        otra.setEntregada(otra.isEntregada() && linea.isEntregada());
         String entregaUnida = linea.getEntregaId();
         if (otra.getEntregaId() == null) otra.setEntregaId(entregaUnida);
         otra.setActualizada(ahora);
@@ -265,7 +280,7 @@ public class LiveService {
     /** Pasa el live de Abierta a En cierre; desde ahí se puede abrir otro live. */
     @Transactional
     public SesionDto terminar(String sesionId) {
-        Sesion sesion = buscarSesion(sesionId);
+        Sesion sesion = sesionParaCambiar(sesionId);
         if (sesion.getEstado() != EstadoSesion.ABIERTA) {
             throw new ReglaException(HttpStatus.CONFLICT, null, "Solo se puede terminar un live abierto.");
         }
@@ -274,21 +289,22 @@ public class LiveService {
         return SesionDto.de(sesion);
     }
 
-    /** Marca o desmarca la bolsa revisada. Solo En cierre (D-25); no reordena la hoja. */
+    /** Bolsas de la clienta y si ya se entregaron (D-47). Desde el cierre en adelante, también con el live Cerrado. */
     @Transactional
-    public LineaDto alternarBolsa(String sesionId, String lineaId) {
-        Linea linea = lineaEnCierre(sesionId, lineaId, "Las bolsas se revisan en el cierre del live.");
-        linea.setBolsaRevisada(!linea.isBolsaRevisada());
+    public LineaDto registrarBolsas(String sesionId, String lineaId, DatosBolsas datos) {
+        Linea linea = lineaSi(sesionId, lineaId, TERMINADA, "Las bolsas y la entrega se registran cuando termina el live.");
+        linea.setBolsas(datos.bolsas());
+        linea.setEntregada(datos.entregada());
         return LineaDto.de(linea);
     }
 
     /**
-     * Registra la forma de entrega de una clienta. Despacho exige dirección, que queda en su ficha (D-26).
-     * Si la clienta compartía la entrega con otras, sale del grupo y las demás no cambian. No reordena la hoja.
+     * Registra la forma de entrega de una clienta desde su ficha, también con el live Cerrado (D-47). Despacho exige
+     * dirección, que queda en su ficha (D-26). Si compartía una entrega de antes de D-47, sale del grupo y las demás no cambian.
      */
     @Transactional
     public EntregaDto registrarEntrega(String sesionId, String lineaId, DatosEntrega datos) {
-        Linea linea = lineaEnCierre(sesionId, lineaId, "La entrega se registra en el cierre del live.");
+        Linea linea = lineaSi(sesionId, lineaId, TERMINADA, "Las bolsas y la entrega se registran cuando termina el live.");
         Direccion direccion = null;
         if (datos.tipo() == TipoEntrega.DESPACHO) {
             if (datos.direccion() == null) throw new ReglaException(HttpStatus.BAD_REQUEST, "direccion", "El despacho necesita una dirección.");
@@ -313,30 +329,13 @@ public class LiveService {
         return EntregaDto.de(entrega);
     }
 
-    /** Suma la clienta al despacho de otra del mismo live (ej: hermanas). Cada una conserva su línea (RF-10). */
-    @Transactional
-    public EntregaDto agruparEntrega(String sesionId, String lineaId, String entregaId) {
-        Linea linea = lineaEnCierre(sesionId, lineaId, "La entrega se registra en el cierre del live.");
-        Entrega entrega = entregas.findByIdAndSesionId(entregaId, sesionId)
-                .orElseThrow(() -> new ReglaException(HttpStatus.NOT_FOUND, null, "La entrega no existe."));
-        if (entrega.getTipo() != TipoEntrega.DESPACHO) {
-            throw new ReglaException(HttpStatus.CONFLICT, null, "Solo se puede agrupar con un despacho.");
-        }
-        String anterior = linea.getEntregaId();
-        linea.setEntregaId(entrega.getId());
-        lineas.flush();
-        // La entrega que dejó pudo quedar sin líneas (D-05: no existe sin líneas).
-        if (anterior != null && !anterior.equals(entregaId) && !lineas.existsByEntregaId(anterior)) entregas.deleteById(anterior);
-        return EntregaDto.de(entrega);
-    }
-
     /**
      * Marca una línea Pendiente como No pagó, o la devuelve a Pendiente (si pagó después). Fija el estado en vez de
      * alternarlo: repetir la llamada no lo deshace (D-27). Solo En cierre.
      */
     @Transactional
     public LineaDto marcarNoPago(String sesionId, String lineaId, boolean noPago, String usuarioId) {
-        Linea linea = lineaEnCierre(sesionId, lineaId, "\"No pagó\" se marca en el cierre del live.");
+        Linea linea = lineaSi(sesionId, lineaId, Set.of(EstadoSesion.EN_CIERRE), "\"No pagó\" se marca en el cierre del live.");
         if (linea.getEstadoPago() == EstadoPago.PAGADO) throw new ReglaException(HttpStatus.CONFLICT, null, "La línea está Pagada.");
         EstadoPago estado = noPago ? EstadoPago.NO_PAGO : EstadoPago.PENDIENTE;
         if (linea.getEstadoPago() != estado) linea.registrarPago(estado, usuarioId, Instant.now());
@@ -346,17 +345,13 @@ public class LiveService {
     /** Finaliza el cierre: valida las reglas de RevisionCierre y pasa a Cerrada, todo en una transacción (RNF-12). */
     @Transactional
     public SesionDto finalizar(String sesionId) {
-        Sesion sesion = buscarSesion(sesionId);
+        Sesion sesion = sesionParaCambiar(sesionId);
         if (sesion.getEstado() != EstadoSesion.EN_CIERRE) {
             throw new ReglaException(HttpStatus.CONFLICT, null, "Solo se finaliza un live En cierre.");
         }
-        RevisionCierre falta = RevisionCierre.de(lineas.findBySesionId(sesionId), entregas.findBySesionId(sesionId));
-        if (falta.bolsas() > 0) throw new ReglaException(HttpStatus.CONFLICT, null, "Falta revisar " + falta.bolsas() + " bolsa(s).");
-        if (falta.pendientes() > 0) {
+        RevisionCierre falta = RevisionCierre.de(lineas.findBySesionId(sesionId));
+        if (!falta.listo()) {
             throw new ReglaException(HttpStatus.CONFLICT, null, "Hay " + falta.pendientes() + " línea(s) Pendiente(s): cóbralas o márcalas No pagó.");
-        }
-        if (falta.sinEntrega() > 0) {
-            throw new ReglaException(HttpStatus.CONFLICT, null, "Falta la forma de entrega de " + falta.sinEntrega() + " clienta(s) que pagaron.");
         }
         sesion.setEstado(EstadoSesion.CERRADA);
         log.info("Live {} cerrado", sesionId);
@@ -366,7 +361,7 @@ public class LiveService {
     /** Solo la Admin reabre un live Cerrado (la ruta lo exige); vuelve a En cierre con sus líneas tal como estaban. */
     @Transactional
     public SesionDto reabrir(String sesionId) {
-        Sesion sesion = buscarSesion(sesionId);
+        Sesion sesion = sesionParaCambiar(sesionId);
         if (sesion.getEstado() != EstadoSesion.CERRADA) {
             throw new ReglaException(HttpStatus.CONFLICT, null, "Solo se reabre un live Cerrado.");
         }
@@ -403,6 +398,12 @@ public class LiveService {
                 .toList();
     }
 
+    /** D-47: clientas con bolsas en bodega, para el filtro de Clientas. */
+    @Transactional(readOnly = true)
+    public List<BolsasEnBodega> bolsasEnBodega() {
+        return lineas.bolsasEnBodega();
+    }
+
     /**
      * ms-clientas avisa que la ficha cambió: la copia del nombre en las líneas se iguala a la de la ficha (D-03, D-28).
      * El nombre se lee de ms-clientas, no lo manda quien llama: así nadie puede poner otro, y repetir la llamada repara.
@@ -414,12 +415,6 @@ public class LiveService {
     }
 
     // Apoyo
-
-    /** Línea de un live En cierre: bolsas, entregas y No pagó solo existen ahí (D-25 a D-27). */
-    private Linea lineaEnCierre(String sesionId, String lineaId, String mensaje) {
-        if (buscarSesion(sesionId).getEstado() != EstadoSesion.EN_CIERRE) throw new ReglaException(HttpStatus.CONFLICT, null, mensaje);
-        return lineaEditable(sesionId, lineaId);
-    }
 
     /**
      * La clienta del destino. Si ya tiene línea en el live se usa su copia del nombre, sin llamar a ms-clientas (D-03).
@@ -460,11 +455,19 @@ public class LiveService {
         return sesiones.findById(id).orElseThrow(() -> new ReglaException(HttpStatus.NOT_FOUND, null, "El live no existe."));
     }
 
-    /** Línea de un live que se puede corregir: existe y el live no está Cerrado (RF-06). */
-    private Linea lineaEditable(String sesionId, String lineaId) {
-        if (buscarSesion(sesionId).getEstado() == EstadoSesion.CERRADA) {
-            throw new ReglaException(HttpStatus.CONFLICT, null, "El live está cerrado: es solo lectura.");
-        }
+    /** La sesión, bloqueada hasta el fin de la transacción (para que anotar o cobrar no se crucen con finalizar). */
+    private Sesion sesionParaCambiar(String id) {
+        return sesiones.bloquear(id).orElseThrow(() -> new ReglaException(HttpStatus.NOT_FOUND, null, "El live no existe."));
+    }
+
+    /** Corregir y cobrar (RF-06, RF-07): mientras el live no esté Cerrado. */
+    private static final Set<EstadoSesion> NO_CERRADA = Set.of(EstadoSesion.ABIERTA, EstadoSesion.EN_CIERRE);
+    /** Bolsas y entrega (D-47): desde que termina el live, también Cerrado. */
+    private static final Set<EstadoSesion> TERMINADA = Set.of(EstadoSesion.EN_CIERRE, EstadoSesion.CERRADA);
+
+    /** Línea del live, si el estado del live lo permite; si no, 409 con el mensaje. Bloquea la sesión. */
+    private Linea lineaSi(String sesionId, String lineaId, Set<EstadoSesion> permitidos, String mensaje) {
+        if (!permitidos.contains(sesionParaCambiar(sesionId).getEstado())) throw new ReglaException(HttpStatus.CONFLICT, null, mensaje);
         return lineas.findByIdAndSesionId(lineaId, sesionId)
                 .orElseThrow(() -> new ReglaException(HttpStatus.NOT_FOUND, null, "La línea no existe."));
     }

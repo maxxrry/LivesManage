@@ -123,9 +123,9 @@ Tablas: `sesion`, `linea` (con copia de `clienta_nombre`, D-03), `prenda`, `anot
 | `PATCH .../lineas/{id}/clienta` | `cambiarClienta` | Live (RF-06, D-19) |
 | `PATCH .../lineas/{id}/pago` | `alternarPago` | Live (RF-07) |
 | `POST /api/lives/{id}/terminar` | `terminarSesion` | Live (RF-09) |
-| `PATCH .../lineas/{id}/bolsa` | `alternarBolsa` | Cierre |
-| `PUT .../lineas/{id}/entrega` | `registrarEntrega` | Cierre (RF-10) |
-| `PUT .../lineas/{id}/entrega/{entregaId}` | `agruparEntrega` | Cierre ("Enviar junto con") |
+| `PUT .../lineas/{id}/bolsas` | `registrarBolsas` | Ficha de la clienta (RF-10, D-47) |
+| `PUT .../lineas/{id}/entrega` | `registrarEntrega` | Ficha de la clienta (RF-10, D-47) |
+| `GET /api/lives/en-bodega` | `bolsasEnBodega` | Clientas: filtro "Con bolsas en bodega" (D-47) |
 | `PATCH .../lineas/{id}/no-pago` | `marcarNoPago` | Finalizar cierre |
 | `POST /api/lives/{id}/finalizar` | `finalizarCierre` | Finalizar cierre (transacción, RNF-12) |
 | `POST /api/lives/{id}/reabrir` | `reabrirSesion` | Admin |

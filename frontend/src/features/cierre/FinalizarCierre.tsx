@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { TIPOS_ENTREGA, type Linea } from '../../types/dominio';
-import { ETIQUETAS_ESTADO_PAGO, ETIQUETAS_TIPO_ENTREGA } from '../../types/etiquetas';
+import { ETIQUETAS_ESTADO_PAGO } from '../../types/etiquetas';
 import type { RevisionCierre } from '../../utils/cierre';
 import { formatearClp, totalLinea } from '../../utils/montos';
 
@@ -10,8 +9,6 @@ interface FinalizarCierreProps {
   onConfirmar: () => Promise<void>;
   onVolver: () => void;
 }
-
-const nombres = (lineas: Linea[]) => lineas.map((l) => l.clientaNombre).join(', ');
 
 /**
  * RF-11: resumen del cierre y lo que falta para finalizar. Las líneas Pendientes se marcan No pagó aquí mismo.
@@ -37,7 +34,6 @@ export function FinalizarCierre({ revision, onNoPago, onConfirmar, onVolver }: F
     { etiqueta: 'Total del live', valor: formatearClp(resumen.total) },
     { etiqueta: 'Pagado', valor: formatearClp(resumen.pagado) },
     { etiqueta: 'Sin pagar', valor: formatearClp(resumen.sinPagar) },
-    ...TIPOS_ENTREGA.map((tipo) => ({ etiqueta: ETIQUETAS_TIPO_ENTREGA[tipo], valor: String(resumen.entregas[tipo]) })),
   ];
 
   return (
@@ -58,12 +54,6 @@ export function FinalizarCierre({ revision, onNoPago, onConfirmar, onVolver }: F
       {!listo && (
         <div className="space-y-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm">
           <p className="font-semibold text-amber-900">Para finalizar falta:</p>
-          {faltan.bolsas.length > 0 && (
-            <p>
-              Revisar {faltan.bolsas.length} {faltan.bolsas.length === 1 ? 'bolsa' : 'bolsas'}: {nombres(faltan.bolsas)}.
-            </p>
-          )}
-          {faltan.sinEntrega.length > 0 && <p>Forma de entrega de quienes pagaron: {nombres(faltan.sinEntrega)}.</p>}
           {faltan.pendientes.length > 0 && (
             <div className="space-y-2">
               <p>Cobrar o marcar {ETIQUETAS_ESTADO_PAGO.NO_PAGO} a las clientas Pendientes:</p>

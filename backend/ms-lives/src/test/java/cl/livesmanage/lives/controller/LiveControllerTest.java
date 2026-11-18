@@ -1,7 +1,6 @@
 package cl.livesmanage.lives.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -197,13 +196,28 @@ class LiveControllerTest {
     }
 
     @Test
-    void enUnLiveQueNoEstaAbiertoNoSeAnota() throws Exception {
+    void enUnLiveCerradoNoSeAnota() throws Exception {
         String live = abrirLive();
-        cambiarEstado(live, EstadoSesion.EN_CIERRE); // terminar llega con RF-09
+        lineaId(live, "c-flo", 6000);
+        cambiarEstado(live, EstadoSesion.CERRADA);
 
         anotar(live, "{\"clientaId\":\"c-flo\"}", 6000)
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.mensaje").value("El live no está abierto; no se puede anotar."));
+    }
+
+    @Test
+    void enCierreSoloSeAgreganPrendasAUnaLineaQueYaExiste() throws Exception {
+        String live = abrirLive();
+        lineaId(live, "c-flo", 6000);
+        cambiarEstado(live, EstadoSesion.EN_CIERRE);
+
+        anotar(live, "{\"clientaId\":\"c-flo\"}", 4000).andExpect(status().isCreated()).andExpect(jsonPath("$.linea.prendas.length()").value(2));
+
+        String mensaje = "En el cierre solo se agregan prendas a una clienta que ya está en la hoja.";
+        anotar(live, "{\"clientaId\":\"c-gabi\"}", 5000).andExpect(status().isConflict()).andExpect(jsonPath("$.mensaje").value(mensaje));
+        anotar(live, "{\"nuevaClienta\":\"ana\"}", 5000).andExpect(status().isConflict()).andExpect(jsonPath("$.mensaje").value(mensaje));
+        verify(clientas, never()).crear(any());
     }
 
     // D-11, D-20 y D-22
@@ -376,15 +390,42 @@ class LiveControllerTest {
     }
 
     @Test
-    void laBolsaSoloSeRevisaEnCierre() throws Exception {
+    void lasBolsasSeRegistranDesdeElCierreYTambienConElLiveCerrado() throws Exception {
         String live = abrirLive();
         String linea = lineaId(live, "c-flo", 6000);
-        accion(patch("/api/lives/" + live + "/lineas/" + linea + "/bolsa"), null)
+        String ruta = "/api/lives/" + live + "/lineas/" + linea + "/bolsas";
+        accion(put(ruta), "{\"bolsas\":2,\"entregada\":false}")
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.mensaje").value("Las bolsas se revisan en el cierre del live."));
+                .andExpect(jsonPath("$.mensaje").value("Las bolsas y la entrega se registran cuando termina el live."));
 
         accion(post("/api/lives/" + live + "/terminar"), null);
-        accion(patch("/api/lives/" + live + "/lineas/" + linea + "/bolsa"), null).andExpect(jsonPath("$.bolsaRevisada").value(true));
+        accion(put(ruta), "{\"bolsas\":-1,\"entregada\":false}").andExpect(status().isBadRequest());
+        accion(put(ruta), "{\"bolsas\":2,\"entregada\":false}")
+                .andExpect(jsonPath("$.bolsas").value(2)).andExpect(jsonPath("$.entregada").value(false));
+
+        cambiarEstado(live, EstadoSesion.CERRADA); // D-47: las bolsas se entregan días después del cierre
+        accion(put(ruta), "{\"bolsas\":2,\"entregada\":true}").andExpect(status().isOk()).andExpect(jsonPath("$.entregada").value(true));
+        accion(put("/api/lives/" + live + "/lineas/" + linea + "/entrega"), "{\"tipo\":\"RETIRO\"}").andExpect(status().isOk());
+    }
+
+    @Test
+    void enBodegaSumaLasBolsasNoEntregadasDeCadaClienta() throws Exception {
+        String uno = abrirLive();
+        String flo = lineaId(uno, "c-flo", 6000);
+        String gabi = lineaId(uno, "c-gabi", 5000);
+        accion(post("/api/lives/" + uno + "/terminar"), null);
+        String dos = abrirLive();
+        String flo2 = lineaId(dos, "c-flo", 4000);
+        accion(post("/api/lives/" + dos + "/terminar"), null);
+        accion(put("/api/lives/" + uno + "/lineas/" + flo + "/bolsas"), "{\"bolsas\":1,\"entregada\":false}");
+        accion(put("/api/lives/" + dos + "/lineas/" + flo2 + "/bolsas"), "{\"bolsas\":2,\"entregada\":false}");
+        accion(put("/api/lives/" + uno + "/lineas/" + gabi + "/bolsas"), "{\"bolsas\":1,\"entregada\":true}");
+
+        mvc.perform(get("/api/lives/en-bodega").header("Authorization", VENDEDORA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].clientaId").value("c-flo"))
+                .andExpect(jsonPath("$[0].bolsas").value(3));
     }
 
     @Test
@@ -407,44 +448,22 @@ class LiveControllerTest {
     }
 
     @Test
-    void hermanasCompartenDespachoYCambiarUnaLaSacaDelGrupo() throws Exception {
-        String live = abrirLive();
-        String flo = lineaId(live, "c-flo", 6000);
-        String gabi = lineaId(live, "c-gabi", 5000);
-        accion(post("/api/lives/" + live + "/terminar"), null);
-        String despacho = JsonPath.read(cuerpo(accion(put("/api/lives/" + live + "/lineas/" + flo + "/entrega"),
-                "{\"tipo\":\"DESPACHO\",\"direccion\":{\"calle\":\"Los Aromos 1234\",\"comuna\":\"Maipú\"}}")), "$.id");
-        String propia = JsonPath.read(cuerpo(accion(put("/api/lives/" + live + "/lineas/" + gabi + "/entrega"), "{\"tipo\":\"RETIRO\"}")), "$.id");
-
-        accion(patch("/api/lives/" + live + "/lineas/" + gabi + "/entrega"), "{\"entregaId\":\"" + despacho + "\"}")
-                .andExpect(jsonPath("$.id").value(despacho));
-        assertThat(entregas.existsById(propia)).isFalse(); // su retiro quedó sin líneas (D-05)
-
-        // Gabriela pasa a Feria: sale del grupo y Florencia conserva su despacho (D-26).
-        accion(put("/api/lives/" + live + "/lineas/" + gabi + "/entrega"), "{\"tipo\":\"FERIA\"}")
-                .andExpect(jsonPath("$.id").value(not(despacho)));
-        assertThat(lineas.findById(flo).orElseThrow().getEntregaId()).isEqualTo(despacho);
-    }
-
-    @Test
-    void finalizarExigeBolsasCobrosYEntregasYDespuesEsSoloLectura() throws Exception {
+    void finalizarSoloExigeQueNoQuedenPendientesYDespuesEsSoloLectura() throws Exception {
         String live = abrirLive();
         String flo = lineaId(live, "c-flo", 6000);
         String gabi = lineaId(live, "c-gabi", 5000);
         accion(post("/api/lives/" + live + "/terminar"), null);
         String finalizar = "/api/lives/" + live + "/finalizar";
 
-        accion(post(finalizar), null).andExpect(status().isConflict()).andExpect(jsonPath("$.mensaje").value("Falta revisar 2 bolsa(s)."));
-        for (String l : new String[] {flo, gabi}) accion(patch("/api/lives/" + live + "/lineas/" + l + "/bolsa"), null);
-        accion(post(finalizar), null).andExpect(jsonPath("$.mensaje").value("Hay 2 línea(s) Pendiente(s): cóbralas o márcalas No pagó."));
+        accion(post(finalizar), null).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.mensaje").value("Hay 2 línea(s) Pendiente(s): cóbralas o márcalas No pagó."));
 
         accion(patch("/api/lives/" + live + "/lineas/" + flo + "/pago"), null);
         accion(put("/api/lives/" + live + "/lineas/" + gabi + "/no-pago"), "{\"noPago\":true}").andExpect(jsonPath("$.estadoPago").value("NO_PAGO"));
         accion(put("/api/lives/" + live + "/lineas/" + flo + "/no-pago"), "{\"noPago\":true}")
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.mensaje").value("La línea está Pagada."));
-        accion(post(finalizar), null).andExpect(jsonPath("$.mensaje").value("Falta la forma de entrega de 1 clienta(s) que pagaron."));
 
-        accion(put("/api/lives/" + live + "/lineas/" + flo + "/entrega"), "{\"tipo\":\"RETIRO\"}");
+        // Sin bolsas ni entrega: ya no se exigen para cerrar (D-47).
         accion(post(finalizar), null).andExpect(status().isOk()).andExpect(jsonPath("$.estado").value("CERRADA"));
         accion(patch("/api/lives/" + live + "/lineas/" + flo + "/pago"), null).andExpect(status().isConflict());
     }

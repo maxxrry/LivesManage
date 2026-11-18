@@ -49,6 +49,8 @@ Registro de decisiones de diseño que complementan o precisan el ERS (`docs/ERS.
 | D-43 | 03/11/2026 | RNF-15, RNF-22, RNF-23 | E2E contra el backend real con H2 en memoria, cobertura con JaCoCo (mínimo 60 % en `service`) y prueba de contenido cortado en cada pantalla. |
 | D-44 | 04/11/2026 | RNF-19 | Respaldo diario con `scripts/respaldar.sh`: las tres bases en un archivo, los últimos 7 días con respaldo, en `respaldos/` dentro de OneDrive. |
 | D-45 | 05/11/2026 | RF-15, RNF-04, RNF-10 | Se descarta importar el cuaderno desde una foto, y con ello `ms-importacion`. |
+| D-47 | 17/11/2026 | RF-09, RF-10, RF-11, RF-13, D-25, D-26 | Bolsas y forma de entrega salen del cierre y se registran en la ficha de la clienta, también con el live Cerrado; se quita "Enviar junto con". |
+| D-48 | 17/11/2026 | RF-06, RF-09, D-41 | En el cierre, el lápiz de una línea también agrega prendas; no se crean clientas ni líneas nuevas. |
 
 ## D-01 · Estilos con Tailwind CSS
 
@@ -470,7 +472,7 @@ Durante el live, una clienta suele pedir otra prenda cuando su línea ya está a
 - **Al agregar:** funciona como una anotación de RF-05, con el mismo endpoint y `clientaId`. Muestra el aviso con Deshacer, actualiza los totales, sube la línea al primer lugar y vuelve a Pendiente una línea Pagada (D-20).
 - **Cerrar:** el panel se cierra al agregar, con Escape, tocando otra vez el lápiz o al buscar en la hoja, porque la búsqueda puede ocultar la línea. El foco vuelve al lápiz, salvo que ya haya pasado a otro campo mientras se guardaba.
 - **Mientras se guarda:** el panel no se puede cerrar ni se abre otro, para que un fallo se vea con su texto (RNF-13).
-- **En cierre:** el lápiz abre directo Cambiar clienta, porque ya no se anota (RF-09).
+- **En cierre:** desde D-48, el lápiz abre el mismo panel que con el live Abierto. Antes abría directo Cambiar clienta.
 
 **Alternativas descartadas:**
 
@@ -552,3 +554,37 @@ RF-15 era Deseable y la única función sin construir. Se evaluó el 04/11/2026 
 - Escribir o pegar el texto de la página con la foto a la vista: no necesita clave, pero no cumple RF-15 tal como estaba escrito y agrega una pantalla y una ruta en `ms-lives` a pocas semanas de la entrega.
 
 **Lo que se acepta a cambio:** pasar una página de papel al sistema sigue siendo manual.
+
+## D-47 · Bolsas y entrega en la ficha de la clienta
+
+Pedido el 17/11/2026, después de la UAT: revisar bolsas en el cierre quitaba tiempo y servía poco, y las bolsas se entregan días después de cerrar el live.
+
+- **Cierre:** solo cobro, correcciones y No pagó. Para finalizar basta con que no queden líneas Pendientes. Se quitan el check de bolsa, el avance y los botones de entrega.
+- **Ficha de la clienta:** en el historial, cada compra de un live En cierre o Cerrado tiene el número de bolsas (− y +), En bodega o Entregada, y Despacho, Retiro o Feria. Despacho usa la dirección de la ficha o pide una nueva, que queda en la ficha (D-26).
+- **Live Cerrado:** sigue de solo lectura, salvo bolsas y entrega. Las registran la vendedora y la Admin.
+- **Clientas:** filtro "Con bolsas en bodega" y la cantidad junto al nombre. Lo entrega `GET /api/lives/en-bodega`.
+- **API (`ms-lives`):** `PUT /api/lives/{id}/lineas/{lid}/bolsas` con `{ bolsas, entregada }` (0 a 99). La línea cambia `bolsaRevisada` por `bolsas` y `entregada`. Se quitan `PATCH .../bolsa` y `PATCH .../entrega` (agrupar). Al unir dos líneas (D-19), las bolsas se suman.
+
+**Alternativa descartada:** mantener "Enviar junto con" para las hermanas. Desde la ficha de una clienta habría que buscar a la otra dentro del mismo live; cada hermana registra su propio Despacho con la misma dirección.
+
+**Lo que se acepta a cambio:**
+
+- El resumen al finalizar ya no cuenta despachos, retiros ni ferias.
+- Las entregas agrupadas de antes siguen en la base; si una clienta cambia su entrega, sale del grupo como antes.
+- Con `ddl-auto: update` la columna vieja queda en la tabla. En una base existente hay que quitarla a mano una vez, con los servicios detenidos:
+
+```sql
+ALTER TABLE livesmanage_lives.linea DROP COLUMN bolsa_revisada;
+```
+
+## D-48 · Agregar prendas desde el lápiz en el cierre
+
+Pedido el 17/11/2026 al probar D-47: en el cierre, el lápiz abría directo "Cambiar clienta", y la tienda necesita seguir sumando prendas a una clienta que pide algo más mientras se arman las bolsas o se cobra.
+
+- **Pantalla:** en el cierre, el lápiz abre el panel de D-41: "Agregar prendas" con el cursor y, debajo, "Cambiar clienta".
+- **Regla (`ms-lives` y servicio simulado):** con el live En cierre, `POST /api/lives/{id}/anotaciones` solo acepta una clienta que ya tiene línea en ese live. Una clienta sin línea o nueva responde 409 con "En el cierre solo se agregan prendas a una clienta que ya está en la hoja.". Con el live Cerrado sigue sin poder anotarse.
+- **Pago:** una línea Pagada vuelve a Pendiente al sumar prendas (D-20), así que hay que volver a cobrarla antes de finalizar.
+
+**Alternativa descartada:** reabrir la anotación rápida en el cierre. Permitiría crear clientas y líneas nuevas después del live, y el cuaderno no lo hacía.
+
+**Lo que se acepta a cambio:** en el cierre no hay aviso con Deshacer; una prenda agregada por error se cancela con un toque (RF-06).

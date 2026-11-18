@@ -12,6 +12,7 @@
 | 02/11/2026 | 2.2 | Maxi | RF-05: el lápiz de una línea permite agregar prendas escribiendo solo los precios. |
 | 03/11/2026 | 2.3 | Maxi | Despliegue: AWS deja de ser obligatorio y el alojamiento queda por definir. |
 | 05/11/2026 | 2.4 | Maxi | Se descarta RF-15 (importar cuaderno desde foto), con RNF-04, RNF-10 y UAT-05, y se quita `ms-importacion` de la arquitectura. |
+| 17/11/2026 | 2.5 | Maxi | RF-06 y RF-09 (D-48): en el cierre, el lápiz de una línea también agrega prendas. RF-09 a RF-11 y RF-13 (D-47): el cierre ya no revisa bolsas ni pide la entrega; las bolsas (cantidad, En bodega o Entregada) y la forma de entrega se registran en la ficha de la clienta, también con el live Cerrado. Se quita la entrega agrupada. |
 
 ## 1. Introducción
 
@@ -34,7 +35,7 @@ Se compone de un frontend en React, usado principalmente desde el celular, y un 
 * Anotar compras durante el live con una sintaxis rápida (ej: "flo 6000 4000"), autocompletando la clienta o creándola, y sumando a su línea si ya tenía una.
 * Quitar prendas canceladas con un toque y recalcular los totales.
 * Registrar si cada clienta pagó, y mostrar siempre el total del live y el total pagado.
-* Guiar el cierre del live: revisión de bolsas, cobro y forma de entrega (despacho, retiro o feria), con la dirección cuando corresponda.
+* Guiar el cierre del live (cobro) y registrar en la ficha de cada clienta sus bolsas, si siguen en bodega o se entregaron, y la forma de entrega (despacho, retiro o feria), con la dirección cuando corresponda.
 * Mantener la ficha de cada clienta con su historial, total gastado, cancelaciones y no pagos, además de un ranking y la lista de clientas inactivas.
 
 **Lo que el sistema no hará:**
@@ -63,9 +64,8 @@ Se compone de un frontend en React, usado principalmente desde el celular, y un 
 | Prenda | Cada ítem anotado en una línea. Solo tiene precio; no tiene talla, descripción ni código. Puede estar Vigente o Cancelada. |
 | Sintaxis rápida | Formato de anotación: nombre seguido de los precios completos, separados por espacio o guion. Ej: "flo 6000 4000" son dos prendas de $6.000 y $4.000 para la clienta que coincide con "flo". |
 | Estado de pago | Estado de una línea: Pendiente, Pagado o No pagó. Reemplaza el destacado rosado del cuaderno. |
-| Bolsa | Bolsa física donde se juntan las prendas de cada clienta durante el live; en el cierre se revisa contra su línea. |
+| Bolsa | Bolsa física donde se juntan las prendas de cada clienta. Por cada compra se registra cuántas se armaron y si siguen en bodega o se entregaron (D-47). |
 | Forma de entrega | Cómo recibe la clienta sus prendas: Despacho a domicilio, Retiro o Entrega en feria. |
-| Entrega agrupada | Varias clientas de un mismo live que reciben juntas en una misma dirección (ej: hermanas). Cada una conserva su línea y su total. |
 | Total del live | Suma de las prendas vigentes de todas las líneas de la sesión. El total pagado suma solo las líneas Pagadas. |
 | Clienta inactiva | Clienta con al menos una compra y sin compras en los últimos N días (60 por defecto). |
 | UAT | Pruebas de aceptación de usuario: la tienda valida el sistema en escenarios reales. |
@@ -95,7 +95,7 @@ LivesManage reemplaza un proceso manual en papel y no se integra con otro softwa
 | Si cancela, se tacha la prenda y se corrige el total. | Sumas y correcciones a mano, propensas a error. | Quitar la prenda con un toque y recálculo automático (RF-06). |
 | Las clientas que pagaron se destacan en rosado. | No se ve de un vistazo cuánto falta por cobrar. | Estado de pago, total pagado y pendiente siempre visibles (RF-07, RF-08). |
 | Al final se suma el total del live. | Suma manual al terminar. | Total del live calculado en todo momento (RF-08). |
-| Cierre: revisar bolsas, sacar el total, cobrar y preguntar la forma de entrega. | Se hace a mano, sin registro del cobro ni de las direcciones. | Pantalla de cierre guiada (RF-09 a RF-11). |
+| Cierre: revisar bolsas, sacar el total, cobrar y preguntar la forma de entrega. | Se hace a mano, sin registro del cobro ni de las direcciones. | Pantalla de cierre para cobrar (RF-09 a RF-11); bolsas y entrega en la ficha de cada clienta (RF-10). |
 | Solo se anota nombre y precio. | No se sabe quién compra más, quién cancela o quién no paga. | Ficha, ranking y clientas inactivas (RF-12 a RF-14). |
 
 **Arquitectura:** cliente-servidor con frontend React (SPA) y backend de microservicios Spring Boot. El frontend solo se comunica con el API Gateway, que valida el JWT y enruta cada petición. Son tres microservicios, cada uno con su propia base MySQL: autenticación y usuarios, lives (sesiones, líneas, prendas, pagos y entregas) y clientas (fichas, direcciones y estadísticas).
@@ -117,7 +117,7 @@ flowchart LR
 | Acceso y usuarios | Inicio y cierre de sesión, control por rol y gestión de usuarios. | RF-01 a RF-03 |
 | Sesiones de live | Abrir un live y consultar los anteriores con sus totales. | RF-04 |
 | Pantalla de live | Anotación rápida con la sintaxis del cuaderno, corrección de líneas, estado de pago y totales siempre visibles. | RF-05 a RF-08 |
-| Cierre del live | Revisión de bolsas, cobro, forma de entrega y dirección, y cierre de la sesión. | RF-09 a RF-11 |
+| Cierre del live | Cobro y cierre de la sesión; bolsas, forma de entrega y dirección en la ficha de la clienta. | RF-09 a RF-11 |
 | Clientas | Ficha con historial, total gastado, cancelaciones y no pagos; ranking y clientas inactivas. | RF-12 a RF-14 |
 
 ### 2.3. Características de los usuarios
@@ -203,7 +203,7 @@ Son 15 requisitos en seis módulos. Actores: **Admin** (administrador) y **Vende
 
 #### 3.2.2. Sesiones de live
 
-Estados de una sesión: **Abierta** (se anotan compras), **En cierre** (el live terminó: se revisan bolsas, se cobra y se define la entrega) y **Cerrada** (solo lectura).
+Estados de una sesión: **Abierta** (se anotan compras), **En cierre** (el live terminó: se cobra) y **Cerrada** (solo lectura, salvo bolsas y entrega, que se registran en la ficha de la clienta, D-47).
 
 | **ID** | **Requisito** | **Actor** | **Descripción** | **Prioridad** |
 | --- | --- | --- | --- | --- |
@@ -214,7 +214,7 @@ Estados de una sesión: **Abierta** (se anotan compras), **En cierre** (el live 
 | **ID** | **Requisito** | **Actor** | **Descripción** | **Prioridad** |
 | --- | --- | --- | --- | --- |
 | RF-05 | Anotar compra con sintaxis rápida | Ambos | Ver detalle abajo. | Esencial |
-| RF-06 | Corregir línea | Ambos | Un toque sobre una prenda la marca Cancelada (se ve tachada, no se borra) y recalcula los totales; otro toque la restaura. También permite cambiar la clienta de la línea si se eligió mal; si la nueva clienta ya tenía línea en el live, ambas se unen. Disponible mientras la sesión no esté Cerrada. | Esencial |
+| RF-06 | Corregir línea | Ambos | Un toque sobre una prenda la marca Cancelada (se ve tachada, no se borra) y recalcula los totales; otro toque la restaura. También permite cambiar la clienta de la línea si se eligió mal; si la nueva clienta ya tenía línea en el live, ambas se unen. Disponible mientras la sesión no esté Cerrada. En el cierre, el lápiz de la línea también agrega prendas escribiendo solo los precios (D-48). | Esencial |
 | RF-07 | Marcar estado de pago | Ambos | Con un toque la línea pasa de Pendiente a Pagado, o vuelve a Pendiente. Las líneas pagadas se destacan con color, como el rosado del cuaderno. Se registra fecha, hora y usuario del cambio. | Esencial |
 | RF-08 | Ver hoja y totales del live | Ambos | Muestra cada línea con su clienta, sus precios y su total (ej: "Gabriela Peña 6.000 6.000 5.000 = $17.000"), con la última modificada arriba y búsqueda por nombre. El total del live, el total pagado, lo pendiente por cobrar y el número de clientas quedan siempre visibles y se actualizan tras cada anotación, corrección o pago, sin recargar la página. | Esencial |
 
@@ -240,25 +240,24 @@ Validaciones y errores:
 
 | **ID** | **Requisito** | **Actor** | **Descripción** | **Prioridad** |
 | --- | --- | --- | --- | --- |
-| RF-09 | Terminar live y revisar bolsas | Ambos | Pasa la sesión de Abierta a En cierre (ya no se usa la anotación rápida) y muestra la pantalla de cierre con un check de bolsa revisada por clienta y el avance (ej: 12 de 18). Si una bolsa no cuadra con su línea, se corrige con RF-06. | Esencial |
-| RF-10 | Registrar forma de entrega | Ambos | Por cada clienta se elige Despacho, Retiro o Feria. Si es Despacho, se confirma la dirección de su ficha o se ingresa una nueva, que queda guardada. Varias clientas del mismo live pueden agruparse en una entrega a una misma dirección (ej: hermanas); cada una conserva su línea y su total. | Esencial |
+| RF-09 | Terminar live | Ambos | Pasa la sesión de Abierta a En cierre (ya no se usa la anotación rápida, pero el lápiz de una línea sigue agregando prendas, D-48) y muestra la pantalla de cierre, donde se cobra (RF-07) y se corrigen las líneas (RF-06). Las bolsas no se revisan aquí: se registran en la ficha de la clienta (RF-10, D-47). | Esencial |
+| RF-10 | Registrar bolsas y forma de entrega | Ambos | En la ficha de la clienta, por cada compra de un live En cierre o Cerrado: cuántas bolsas se armaron, si siguen En bodega o fueron Entregadas, y la forma de entrega (Despacho, Retiro o Feria). Si es Despacho, se usa la dirección de su ficha o se ingresa una nueva, que queda guardada. La lista de clientas se puede filtrar por "Con bolsas en bodega" (D-47). | Esencial |
 | RF-11 | Finalizar cierre | Ambos (reabrir: Admin) | Ver detalle abajo. | Esencial |
 
 **Flujo de cierre (RF-09 a RF-11)**
 
 1. Al terminar la transmisión, el usuario elige "Terminar live" y confirma; la sesión pasa a En cierre. Desde ese momento se puede abrir un live nuevo.
-2. Revisa cada bolsa contra su línea y la marca como revisada; si no cuadra, corrige la línea (RF-06).
+2. Si una línea no cuadra, la corrige (RF-06).
 3. Cobra a cada clienta: la pantalla muestra el monto de cada una y, al recibir el pago, la línea se marca Pagada (RF-07). El total pagado y lo pendiente se ven siempre.
-4. Registra la forma de entrega de cada clienta y la dirección si es despacho (RF-10).
-5. Elige "Finalizar cierre". El sistema muestra un resumen: total del live, total pagado, total sin pagar y cantidad de despachos, retiros y entregas en feria.
+4. Elige "Finalizar cierre". El sistema muestra un resumen: total del live, total pagado y total sin pagar.
+5. Bolsas y forma de entrega se registran después, en la ficha de cada clienta, aunque la sesión ya esté Cerrada (RF-10, D-47).
 6. Al confirmar, la sesión pasa a Cerrada y sus datos alimentan las estadísticas de las clientas.
 
 Validaciones y errores:
 
-* No se puede finalizar si hay bolsas sin revisar.
 * Las líneas que siguen Pendientes se listan y deben marcarse como No pagó para poder finalizar; si se espera su pago, la sesión puede quedar En cierre los días que haga falta.
-* Toda línea Pagada debe tener forma de entrega, y dirección si es despacho.
-* Una sesión Cerrada es de solo lectura; solo el administrador puede reabrirla (vuelve a En cierre).
+* Bolsas y forma de entrega no se exigen para finalizar (D-47).
+* Una sesión Cerrada es de solo lectura, salvo bolsas y entrega; solo el administrador puede reabrirla (vuelve a En cierre).
 
 #### 3.2.5. Clientas
 
@@ -267,7 +266,7 @@ Las estadísticas de una clienta se calculan con sus líneas de lives Cerrados: 
 | **ID** | **Requisito** | **Actor** | **Descripción** | **Prioridad** |
 | --- | --- | --- | --- | --- |
 | RF-12 | Registrar y buscar clientas | Ambos (desactivar: Admin) | Datos: nombre (obligatorio), usuario de TikTok, teléfono y dirección de despacho. Solo el nombre es obligatorio porque la clienta suele crearse desde la anotación rápida; el resto se completa después. Avisa si el usuario de TikTok o el teléfono ya existen. Búsqueda por nombre, usuario de TikTok o teléfono. El administrador puede desactivarla (baja lógica; conserva su historial). | Esencial |
-| RF-13 | Ver ficha de la clienta | Ambos | Datos de contacto, dirección e historial por live (fecha, prendas, total, estado de pago y forma de entrega). Indicadores: total gastado, número de compras, ticket promedio, última compra, prendas canceladas y lives sin pago. | Esencial |
+| RF-13 | Ver ficha de la clienta | Ambos | Datos de contacto, dirección e historial por live (fecha, prendas, total, estado de pago, forma de entrega y bolsas, D-47). Indicadores: total gastado, número de compras, ticket promedio, última compra, prendas canceladas y lives sin pago. | Esencial |
 | RF-14 | Ranking y clientas inactivas | Ambos (configurar días: Admin) | Ranking por total gastado o por número de compras en un rango de fechas. Lista de clientas inactivas con días sin comprar, usuario de TikTok y teléfono para contactarlas. El administrador configura los días de inactividad (60 por defecto). | Esencial |
 
 #### 3.2.6. Importar cuaderno (descartada)
@@ -360,9 +359,9 @@ Cada RF tiene un criterio de aceptación verificable. El criterio se automatiza 
 | RF-06 | Quitar una prenda de $6.000 baja la línea y el total del live en $6.000; restaurarla los repone. | Cálculo de totales (JUnit) | E2E-06 | UAT-02 |
 | RF-07 | Marcar Pagada una línea de $17.000 la destaca y sube el total pagado en $17.000. | LineaService (JUnit) | E2E-07 | UAT-02 |
 | RF-08 | Tras cada acción, el total del live es igual a la suma de las líneas visibles. | Componente de totales (Vitest) | E2E-08 | UAT-02 |
-| RF-09 | Al terminar el live desaparece el campo de anotación y el avance cuenta las bolsas revisadas. | SesionService (JUnit) | E2E-09 | UAT-03 |
-| RF-10 | Despacho exige dirección; una dirección nueva queda en la ficha; dos clientas agrupadas comparten dirección. | EntregaService (JUnit) | E2E-10 | UAT-03 |
-| RF-11 | No se puede finalizar con bolsas sin revisar o líneas Pendientes; al finalizar, el live queda de solo lectura. | Reglas de cierre (JUnit) | E2E-11 | UAT-03 |
+| RF-09 | Al terminar el live desaparece el campo de anotación y el cierre no pide bolsas. | SesionService (JUnit) | E2E-09 | UAT-03 |
+| RF-10 | En la ficha, Despacho exige dirección y una nueva queda guardada; con el live Cerrado, las bolsas quedan En bodega, salen en el filtro y se marcan Entregadas. | LiveService (JUnit) | E2E-10 | UAT-03 |
+| RF-11 | No se puede finalizar con líneas Pendientes; al finalizar, el live queda de solo lectura. | Reglas de cierre (JUnit) | E2E-11 | UAT-03 |
 | RF-12 | Crear una clienta con un usuario de TikTok ya registrado muestra aviso de duplicado. | ClientaService (JUnit) | E2E-12 | UAT-04 |
 | RF-13 | El total gastado de la ficha es igual a la suma de sus líneas Pagadas en lives cerrados. | Cálculo de estadísticas (JUnit) | E2E-13 | UAT-04 |
 | RF-14 | Una clienta sin compras hace 61 días aparece como inactiva; el ranking ordena por total gastado. | Consultas de ranking e inactividad (JUnit) | E2E-14 | UAT-04 |
@@ -372,7 +371,7 @@ Cada RF tiene un criterio de aceptación verificable. El criterio se automatiza 
 
 * **UAT-01 Acceso:** la administradora crea el usuario de la persona que anota y esta inicia sesión en su celular.
 * **UAT-02 Live simulado:** la persona que anota registra en el sistema las compras de un live anterior (desde la grabación o el cuaderno). Se acepta si los totales coinciden con el cuaderno y anotar no le toma más tiempo que escribir a mano.
-* **UAT-03 Cierre:** se revisan las bolsas, se cobra y se registra la entrega de ese live hasta cerrarlo.
+* **UAT-03 Cierre:** se cobra ese live hasta cerrarlo, y en la ficha de cada clienta se registran sus bolsas y su entrega.
 * **UAT-04 Clientas:** la tienda revisa fichas, ranking e inactivas y confirma que reflejan lo que conoce de sus clientas.
 
 ## Pendientes por confirmar

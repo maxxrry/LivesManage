@@ -1,8 +1,9 @@
 package cl.livesmanage.lives.controller;
 
-import cl.livesmanage.lives.dto.AgruparEntrega;
+import cl.livesmanage.lives.dto.BolsasEnBodega;
 import cl.livesmanage.lives.dto.CambioNoPago;
 import cl.livesmanage.lives.dto.CompraClienta;
+import cl.livesmanage.lives.dto.DatosBolsas;
 import cl.livesmanage.lives.dto.DatosEntrega;
 import cl.livesmanage.lives.dto.Destino;
 import cl.livesmanage.lives.dto.EntregaDto;
@@ -105,22 +106,17 @@ public class LiveController {
         return ResponseEntity.ok(servicio.terminar(id));
     }
 
-    @Operation(summary = "Marcar o desmarcar la bolsa revisada (RF-09)", description = "Solo En cierre.")
-    @PatchMapping("/{id}/lineas/{lineaId}/bolsa")
-    public ResponseEntity<LineaDto> alternarBolsa(@PathVariable String id, @PathVariable String lineaId) {
-        return ResponseEntity.ok(servicio.alternarBolsa(id, lineaId));
+    @Operation(summary = "Bolsas de la clienta y si ya se entregaron (D-47)", description = "En cierre o Cerrado.")
+    @PutMapping("/{id}/lineas/{lineaId}/bolsas")
+    public ResponseEntity<LineaDto> registrarBolsas(@PathVariable String id, @PathVariable String lineaId, @Valid @RequestBody DatosBolsas datos) {
+        return ResponseEntity.ok(servicio.registrarBolsas(id, lineaId, datos));
     }
 
-    @Operation(summary = "Registrar la forma de entrega (RF-10)", description = "Despacho exige dirección, que queda en la ficha de la clienta.")
+    @Operation(summary = "Registrar la forma de entrega (RF-10, D-47)",
+            description = "En cierre o Cerrado. Despacho exige dirección, que queda en la ficha de la clienta.")
     @PutMapping("/{id}/lineas/{lineaId}/entrega")
     public ResponseEntity<EntregaDto> registrarEntrega(@PathVariable String id, @PathVariable String lineaId, @Valid @RequestBody DatosEntrega datos) {
         return ResponseEntity.ok(servicio.registrarEntrega(id, lineaId, datos));
-    }
-
-    @Operation(summary = "Enviar junto con el despacho de otra clienta del live (RF-10)")
-    @PatchMapping("/{id}/lineas/{lineaId}/entrega")
-    public ResponseEntity<EntregaDto> agruparEntrega(@PathVariable String id, @PathVariable String lineaId, @Valid @RequestBody AgruparEntrega datos) {
-        return ResponseEntity.ok(servicio.agruparEntrega(id, lineaId, datos.entregaId()));
     }
 
     @Operation(summary = "Marcar No pagó o volver a Pendiente (RF-11)", description = "Solo En cierre y sobre líneas no Pagadas.")
@@ -130,7 +126,7 @@ public class LiveController {
         return ResponseEntity.ok(servicio.marcarNoPago(id, lineaId, datos.noPago(), jwt.getSubject()));
     }
 
-    @Operation(summary = "Finalizar el cierre (RF-11)", description = "409 con lo que falta: bolsas, líneas Pendientes o entregas.")
+    @Operation(summary = "Finalizar el cierre (RF-11)", description = "409 si quedan líneas Pendientes.")
     @PostMapping("/{id}/finalizar")
     public ResponseEntity<SesionDto> finalizar(@PathVariable String id) {
         return ResponseEntity.ok(servicio.finalizar(id));
@@ -157,6 +153,12 @@ public class LiveController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
         return ResponseEntity.ok(servicio.comprasPorClienta(desde, hasta));
+    }
+
+    @Operation(summary = "Clientas con bolsas en bodega (D-47)")
+    @GetMapping("/en-bodega")
+    public ResponseEntity<List<BolsasEnBodega>> bolsasEnBodega() {
+        return ResponseEntity.ok(servicio.bolsasEnBodega());
     }
 
     @Operation(summary = "Igualar el nombre de la clienta en sus líneas al de su ficha (lo llama ms-clientas al editarla, D-28)")

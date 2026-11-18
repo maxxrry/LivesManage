@@ -23,7 +23,7 @@ describe('anotar (RF-05)', () => {
   it('crea clienta y línea Pendiente para una clienta nueva', async () => {
     const { linea } = await anotar('s-2', { nuevaClienta: 'ana' }, [5000]);
 
-    expect(linea).toMatchObject({ clientaNombre: 'ana', estadoPago: 'PENDIENTE', bolsaRevisada: false });
+    expect(linea).toMatchObject({ clientaNombre: 'ana', estadoPago: 'PENDIENTE', bolsas: 0, entregada: false });
     expect(precios(linea)).toEqual([5000]);
     expect((await listarClientas()).map((c) => c.nombre)).toContain('ana');
   });

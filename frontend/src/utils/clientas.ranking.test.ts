@@ -30,7 +30,7 @@ function compra(
       clientaNombre: '',
       prendas: [{ id: `p-${id}`, precio: miles * 1000, estado: 'VIGENTE' }],
       estadoPago: pago,
-      bolsaRevisada: true,
+      bolsas: 1, entregada: true,
       actualizada: `${dia}T21:00:00-03:00`,
     },
   };

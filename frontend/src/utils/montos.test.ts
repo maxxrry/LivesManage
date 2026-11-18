@@ -35,7 +35,7 @@ describe('totalesDeLineas (RF-08, D-23)', () => {
     clientaNombre: 'X',
     prendas,
     estadoPago,
-    bolsaRevisada: false,
+    bolsas: 0, entregada: false,
     actualizada: '2026-10-02T20:00:00-03:00',
   });
 

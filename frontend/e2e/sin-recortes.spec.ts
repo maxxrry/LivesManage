@@ -63,14 +63,21 @@ const PANTALLAS: [string, (page: Page) => Promise<unknown>][] = [
     },
   ],
   [
-    'Cierre con el formulario de despacho y el resumen',
+    'Cierre con el resumen',
     async (page) => {
       await liveConNombreLargo(page);
       await page.getByRole('button', { name: 'Terminar live' }).click();
       await page.getByRole('group', { name: 'Confirmar término' }).getByRole('button', { name: 'Terminar' }).click();
       await expect(page).toHaveURL(/\/cierre$/);
-      await page.getByRole('group', { name: 'Entrega de Gabriela Peña' }).getByRole('button', { name: 'Despacho' }).click();
       await page.getByRole('button', { name: 'Finalizar cierre' }).click();
+    },
+  ],
+  [
+    'Ficha con bolsas y el formulario de despacho (D-47)',
+    async (page) => {
+      await page.goto('/clientas/c-1'); // Gabriela, sin dirección: Despacho abre el formulario
+      await page.getByRole('group', { name: 'Bolsas y entrega del live 24/09/2026' }).getByRole('button', { name: 'Despacho' }).click();
+      await expect(page.getByRole('textbox', { name: 'Calle y número' })).toBeVisible();
     },
   ],
   ['Clientas', (page) => page.goto('/clientas')],

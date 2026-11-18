@@ -1,6 +1,7 @@
 package cl.livesmanage.lives.repository;
 
 import cl.livesmanage.lives.model.Linea;
+import cl.livesmanage.lives.dto.BolsasEnBodega;
 import cl.livesmanage.lives.dto.ResumenCompras;
 import java.time.Instant;
 import java.util.List;
@@ -47,6 +48,15 @@ public interface LineaRepository extends JpaRepository<Linea, String> {
             group by l.clientaId
             """)
     List<ResumenCompras> comprasPorClienta(@Param("desde") Instant desde, @Param("hasta") Instant hasta);
+
+    /** D-47: clientas con bolsas armadas que todavía no se entregan. */
+    @Query("""
+            select new cl.livesmanage.lives.dto.BolsasEnBodega(l.clientaId, sum(l.bolsas))
+            from Linea l
+            where l.bolsas > 0 and l.entregada = false
+            group by l.clientaId
+            """)
+    List<BolsasEnBodega> bolsasEnBodega();
 
     /** D-28: al renombrar una clienta se actualiza la copia del nombre en todas sus líneas, también en lives Cerrados. */
     @Modifying

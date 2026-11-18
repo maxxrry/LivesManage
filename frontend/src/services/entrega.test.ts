@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { obtenerClienta } from './clientasService';
-import { agruparEntrega, cambiarClienta, obtenerSesion, registrarEntrega, terminarSesion } from './sesionesService';
+import { cambiarClienta, obtenerSesion, registrarEntrega, terminarSesion } from './sesionesService';
 
 // Datos simulados: s-2 Abierto con l-4 Gabriela (c-1, sin dirección), l-5 Florencia (c-2),
 // l-6 Javiera (c-3, con dirección en Maipú y entrega e-2 Retiro). s-1 Cerrado.
@@ -75,64 +75,9 @@ describe('registrarEntrega (RF-10)', () => {
     expect((await entregaDe('l-6'))?.direccion).toBeUndefined();
   });
 
-  it('solo se registra con el live En cierre', async () => {
-    await expect(registrarEntrega('s-2', 'l-4', { tipo: 'RETIRO' })).rejects.toThrow('cierre');
-    await expect(registrarEntrega('s-1', 'l-3', { tipo: 'RETIRO' })).rejects.toThrow();
-  });
-});
-
-describe('agruparEntrega (RF-10)', () => {
-  it('dos clientas agrupadas comparten la entrega y la dirección; cada una conserva su línea y su total', async () => {
-    await terminarSesion('s-2');
-    await registrarEntrega('s-2', 'l-6', { tipo: 'DESPACHO', direccion: MAIPU });
-    const { lineas: antes } = await detalle();
-
-    await agruparEntrega('s-2', 'l-4', 'e-2');
-
-    const { lineas } = await detalle();
-    expect(lineas.find((l) => l.id === 'l-4')?.entregaId).toBe('e-2');
-    expect((await entregaDe('l-4'))?.direccion).toEqual(MAIPU);
-    expect(lineas.find((l) => l.id === 'l-4')?.prendas).toEqual(antes.find((l) => l.id === 'l-4')?.prendas);
-    expect(lineas.find((l) => l.id === 'l-6')?.prendas).toEqual(antes.find((l) => l.id === 'l-6')?.prendas);
-  });
-
-  it('agrupar no cambia la ficha de la clienta que se suma', async () => {
-    await terminarSesion('s-2');
-    await registrarEntrega('s-2', 'l-6', { tipo: 'DESPACHO', direccion: MAIPU });
-
-    await agruparEntrega('s-2', 'l-4', 'e-2');
-
-    expect((await obtenerClienta('c-1'))?.direccion).toBeUndefined();
-  });
-
-  it('la entrega que queda sin líneas se elimina', async () => {
-    await terminarSesion('s-2');
-    await registrarEntrega('s-2', 'l-4', { tipo: 'RETIRO' });
-    const propia = (await entregaDe('l-4'))!.id;
-    await registrarEntrega('s-2', 'l-6', { tipo: 'DESPACHO', direccion: MAIPU });
-
-    await agruparEntrega('s-2', 'l-4', 'e-2');
-
-    expect((await detalle()).entregas.map((e) => e.id)).not.toContain(propia);
-  });
-
-  it('cambiar la forma de una clienta agrupada la saca del grupo sin cambiar a las demás (D-26)', async () => {
-    await terminarSesion('s-2');
-    await registrarEntrega('s-2', 'l-6', { tipo: 'DESPACHO', direccion: MAIPU });
-    await agruparEntrega('s-2', 'l-4', 'e-2');
-
-    await registrarEntrega('s-2', 'l-4', { tipo: 'RETIRO' });
-
-    expect(await entregaDe('l-4')).toMatchObject({ tipo: 'RETIRO' });
-    expect((await entregaDe('l-4'))?.id).not.toBe('e-2');
-    expect(await entregaDe('l-6')).toMatchObject({ id: 'e-2', tipo: 'DESPACHO', direccion: MAIPU });
-  });
-
-  it('solo se agrupa a un despacho del mismo live', async () => {
-    await terminarSesion('s-2');
-
-    await expect(agruparEntrega('s-2', 'l-4', 'e-2')).rejects.toThrow('despacho');
-    await expect(agruparEntrega('s-2', 'l-4', 'e-1')).rejects.toThrow('Entrega no encontrada');
+  it('se registra desde que termina el live, también con el live Cerrado (D-47)', async () => {
+    await expect(registrarEntrega('s-2', 'l-4', { tipo: 'RETIRO' })).rejects.toThrow('cuando termina el live');
+    await expect(registrarEntrega('s-1', 'l-3', { tipo: 'FERIA' })).resolves.toMatchObject({ tipo: 'FERIA' });
   });
 });
 

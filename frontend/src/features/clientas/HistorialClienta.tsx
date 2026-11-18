@@ -1,11 +1,13 @@
-import { Fragment } from 'react';
+import { Fragment, useState } from 'react';
 import { Link } from 'react-router';
-import type { CompraClienta, Linea } from '../../types/dominio';
-import { ETIQUETAS_ESTADO_PAGO, ETIQUETAS_ESTADO_SESION, ETIQUETAS_TIPO_ENTREGA } from '../../types/etiquetas';
+import { registrarBolsas, registrarEntrega } from '../../services/sesionesService';
+import type { CompraClienta, Direccion, Linea } from '../../types/dominio';
+import { ETIQUETAS_BOLSAS, ETIQUETAS_ESTADO_PAGO, ETIQUETAS_ESTADO_SESION, ETIQUETAS_TIPO_ENTREGA } from '../../types/etiquetas';
 import type { IndicadoresClienta } from '../../utils/clientas';
 import { formatearFecha } from '../../utils/fechas';
 import { formatearClp, formatearPrecio, totalLinea } from '../../utils/montos';
 import { nombreSesion, rutaDeSesion } from '../../utils/sesion';
+import { EntregaLinea } from './EntregaLinea';
 
 /** "6.000 6.000 5.000"; las canceladas tachadas. */
 function Prendas({ linea }: { linea: Linea }) {
@@ -49,6 +51,96 @@ function Live({ compra }: { compra: CompraClienta }) {
 
 const entregaDe = (c: CompraClienta) => (c.entrega ? ETIQUETAS_TIPO_ENTREGA[c.entrega.tipo] : '—');
 
+interface CambiosCompra {
+  clientaNombre: string;
+  direccionFicha?: Direccion;
+  /** Recarga el historial; con `ficha`, también los datos de la clienta (un Despacho puede guardar su dirección). */
+  onCambio: (ficha: boolean) => Promise<void>;
+}
+
+/** D-47: bolsas, si siguen en bodega y forma de entrega de una compra. Desde que termina el live, también Cerrado. */
+function BolsasYEntrega({ compra, clientaNombre, direccionFicha, onCambio }: { compra: CompraClienta } & CambiosCompra) {
+  const { sesion, linea } = compra;
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError] = useState('');
+  if (sesion.estado === 'ABIERTA') return null;
+
+  /** Recarga después de guardar; si falla, avisa sin decir que no se guardó (evita que se repita el toque). */
+  async function recargar(ficha: boolean) {
+    try {
+      await onCambio(ficha);
+    } catch {
+      setError('Se guardó, pero no se pudo actualizar la pantalla. Recarga la página.');
+    }
+  }
+
+  async function guardarBolsas(bolsas: number, entregada: boolean) {
+    setError('');
+    setEnviando(true);
+    try {
+      await registrarBolsas(sesion.id, linea.id, { bolsas, entregada });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudieron guardar las bolsas.');
+      setEnviando(false);
+      return;
+    }
+    await recargar(false);
+    setEnviando(false);
+  }
+
+  const fecha = formatearFecha(sesion.inicio);
+  const boton = 'min-h-11 min-w-11 rounded-md border border-gray-300 bg-white px-3 text-sm font-semibold hover:border-gray-500 disabled:opacity-50';
+  return (
+    <div role="group" aria-label={`Bolsas y entrega del live ${fecha}`} className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm text-gray-600">Bolsas</span>
+        <button type="button" aria-label="Quitar una bolsa" disabled={enviando || linea.bolsas === 0}
+          onClick={() => void guardarBolsas(linea.bolsas - 1, linea.entregada)} className={boton}>
+          −
+        </button>
+        <output aria-label="Bolsas" className="w-6 text-center font-semibold tabular-nums">{linea.bolsas}</output>
+        <button type="button" aria-label="Agregar una bolsa" disabled={enviando || linea.bolsas >= 99}
+          onClick={() => void guardarBolsas(linea.bolsas + 1, linea.entregada)} className={boton}>
+          +
+        </button>
+        <div className="flex min-w-48 flex-1 gap-1">
+          {[false, true].map((entregada) => (
+            <button
+              key={String(entregada)}
+              type="button"
+              aria-pressed={linea.bolsas > 0 && linea.entregada === entregada}
+              disabled={enviando || linea.bolsas === 0}
+              onClick={() => void guardarBolsas(linea.bolsas, entregada)}
+              className={`min-h-11 flex-1 rounded-md border px-2 text-sm font-semibold disabled:opacity-50 ${
+                linea.bolsas > 0 && linea.entregada === entregada
+                  ? 'border-gray-900 bg-gray-900 text-white'
+                  : 'border-gray-300 bg-white text-gray-700 hover:border-gray-500'
+              }`}
+            >
+              {entregada ? ETIQUETAS_BOLSAS.entregada : ETIQUETAS_BOLSAS.enBodega}
+            </button>
+          ))}
+        </div>
+      </div>
+      <EntregaLinea
+        clientaNombre={`${clientaNombre} (${fecha})`}
+        entrega={compra.entrega}
+        direccionFicha={direccionFicha}
+        onRegistrar={async (datos) => {
+          await registrarEntrega(sesion.id, linea.id, datos); // si falla, EntregaLinea muestra el error y conserva lo escrito
+          setError('');
+          await recargar(datos.tipo === 'DESPACHO');
+        }}
+      />
+      {error && (
+        <p role="alert" className="text-sm text-red-700">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
 /** RF-13: indicadores de la ficha. */
 export function IndicadoresFicha({ indicadores: ind }: { indicadores: IndicadoresClienta }) {
   const indicadores = [
@@ -76,8 +168,8 @@ export function IndicadoresFicha({ indicadores: ind }: { indicadores: Indicadore
   );
 }
 
-/** RF-13: historial por live de la ficha. */
-export function HistorialClienta({ historial }: { historial: CompraClienta[] }) {
+/** RF-13: historial por live de la ficha, con bolsas y entrega de cada compra (D-47). */
+export function HistorialClienta({ historial, ...cambios }: { historial: CompraClienta[] } & CambiosCompra) {
   return (
     <>
       <section aria-labelledby="titulo-historial" className="space-y-2">
@@ -99,13 +191,22 @@ export function HistorialClienta({ historial }: { historial: CompraClienta[] }) 
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {historial.map((c) => (
-                  <tr key={c.linea.id}>
-                    <td className="px-3 py-3"><Live compra={c} /></td>
-                    <td className="px-3 py-3 tabular-nums"><Prendas linea={c.linea} /></td>
-                    <td className="px-3 py-3 text-right font-semibold tabular-nums">{formatearClp(totalLinea(c.linea.prendas))}</td>
-                    <td className="px-3 py-3"><Pago linea={c.linea} /></td>
-                    <td className="px-3 py-3 text-gray-700">{entregaDe(c)}</td>
-                  </tr>
+                  <Fragment key={c.linea.id}>
+                    <tr>
+                      <td className="px-3 py-3"><Live compra={c} /></td>
+                      <td className="px-3 py-3 tabular-nums"><Prendas linea={c.linea} /></td>
+                      <td className="px-3 py-3 text-right font-semibold tabular-nums">{formatearClp(totalLinea(c.linea.prendas))}</td>
+                      <td className="px-3 py-3"><Pago linea={c.linea} /></td>
+                      <td className="px-3 py-3 text-gray-700">{entregaDe(c)}</td>
+                    </tr>
+                    {c.sesion.estado !== 'ABIERTA' && (
+                      <tr>
+                        <td colSpan={5} className="px-3 pb-3">
+                          <BolsasYEntrega compra={c} {...cambios} />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
@@ -123,6 +224,11 @@ export function HistorialClienta({ historial }: { historial: CompraClienta[] }) 
                     <Pago linea={c.linea} />
                     <span className="text-gray-700">Entrega: {entregaDe(c)}</span>
                   </div>
+                  {c.sesion.estado !== 'ABIERTA' && (
+                    <div className="mt-2 border-t border-gray-100 pt-2">
+                      <BolsasYEntrega compra={c} {...cambios} />
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

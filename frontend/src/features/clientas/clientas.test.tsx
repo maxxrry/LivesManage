@@ -5,12 +5,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { rutas } from '../../app/router';
 import { clientas, lineas, sesiones, usuarios } from '../../services/mock/datos';
 import { indicadoresClienta } from '../../services/clientasService';
-import { historialDeClienta } from '../../services/sesionesService';
+import { bolsasEnBodega, historialDeClienta } from '../../services/sesionesService';
 
 // El historial real, salvo en el test que simula una falla.
 vi.mock('../../services/sesionesService', async (original) => {
   const real = await original<typeof import('../../services/sesionesService')>();
-  return { ...real, historialDeClienta: vi.fn(real.historialDeClienta) };
+  return { ...real, historialDeClienta: vi.fn(real.historialDeClienta), bolsasEnBodega: vi.fn(real.bolsasEnBodega) };
 });
 
 vi.mock('../../services/clientasService', async (original) => {
@@ -108,6 +108,27 @@ describe('Clientas (RF-12)', () => {
     expect(await nombresEnLista()).not.toContain('Camila Rojas');
     await usuario.click(screen.getByRole('checkbox', { name: 'Mostrar desactivadas' }));
     expect(await nombresEnLista()).toContain('Camila Rojas');
+  });
+
+  it('"Con bolsas en bodega" muestra solo a quienes tienen bolsas sin entregar (D-47)', async () => {
+    Object.assign(lineas.find((l) => l.id === 'l-1')!, { bolsas: 2, entregada: false }); // Javiera, live Cerrado
+    const { usuario } = abrir('/clientas');
+    const lista = await screen.findByRole('list', { name: 'Lista de clientas' });
+    expect(await within(lista).findByText('2 bolsas en bodega')).toBeInTheDocument();
+
+    await usuario.click(screen.getByRole('checkbox', { name: 'Con bolsas en bodega' }));
+
+    expect((await nombresEnLista()).map((n) => n?.replace(/\d+ bolsas? en bodega/, ''))).toEqual(['Javiera Soto']);
+  });
+
+  it('si no cargan las bolsas en bodega, la lista se muestra igual y sin el filtro (D-47)', async () => {
+    vi.mocked(bolsasEnBodega).mockRejectedValueOnce(new Error('No se pudo conectar con el servidor.'));
+    abrir('/clientas');
+
+    expect(await nombresEnLista()).toContain('Javiera Soto');
+    expect(await screen.findByText('No se pudieron cargar las bolsas en bodega.')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'Con bolsas en bodega' })).not.toBeInTheDocument();
   });
 });
 

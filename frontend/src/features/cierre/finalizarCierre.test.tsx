@@ -11,10 +11,9 @@ function abrir(ruta: string) {
   return { usuario: userEvent.setup(), router };
 }
 
-/** s-2 En cierre con todo listo salvo las líneas Pendientes, que quedan como estén. */
-function cierreConBolsasYEntregas() {
+/** s-2 En cierre; las líneas Pendientes quedan como estén. */
+function enCierre() {
   sesiones.find((s) => s.id === 's-2')!.estado = 'EN_CIERRE';
-  for (const l of lineas.filter((l) => l.sesionId === 's-2')) l.bolsaRevisada = true;
 }
 
 describe('Finalizar cierre (RF-11)', () => {
@@ -27,14 +26,13 @@ describe('Finalizar cierre (RF-11)', () => {
     const resumen = screen.getByTestId('resumen-cierre');
     expect(resumen).toHaveTextContent('Total del live$58.000');
     expect(resumen).toHaveTextContent('Pagado$13.000');
-    expect(resumen).toHaveTextContent('Retiro1'); // Javiera pagó con Retiro
-    expect(screen.getByText(/Revisar 5 bolsas/)).toBeInTheDocument();
+    expect(screen.queryByText(/bolsa/i)).not.toBeInTheDocument(); // D-47: las bolsas van en la ficha
     expect(within(screen.getByRole('list', { name: 'Líneas pendientes' })).getAllByRole('listitem')).toHaveLength(4);
     expect(screen.getByRole('button', { name: 'Cerrar el live' })).toBeDisabled();
   });
 
   it('marcar No pagó a las Pendientes habilita cerrar; al cerrar queda de solo lectura', async () => {
-    cierreConBolsasYEntregas();
+    enCierre();
     const { usuario, router } = abrir('/lives/s-2/cierre');
     await usuario.click(await screen.findByRole('button', { name: 'Finalizar cierre' }));
 
@@ -51,7 +49,7 @@ describe('Finalizar cierre (RF-11)', () => {
   });
 
   it('Deshacer devuelve una línea No pagó a Pendiente', async () => {
-    cierreConBolsasYEntregas();
+    enCierre();
     lineas.find((l) => l.id === 'l-4')!.estadoPago = 'NO_PAGO';
     const { usuario } = abrir('/lives/s-2/cierre');
 

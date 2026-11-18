@@ -11,7 +11,7 @@ function abrir(ruta: string) {
   return { usuario: userEvent.setup(), router };
 }
 
-describe('Terminar live y revisar bolsas (RF-09)', () => {
+describe('Terminar live y cierre (RF-09, D-47)', () => {
   it('terminar pide confirmación; al confirmar desaparece la anotación y se abre el cierre', async () => {
     const { usuario, router } = abrir('/lives/s-2');
 
@@ -36,21 +36,14 @@ describe('Terminar live y revisar bolsas (RF-09)', () => {
     expect(sesiones.find((s) => s.id === 's-2')!.estado).toBe('ABIERTA');
   });
 
-  it('el avance cuenta las bolsas revisadas', async () => {
+  it('el cierre ya no pide bolsas ni entrega: se registran en la ficha (D-47)', async () => {
     sesiones.find((s) => s.id === 's-2')!.estado = 'EN_CIERRE';
-    const { usuario } = abrir('/lives/s-2/cierre');
+    abrir('/lives/s-2/cierre');
 
-    expect(await screen.findByTestId('avance-bolsas')).toHaveTextContent('0 de 5');
-
-    await usuario.click(screen.getByRole('checkbox', { name: 'Bolsa revisada: Gabriela Peña' }));
-    await usuario.click(screen.getByRole('checkbox', { name: 'Bolsa revisada: Florencia Ruiz' }));
-
-    expect(await screen.findByText('2 de 5')).toBeInTheDocument();
-    expect(screen.getByRole('checkbox', { name: 'Bolsa revisada: Gabriela Peña' })).toBeChecked();
-    expect(screen.getByRole('progressbar', { name: 'Avance de bolsas revisadas' })).toHaveAttribute('value', '2');
-
-    await usuario.click(screen.getByRole('checkbox', { name: 'Bolsa revisada: Gabriela Peña' }));
-    expect(await screen.findByText('1 de 5')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Cierre: Live martes' })).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: /Bolsa/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: /Entrega de/ })).not.toBeInTheDocument();
   });
 
   it('en el cierre se puede corregir una línea y marcar el pago', async () => {

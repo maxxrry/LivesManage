@@ -5,45 +5,26 @@ import { TIPOS_ENTREGA, type Direccion, type Entrega } from '../../types/dominio
 import { ETIQUETAS_TIPO_ENTREGA } from '../../types/etiquetas';
 import { DIRECCION_VACIA as VACIA, textoDireccion } from '../../utils/clientas';
 
-/** Un despacho del live al que se puede sumar la clienta (ej: su hermana). */
-export interface DespachoAgrupable {
-  entregaId: string;
-  nombres: string[];
-  direccion?: Direccion;
-}
-
 interface EntregaLineaProps {
   clientaNombre: string;
   entrega?: Entrega;
-  /** Otras clientas que comparten esta entrega. */
-  junto: string[];
   direccionFicha?: Direccion;
-  despachos: DespachoAgrupable[];
   onRegistrar: (datos: DatosEntrega) => Promise<void>;
-  onAgrupar: (entregaId: string) => Promise<void>;
 }
 
 /**
- * RF-10: forma de entrega de una clienta en el cierre. Retiro y Feria se registran con un toque;
- * Despacho pide confirmar la dirección de la ficha, ingresar otra o enviar junto con otra clienta.
+ * RF-10: forma de entrega de una compra, en la ficha de la clienta (D-47). Retiro y Feria se registran con un toque;
+ * Despacho usa la dirección de la ficha o pide otra, que queda en la ficha.
  */
-export function EntregaLinea({
-  clientaNombre,
-  entrega,
-  junto,
-  direccionFicha,
-  despachos,
-  onRegistrar,
-  onAgrupar,
-}: EntregaLineaProps) {
+export function EntregaLinea({ clientaNombre, entrega, direccionFicha, onRegistrar }: EntregaLineaProps) {
   const [eligiendoDespacho, setEligiendoDespacho] = useState(false);
   const [formulario, setFormulario] = useState(false);
   const [direccion, setDireccion] = useState<Direccion>(VACIA);
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
 
-  // Sin dirección en la ficha ni despachos para agrupar, el formulario es la única opción.
-  const soloFormulario = !direccionFicha && despachos.length === 0;
+  // Sin dirección en la ficha, el formulario es la única opción.
+  const soloFormulario = !direccionFicha;
 
   async function guardar(accion: () => Promise<void>) {
     setError('');
@@ -66,7 +47,7 @@ export function EntregaLinea({
   }
 
   return (
-    <div role="group" aria-label={`Entrega de ${clientaNombre}`} className="mt-2 border-t border-gray-100 pt-2">
+    <div role="group" aria-label={`Entrega de ${clientaNombre}`}>
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm text-gray-600">Entrega</span>
         <div className="flex flex-1 gap-1">
@@ -102,7 +83,7 @@ export function EntregaLinea({
       {entrega?.tipo === 'DESPACHO' && entrega.direccion && !eligiendoDespacho && (
         <p className="mt-1 text-sm text-gray-700">
           {textoDireccion(entrega.direccion)}
-          {junto.length > 0 && <span className="text-gray-500"> · junto con {junto.join(', ')}</span>}{' '}
+{' '}
           <button
             type="button"
             onClick={() => {
@@ -131,18 +112,6 @@ export function EntregaLinea({
                   <span className="text-gray-600">{textoDireccion(direccionFicha)}</span>
                 </button>
               )}
-              {despachos.map((d) => (
-                <button
-                  key={d.entregaId}
-                  type="button"
-                  disabled={enviando}
-                  onClick={() => void guardar(() => onAgrupar(d.entregaId))}
-                  className="flex min-h-11 w-full flex-col items-start justify-center rounded-md border border-gray-300 bg-white px-3 py-1 text-left text-sm hover:border-marca-600 disabled:opacity-50"
-                >
-                  <span className="font-semibold">Enviar junto con {d.nombres.join(', ')}</span>
-                  {d.direccion && <span className="text-gray-600">{textoDireccion(d.direccion)}</span>}
-                </button>
-              ))}
               <div className="flex gap-2">
                 <button
                   type="button"

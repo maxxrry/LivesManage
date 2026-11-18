@@ -75,8 +75,10 @@ export interface Linea {
   prendas: Prenda[];
   estadoPago: EstadoPago;
   pagoActualizado?: CambioPago;
-  /** Check de bolsa revisada en el cierre (RF-09). */
-  bolsaRevisada: boolean;
+  /** Bolsas armadas para la clienta; se registran en su ficha (D-47). */
+  bolsas: number;
+  /** false: las bolsas siguen en bodega; true: ya se entregaron (D-47). */
+  entregada: boolean;
   /** Única referencia entre línea y entrega (D-05). */
   entregaId?: string;
   /** Última modificación; la hoja se ordena por este campo (RF-08). */

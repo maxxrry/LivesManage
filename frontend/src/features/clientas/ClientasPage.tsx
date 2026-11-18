@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Pantalla } from '../../components/Pantalla';
 import { crearClienta, listarClientas } from '../../services/clientasService';
+import { bolsasEnBodega } from '../../services/sesionesService';
 import type { Clienta } from '../../types/dominio';
 import { buscarClientas } from '../../utils/clientas';
 import { FormularioClienta } from './FormularioClienta';
@@ -10,13 +11,24 @@ export const Desactivada = () => (
   <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-700">Desactivada</span>
 );
 
-/** RF-12: buscar clientas por nombre, usuario de TikTok o teléfono, y registrar una nueva. */
+/** D-47: bolsas de la clienta que siguen en bodega. */
+const EnBodega = ({ bolsas }: { bolsas?: number }) =>
+  bolsas ? (
+    <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
+      {bolsas} {bolsas === 1 ? 'bolsa' : 'bolsas'} en bodega
+    </span>
+  ) : null;
+
+/** RF-12: buscar clientas por nombre, usuario de TikTok o teléfono, y registrar una nueva. D-47: filtro de bolsas en bodega. */
 export function ClientasPage() {
   const navigate = useNavigate();
   const [clientas, setClientas] = useState<Clienta[] | null>(null);
   const [error, setError] = useState('');
   const [busqueda, setBusqueda] = useState('');
   const [verDesactivadas, setVerDesactivadas] = useState(false);
+  const [bodega, setBodega] = useState<Map<string, number>>(new Map());
+  const [sinBodega, setSinBodega] = useState(false); // ms-lives no respondió: la lista sirve igual, sin el filtro
+  const [soloEnBodega, setSoloEnBodega] = useState(false);
   const [creando, setCreando] = useState(false);
 
   useEffect(() => {
@@ -25,12 +37,19 @@ export function ClientasPage() {
       (todas) => vigente && setClientas(todas),
       (e: Error) => vigente && setError(e.message),
     );
+    bolsasEnBodega().then(
+      (lista) => vigente && setBodega(new Map(lista.map((b) => [b.clientaId, b.bolsas]))),
+      () => vigente && setSinBodega(true),
+    );
     return () => {
       vigente = false;
     };
   }, []);
 
-  const visibles = buscarClientas(busqueda, (clientas ?? []).filter((c) => verDesactivadas || c.activa));
+  const visibles = buscarClientas(
+    busqueda,
+    (clientas ?? []).filter((c) => (verDesactivadas || c.activa) && (!soloEnBodega || bodega.has(c.id))),
+  );
 
   return (
     <Pantalla titulo="Clientas">
@@ -66,6 +85,19 @@ export function ClientasPage() {
               />
               Mostrar desactivadas
             </label>
+            {sinBodega ? (
+              <p className="text-sm text-gray-500">No se pudieron cargar las bolsas en bodega.</p>
+            ) : (
+              <label className="flex min-h-11 items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={soloEnBodega}
+                  onChange={(e) => setSoloEnBodega(e.target.checked)}
+                  className="size-5 accent-marca-600"
+                />
+                Con bolsas en bodega
+              </label>
+            )}
             <button
               type="button"
               onClick={() => setCreando(true)}
@@ -86,7 +118,11 @@ export function ClientasPage() {
           !error && <p className="text-sm text-gray-500">Cargando…</p>
         ) : visibles.length === 0 ? (
           <p role="status" className="text-sm text-gray-500">
-            {busqueda.trim() ? `Ninguna clienta coincide con "${busqueda.trim()}".` : 'Aún no hay clientas.'}
+            {busqueda.trim()
+              ? `Ninguna clienta coincide con "${busqueda.trim()}".`
+              : soloEnBodega
+                ? 'No hay bolsas en bodega.'
+                : 'Aún no hay clientas.'}
           </p>
         ) : (
           <>
@@ -107,7 +143,7 @@ export function ClientasPage() {
                       <Link to={`/clientas/${c.id}`} className="after:absolute after:inset-0 focus-visible:outline-none">
                         {c.nombre}
                       </Link>{' '}
-                      {!c.activa && <Desactivada />}
+                      {!c.activa && <Desactivada />} <EnBodega bolsas={bodega.get(c.id)} />
                     </td>
                     <td className="px-3 py-3 text-gray-700">{c.usuarioTiktok ?? '—'}</td>
                     <td className="px-3 py-3 text-gray-700 tabular-nums">{c.telefono ?? '—'}</td>
@@ -127,7 +163,10 @@ export function ClientasPage() {
                   >
                     <span className="flex items-center justify-between gap-2">
                       <span className="truncate font-medium">{c.nombre}</span>
-                      {!c.activa && <Desactivada />}
+                      <span className="flex gap-1">
+                        <EnBodega bolsas={bodega.get(c.id)} />
+                        {!c.activa && <Desactivada />}
+                      </span>
                     </span>
                     {(c.usuarioTiktok || c.telefono) && (
                       <span className="mt-0.5 block text-sm text-gray-600">

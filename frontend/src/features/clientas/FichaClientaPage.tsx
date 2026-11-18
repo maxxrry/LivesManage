@@ -193,7 +193,17 @@ function Ficha({ id }: { id: string }) {
             </p>
           </section>
         ) : historial ? (
-          <HistorialClienta historial={historial} />
+          <HistorialClienta
+            historial={historial}
+            clientaNombre={clienta.nombre}
+            direccionFicha={clienta.direccion}
+            onCambio={async (ficha) => {
+              // Un Despacho con otra dirección la guarda en la ficha (D-26); las bolsas no la cambian.
+              const [h, c] = await Promise.all([historialDeClienta(id), ficha ? obtenerClienta(id) : null]);
+              setHistorial(h);
+              if (c) setClienta(c);
+            }}
+          />
         ) : (
           <p className="text-sm text-gray-500">Cargando historial…</p>
         )}

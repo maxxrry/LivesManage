@@ -175,9 +175,9 @@ Cada E2E lleva la etiqueta de su requisito (`{ tag: '@RF-05' }`) y prueba su cri
 | RF-06 | Quitar una prenda de $6.000 baja la línea y el total en $6.000; restaurarla los repone. | `rf-06.spec.ts` | `corregir.test.ts`, `corregirLinea.test.tsx` |
 | RF-07 | Marcar Pagada una línea de $17.000 la destaca y sube el pagado en $17.000. | `rf-07.spec.ts` | `pago.test.ts`, `pagoLinea.test.tsx` |
 | RF-08 | El total del live es siempre la suma de las líneas visibles. | `rf-08.spec.ts` | `montos.test.ts`, `TotalesLive.test.tsx`, `hojaYTotales.test.tsx` |
-| RF-09 | Al terminar el live desaparece el campo de anotación y el avance cuenta las bolsas. | `rf-09.spec.ts` | `cierre.test.ts`, `CierrePage.test.tsx` |
-| RF-10 | Despacho exige dirección; una dirección nueva queda en la ficha; dos clientas agrupadas comparten dirección. | `rf-10.spec.ts` | `entrega.test.ts`, `entregaLinea.test.tsx` |
-| RF-11 | No se finaliza con bolsas sin revisar o líneas Pendientes; al finalizar queda de solo lectura. | `rf-11.spec.ts` | `utils/cierre.test.ts`, `services/cierre.test.ts`, `finalizarCierre.test.tsx` |
+| RF-09 | Al terminar el live desaparece el campo de anotación y el cierre no pide bolsas (D-47). | `rf-09.spec.ts` | `cierre.test.ts`, `CierrePage.test.tsx` |
+| RF-10 | En la ficha, Despacho exige dirección y una nueva queda guardada; las bolsas quedan En bodega o Entregadas, también con el live Cerrado (D-47). | `rf-10.spec.ts` | `entrega.test.ts`, `services/cierre.test.ts`, `bolsasYEntrega.test.tsx`, `clientas.test.tsx` |
+| RF-11 | No se finaliza con líneas Pendientes; al finalizar queda de solo lectura. | `rf-11.spec.ts` | `utils/cierre.test.ts`, `services/cierre.test.ts`, `finalizarCierre.test.tsx` |
 | RF-12 | Un usuario de TikTok ya registrado muestra aviso de duplicado. | `rf-12.spec.ts` | `utils/clientas.test.ts`, `services/clientas.test.ts`, `clientas.test.tsx` |
 | RF-13 | El total gastado es la suma de sus líneas Pagadas en lives cerrados. | `rf-13.spec.ts` | `clientas.indicadores.test.ts`, `sesiones.test.ts`, `clientas.test.tsx` |
 | RF-14 | Sin compras hace 61 días aparece como inactiva; el ranking ordena por total gastado. | `rf-14.spec.ts` | `clientas.ranking.test.ts`, `sesion.test.ts` (gráfico de lives, D-32), `fechas.test.ts`, `services/clientas.test.ts`, `estadisticas.test.tsx` |

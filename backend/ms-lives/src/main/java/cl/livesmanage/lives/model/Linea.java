@@ -59,8 +59,13 @@ public class Linea {
     @Column(name = "pago_usuario_id", length = 36)
     private String pagoUsuarioId;
 
-    @Column(name = "bolsa_revisada", nullable = false)
-    private boolean bolsaRevisada;
+    /** Bolsas armadas para la clienta; se registran en su ficha, también con el live Cerrado (D-47). */
+    @Column(nullable = false)
+    private int bolsas;
+
+    /** false: las bolsas siguen en bodega; true: ya se entregaron (D-47). */
+    @Column(nullable = false)
+    private boolean entregada;
 
     /** Única referencia entre línea y entrega (D-05). */
     @Column(name = "entrega_id", length = 36)

@@ -1,16 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { lineas, sesiones, usuarios } from './mock/datos';
+import { lineas, usuarios } from './mock/datos';
 import {
   abrirSesion,
-  alternarBolsa,
   alternarPago,
-  alternarPrenda,
   anotar,
+  bolsasEnBodega,
   finalizarCierre,
   marcarNoPago,
   obtenerSesion,
   reabrirSesion,
-  registrarEntrega,
+  registrarBolsas,
   terminarSesion,
 } from './sesionesService';
 
@@ -25,9 +24,11 @@ describe('terminarSesion (RF-09)', () => {
     expect((await obtenerSesion('s-2')).sesion.estado).toBe('EN_CIERRE');
   });
 
-  it('después de terminar ya no se puede anotar', async () => {
+  it('después de terminar solo se agregan prendas a una clienta que ya está en la hoja (D-48)', async () => {
     await terminarSesion('s-2');
-    await expect(anotar('s-2', { clientaId: 'c-2' }, [6000])).rejects.toThrow('no está abierto');
+    await expect(anotar('s-2', { clientaId: 'c-2' }, [6000])).resolves.toMatchObject({ linea: { clientaId: 'c-2' } });
+    await expect(anotar('s-2', { clientaId: 'c-6' }, [6000])).rejects.toThrow('ya está en la hoja');
+    await expect(anotar('s-2', { nuevaClienta: 'Ana' }, [6000])).rejects.toThrow('ya está en la hoja');
   });
 
   it('después de terminar se puede abrir un live nuevo', async () => {
@@ -42,34 +43,41 @@ describe('terminarSesion (RF-09)', () => {
   });
 });
 
-describe('alternarBolsa (RF-09)', () => {
-  it('marca y desmarca la bolsa revisada de una línea En cierre', async () => {
+describe('registrarBolsas (D-47)', () => {
+  it('guarda las bolsas y si se entregaron, En cierre y también con el live Cerrado', async () => {
     await terminarSesion('s-2');
+    expect(await registrarBolsas('s-2', 'l-4', { bolsas: 2, entregada: false })).toMatchObject({ bolsas: 2, entregada: false });
 
-    expect((await alternarBolsa('s-2', 'l-4')).bolsaRevisada).toBe(true);
-    expect((await alternarBolsa('s-2', 'l-4')).bolsaRevisada).toBe(false);
+    expect(await registrarBolsas('s-1', 'l-1', { bolsas: 1, entregada: true })).toMatchObject({ bolsas: 1, entregada: true });
   });
 
-  it('no se puede revisar bolsas con el live Abierto ni Cerrado (D-25)', async () => {
-    await expect(alternarBolsa('s-2', 'l-4')).rejects.toThrow('Las bolsas se revisan en el cierre');
-    await expect(alternarBolsa('s-1', 'l-1')).rejects.toThrow();
-    expect((await linea('l-4')).bolsaRevisada).toBe(false);
-  });
-
-  it('corregir una línea con la bolsa marcada no la desmarca (D-25)', async () => {
+  it('con el live Abierto no se registran, y las bolsas van de 0 a 99', async () => {
+    await expect(registrarBolsas('s-2', 'l-4', { bolsas: 1, entregada: false })).rejects.toThrow('cuando termina el live');
     await terminarSesion('s-2');
-    await alternarBolsa('s-2', 'l-4');
-
-    const corregida = await alternarPrenda('s-2', 'l-4', (await linea('l-4')).prendas[0]!.id);
-
-    expect(corregida.bolsaRevisada).toBe(true);
+    await expect(registrarBolsas('s-2', 'l-4', { bolsas: -1, entregada: false })).rejects.toThrow('0 a 99');
+    expect((await linea('l-4')).bolsas).toBe(0);
   });
 
   it('no reordena la hoja', async () => {
-    sesiones.find((s) => s.id === 's-2')!.estado = 'EN_CIERRE';
+    await terminarSesion('s-2');
     const antes = (await linea('l-4')).actualizada;
-    await alternarBolsa('s-2', 'l-4');
+    await registrarBolsas('s-2', 'l-4', { bolsas: 1, entregada: false });
     expect((await linea('l-4')).actualizada).toBe(antes);
+  });
+});
+
+describe('bolsasEnBodega (D-47)', () => {
+  it('suma por clienta las bolsas que no se han entregado', async () => {
+    await terminarSesion('s-2');
+    await registrarBolsas('s-2', 'l-4', { bolsas: 2, entregada: false });
+    await registrarBolsas('s-1', 'l-1', { bolsas: 1, entregada: false });
+    const l4 = await linea('l-4');
+    const delCerrado = (await obtenerSesion('s-1')).lineas.find((l) => l.id === 'l-1')!;
+
+    const enBodega = await bolsasEnBodega();
+
+    expect(enBodega).toContainEqual({ clientaId: l4.clientaId, bolsas: l4.clientaId === delCerrado.clientaId ? 3 : 2 });
+    expect(enBodega.every((b) => b.bolsas > 0)).toBe(true);
   });
 });
 
@@ -77,9 +85,7 @@ describe('alternarBolsa (RF-09)', () => {
 async function cierreListo() {
   await terminarSesion('s-2');
   for (const l of lineas.filter((l) => l.sesionId === 's-2')) {
-    l.bolsaRevisada = true;
     if (l.estadoPago === 'PENDIENTE') await alternarPago('s-2', l.id);
-    if (!l.entregaId) await registrarEntrega('s-2', l.id, { tipo: 'RETIRO' });
   }
 }
 
@@ -116,14 +122,6 @@ describe('finalizarCierre (RF-11)', () => {
     await expect(alternarPago('s-2', 'l-4')).rejects.toThrow('solo lectura');
   });
 
-  it('no finaliza con bolsas sin revisar', async () => {
-    await cierreListo();
-    await alternarBolsa('s-2', 'l-4');
-
-    await expect(finalizarCierre('s-2')).rejects.toThrow('bolsa');
-    expect((await obtenerSesion('s-2')).sesion.estado).toBe('EN_CIERRE');
-  });
-
   it('no finaliza con líneas Pendientes; marcadas No pagó, sí', async () => {
     await cierreListo();
     await alternarPago('s-2', 'l-4'); // vuelve a Pendiente
@@ -133,11 +131,10 @@ describe('finalizarCierre (RF-11)', () => {
     await expect(finalizarCierre('s-2')).resolves.toMatchObject({ estado: 'CERRADA' });
   });
 
-  it('no finaliza con una línea Pagada sin entrega', async () => {
+  it('finaliza sin bolsas ni entregas registradas (D-47)', async () => {
     await cierreListo();
-    lineas.find((l) => l.id === 'l-4')!.entregaId = undefined;
 
-    await expect(finalizarCierre('s-2')).rejects.toThrow('entrega');
+    await expect(finalizarCierre('s-2')).resolves.toMatchObject({ estado: 'CERRADA' });
   });
 
   it('solo se finaliza un live En cierre', async () => {

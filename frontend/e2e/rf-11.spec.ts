@@ -1,9 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// Criterio de aceptación de RF-11 (ERS 3.5): no se puede finalizar con bolsas sin revisar
-// o líneas Pendientes; al finalizar, el live queda de solo lectura.
+// Criterio de aceptación de RF-11 (ERS 3.5, D-47): no se puede finalizar con líneas Pendientes;
+// bolsas y entrega no se exigen. Al finalizar, el live queda de solo lectura.
 
-const CLIENTAS = ['Gabriela Peña', 'Florencia Ruiz', 'Javiera Soto', 'Camila Rojas', 'Antonia Muñoz'];
 const PENDIENTES = ['Gabriela Peña', 'Florencia Ruiz', 'Camila Rojas', 'Antonia Muñoz'];
 
 async function abrirCierre(page: Page) {
@@ -13,17 +12,13 @@ async function abrirCierre(page: Page) {
   await expect(page).toHaveURL(/\/cierre$/);
 }
 
-test('no se finaliza con bolsas sin revisar ni Pendientes; al finalizar queda de solo lectura', { tag: '@RF-11' }, async ({ page }) => {
+test('no se finaliza con Pendientes; al finalizar queda de solo lectura', { tag: '@RF-11' }, async ({ page }) => {
   await abrirCierre(page);
   await page.getByRole('button', { name: 'Finalizar cierre' }).click();
   const cerrar = page.getByRole('button', { name: 'Cerrar el live' });
 
-  await expect(page.getByText('Revisar 5 bolsas')).toBeVisible();
-  await expect(cerrar).toBeDisabled();
-
-  for (const nombre of CLIENTAS) await page.getByRole('checkbox', { name: `Bolsa revisada: ${nombre}` }).check();
-  await expect(page.getByText(/Revisar \d+ bolsa/)).toHaveCount(0);
-  await expect(cerrar).toBeDisabled(); // aún hay Pendientes
+  await expect(cerrar).toBeDisabled(); // hay Pendientes
+  await expect(page.getByText(/bolsa/i)).toHaveCount(0); // D-47: las bolsas van en la ficha
 
   for (const nombre of PENDIENTES) await page.getByRole('button', { name: `No pagó: ${nombre}` }).click();
   await expect(page.getByTestId('resumen-cierre')).toContainText('Sin pagar$45.000');

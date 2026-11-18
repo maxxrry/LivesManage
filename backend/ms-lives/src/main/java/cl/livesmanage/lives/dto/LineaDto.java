@@ -15,14 +15,15 @@ public record LineaDto(
         List<PrendaDto> prendas,
         EstadoPago estadoPago,
         CambioPagoDto pagoActualizado,
-        boolean bolsaRevisada,
+        int bolsas,
+        boolean entregada,
         String entregaId,
         String actualizada) {
 
     public static LineaDto de(Linea l) {
         CambioPagoDto pago = l.getPagoFecha() == null ? null : new CambioPagoDto(l.getPagoFecha().toString(), l.getPagoUsuarioId());
         return new LineaDto(l.getId(), l.getSesionId(), l.getClientaId(), l.getClientaNombre(),
-                l.getPrendas().stream().map(PrendaDto::de).toList(), l.getEstadoPago(), pago, l.isBolsaRevisada(),
+                l.getPrendas().stream().map(PrendaDto::de).toList(), l.getEstadoPago(), pago, l.getBolsas(), l.isEntregada(),
                 l.getEntregaId(), l.getActualizada().toString());
     }
 }

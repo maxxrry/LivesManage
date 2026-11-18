@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 import { rutas } from '../../app/router';
-import { sesiones } from '../../services/mock/datos';
+import { lineas, sesiones } from '../../services/mock/datos';
 import { anotar } from '../../services/sesionesService';
 
 vi.mock('../../services/sesionesService', async (original) => {
@@ -181,13 +181,15 @@ describe('Agregar prendas desde el lápiz (RF-05, D-41)', () => {
     expect(lapiz('Florencia Ruiz')).toHaveFocus();
   });
 
-  it('en el cierre el lápiz abre directo Cambiar clienta: ya no se anota (RF-09)', async () => {
+  it('en el cierre el lápiz también agrega prendas, y Cambiar clienta sigue en el panel (D-48)', async () => {
     sesiones.find((s) => s.id === 's-2')!.estado = 'EN_CIERRE';
     const usuario = await abrir('/lives/s-2/cierre');
 
-    await usuario.click(screen.getByRole('button', { name: 'Cambiar clienta de Florencia Ruiz' }));
+    await usuario.click(lapiz('Florencia Ruiz'));
+    expect(screen.getByRole('button', { name: 'Cambiar clienta' })).toBeInTheDocument();
+    await usuario.type(screen.getByRole('textbox', { name: 'Agregar prendas' }), '3000{Enter}');
 
-    expect(screen.getByRole('combobox', { name: 'Buscar la clienta correcta' })).toBeInTheDocument();
-    expect(screen.queryByRole('textbox', { name: 'Agregar prendas' })).not.toBeInTheDocument();
+    expect(await within(lineaDe('Florencia Ruiz')).findByRole('button', { name: 'Cancelar prenda de $3.000' })).toBeInTheDocument();
+    expect(lineas.find((l) => l.id === 'l-5')!.prendas.map((p) => p.precio)).toContain(3000);
   });
 });
