@@ -19,7 +19,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 /**
  * Contra la fuerza bruta: tras 10 inicios de sesión fallidos desde una misma IP en 15 minutos, responde 429 hasta que pase la ventana.
  * Solo cuentan los fallidos, para que varias vendedoras detrás del mismo Wi-Fi no se bloqueen entre ellas.
- * shortcut: contador en memoria y IP de la conexión; con más de una instancia o detrás de un proxy, pasar a un almacén compartido y X-Forwarded-For.
+ * La IP es la del cliente también detrás de Caddy: Tomcat la toma de X-Forwarded-For (server.forward-headers-strategy).
+ * shortcut: contador en memoria; con más de una instancia del gateway, pasar a un almacén compartido.
  */
 @Slf4j
 @Component

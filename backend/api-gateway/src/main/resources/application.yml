@@ -26,6 +26,8 @@ spring:
 
 server:
   port: ${PORT:8080}
+  # Detrás de Caddy, la IP real llega en X-Forwarded-For; Tomcat solo la acepta desde redes privadas (como la de Docker).
+  forward-headers-strategy: native
 
 livesmanage:
   jwt:

@@ -1,0 +1,23 @@
+# DOMINIO viene del .env (docker-compose.yml). Caddy pide y renueva solo el certificado HTTPS.
+{$DOMINIO} {
+	encode gzip
+
+	# La API va al gateway por la red interna de Docker; el gateway no se publica afuera.
+	handle /api/* {
+		reverse_proxy api-gateway:8080
+	}
+
+	# El resto es la app de React: cualquier ruta (/lives/123) carga index.html.
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}

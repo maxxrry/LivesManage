@@ -1,0 +1,100 @@
+# LivesManage en un servidor: MySQL, los cuatro servicios y Caddy (frontend + HTTPS). Guía: docs/despliegue.md
+# Solo Caddy se publica (puertos 80 y 443); MySQL y los servicios quedan en la red interna.
+
+x-java: &java
+  build:
+    context: ./backend
+  restart: unless-stopped
+  depends_on:
+    mysql:
+      condition: service_healthy
+
+x-entorno: &entorno
+  JWT_SECRET: ${JWT_SECRET:?falta JWT_SECRET en .env}
+  DB_USUARIO: livesmanage
+  DB_CONTRASENA: ${DB_CONTRASENA:?falta DB_CONTRASENA en .env}
+  JAVA_TOOL_OPTIONS: -Xmx300m
+  # En producción no se publica la documentación interactiva (está en docs/documentacion-api.pdf).
+  SPRINGDOC_API_DOCS_ENABLED: "false"
+  SPRINGDOC_SWAGGER_UI_ENABLED: "false"
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?falta MYSQL_ROOT_PASSWORD en .env}
+      MYSQL_USER: livesmanage
+      MYSQL_PASSWORD: ${DB_CONTRASENA}
+      TZ: America/Santiago
+    volumes:
+      - datos-mysql:/var/lib/mysql
+      - ./backend/mysql-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      retries: 12
+
+  ms-auth:
+    <<: *java
+    build:
+      context: ./backend
+      args: { SERVICIO: ms-auth }
+    environment:
+      <<: *entorno
+      DB_URL: jdbc:mysql://mysql:3306/livesmanage_auth
+      ADMIN_CORREO: ${ADMIN_CORREO:?falta ADMIN_CORREO en .env}
+      ADMIN_CONTRASENA: ${ADMIN_CONTRASENA:?falta ADMIN_CONTRASENA en .env}
+
+  ms-clientas:
+    <<: *java
+    build:
+      context: ./backend
+      args: { SERVICIO: ms-clientas }
+    environment:
+      <<: *entorno
+      DB_URL: jdbc:mysql://mysql:3306/livesmanage_clientas
+      LIVES_URL: http://ms-lives:8082
+
+  ms-lives:
+    <<: *java
+    build:
+      context: ./backend
+      args: { SERVICIO: ms-lives }
+    environment:
+      <<: *entorno
+      DB_URL: jdbc:mysql://mysql:3306/livesmanage_lives
+      CLIENTAS_URL: http://ms-clientas:8083
+
+  api-gateway:
+    build:
+      context: ./backend
+      args: { SERVICIO: api-gateway }
+    restart: unless-stopped
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      JAVA_TOOL_OPTIONS: -Xmx256m
+      AUTH_URL: http://ms-auth:8081
+      CLIENTAS_URL: http://ms-clientas:8083
+      LIVES_URL: http://ms-lives:8082
+      CORS_ORIGENES: https://${DOMINIO}
+    depends_on: [ms-auth, ms-clientas, ms-lives]
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: https://${DOMINIO:?falta DOMINIO en .env}
+    restart: unless-stopped
+    environment:
+      DOMINIO: ${DOMINIO}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - datos-caddy:/data
+    depends_on: [api-gateway]
+
+volumes:
+  datos-mysql:
+  datos-caddy:

@@ -80,6 +80,10 @@ cp .env.example .env     # completar los valores; el .env nunca se sube
 
 **Front con el backend real:** crear `frontend/.env.local` con `VITE_API_URL=http://localhost:8080` y levantar MySQL, los cuatro servicios (`ms-auth`, `ms-clientas`, `ms-lives`, `api-gateway`) y `npm run dev`. Todo se guarda en MySQL: usuarios, clientas, lives y cierres. Se entra con la Admin de `ADMIN_CORREO`. Sin ese archivo, el front funciona como antes, solo con datos simulados (los usuarios de prueba de arriba).
 
+## Despliegue
+
+Todo en un servidor con Docker Compose (MySQL, los cuatro servicios y Caddy con HTTPS): `cp .env.example .env`, completar los valores y `docker compose up -d --build`. Paso a paso para DigitalOcean en [docs/despliegue.md](docs/despliegue.md).
+
 ## Respaldos
 
 `scripts/respaldar.sh` guarda las tres bases en `respaldos/diario_aaaa-mm-dd_hhmm.sql` y conserva los últimos 7 días con respaldo. La carpeta no se sube a git porque tiene datos personales.

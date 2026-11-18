@@ -1,2 +1,4 @@
 # Respaldos de MySQL: tienen datos personales de las clientas
 respaldos/
+# Secretos del despliegue (docker-compose.yml)
+.env

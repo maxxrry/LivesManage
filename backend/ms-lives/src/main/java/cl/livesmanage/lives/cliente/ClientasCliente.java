@@ -33,7 +33,7 @@ public class ClientasCliente {
     public ClientasCliente(@Value("${livesmanage.clientas-url}") String url) {
         var tiempos = new SimpleClientHttpRequestFactory();
         tiempos.setConnectTimeout(Duration.ofSeconds(2));
-        tiempos.setReadTimeout(Duration.ofSeconds(5)); // que un servicio colgado no deje la pantalla esperando
+        tiempos.setReadTimeout(Duration.ofSeconds(15)); // la primera llamada tras arrancar tarda más de 5 s; uno colgado igual corta
         this.http = RestClient.builder().baseUrl(url).requestFactory(tiempos).build();
     }
 

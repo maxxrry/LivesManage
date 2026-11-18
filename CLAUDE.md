@@ -54,6 +54,8 @@ docs/pruebas.md        cómo se organizan y corren las pruebas del frontend
 docs/manual-usuario.md manual para la vendedora y la Admin (capturas en docs/manual/)
 docs/documentacion-api.md y .pdf  documentación de la API (desde docs/openapi/*.json)
 docs/uat-live-2026-11-05.md       resultados de la UAT
+docs/despliegue.md     despliegue en DigitalOcean con Docker Compose (docker-compose.yml, .env.example, backend/Dockerfile, frontend/Dockerfile y Caddyfile)
+docs/guion-video.md    guion del video de despliegue y presentación
 frontend/              React + Vite + TypeScript, Vitest, Playwright
 backend/
   api-gateway/         Spring Cloud Gateway, valida JWT       :8080
