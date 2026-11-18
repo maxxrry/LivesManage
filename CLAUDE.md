@@ -50,6 +50,9 @@ Proyecto del ramo Desarrollo FullStack 2 (Duoc UC) y para un cliente real.
 docs/ERS.md            requisitos (RF-01 a RF-14, RNF, matriz de trazabilidad)
 docs/decisiones.md     decisiones que precisan el ERS (D-01, D-02, ...)
 docs/pruebas.md        cómo se organizan y corren las pruebas del frontend
+docs/manual-usuario.md manual para la vendedora y la Admin (capturas en docs/manual/)
+docs/documentacion-api.md y .pdf  documentación de la API (desde docs/openapi/*.json)
+docs/uat-live-2026-11-05.md       resultados de la UAT
 frontend/              React + Vite + TypeScript, Vitest, Playwright
 backend/
   api-gateway/         Spring Cloud Gateway, valida JWT       :8080

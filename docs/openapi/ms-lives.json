@@ -1,0 +1,1138 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ms-lives",
+    "description": "Lives, líneas, prendas, pagos y entregas de LivesManage",
+    "version": "1"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8082",
+      "description": "Generated server url"
+    }
+  ],
+  "paths": {
+    "/api/lives/{id}/lineas/{lineaId}/no-pago": {
+      "put": {
+        "tags": [
+          "live-controller"
+        ],
+        "summary": "Marcar No pagó o volver a Pendiente (RF-11)",
+        "description": "Solo En cierre y sobre líneas no Pagadas.",
+        "operationId": "marcarNoPago",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lineaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CambioNoPago"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineaDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      }
+    },
+    "/api/lives/{id}/lineas/{lineaId}/entrega": {
+      "put": {
+        "tags": [
+          "live-controller"
+        ],
+        "summary": "Registrar la forma de entrega (RF-10, D-47)",
+        "description": "En cierre o Cerrado. Despacho exige dirección, que queda en la ficha de la clienta.",
+        "operationId": "registrarEntrega",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lineaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DatosEntrega"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntregaDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      }
+    },
+    "/api/lives/{id}/lineas/{lineaId}/bolsas": {
+      "put": {
+        "tags": [
+          "live-controller"
+        ],
+        "summary": "Bolsas de la clienta y si ya se entregaron (D-47)",
+        "description": "En cierre o Cerrado.",
+        "operationId": "registrarBolsas",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lineaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DatosBolsas"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineaDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      }
+    },
+    "/api/lives": {
+      "get": {
+        "tags": [
+          "live-controller"
+        ],
+        "summary": "Lives con sus totales, el más reciente primero (RF-04)",
+        "operationId": "listar",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SesionResumenDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "live-controller"
+        ],
+        "summary": "Abrir un live (RF-04)",
+        "description": "409 si ya hay uno Abierto.",
+        "operationId": "abrir",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NuevaSesion"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      }
+    },
+    "/api/lives/{id}/terminar": {
+      "post": {
+        "tags": [
+          "live-controller"
+        ],
+        "summary": "Terminar el live: pasa de Abierta a En cierre (RF-09)",
+        "operationId": "terminar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      }
+    },
+    "/api/lives/{id}/reabrir": {
+      "post": {
+        "tags": [
+          "live-controller"
+        ],
+        "summary": "Reabrir un live Cerrado (solo Admin, RF-11)",
+        "operationId": "reabrir",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      }
+    },
+    "/api/lives/{id}/finalizar": {
+      "post": {
+        "tags": [
+          "live-controller"
+        ],
+        "summary": "Finalizar el cierre (RF-11)",
+        "description": "409 si quedan líneas Pendientes.",
+        "operationId": "finalizar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      }
+    },
+    "/api/lives/{id}/anotaciones": {
+      "post": {
+        "tags": [
+          "live-controller"
+        ],
+        "summary": "Anotar una compra (RF-05)",
+        "description": "Suma a la línea de la clienta o la crea; con { nuevaClienta } también crea la clienta.",
+        "operationId": "anotar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NuevaAnotacion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultadoAnotar"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      }
+    },
+    "/api/lives/clientas/{clientaId}/sincronizar-nombre": {
+      "post": {
+        "tags": [
+          "live-controller"
+        ],
+        "summary": "Igualar el nombre de la clienta en sus líneas al de su ficha (lo llama ms-clientas al editarla, D-28)",
+        "operationId": "sincronizarNombre",
+        "parameters": [
+          {
+            "name": "clientaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      }
+    },
+    "/api/lives/{id}/lineas/{lineaId}/prendas/{prendaId}": {
+      "patch": {
+        "tags": [
+          "live-controller"
+        ],
+        "summary": "Cancelar o restaurar una prenda (RF-06)",
+        "operationId": "alternarPrenda",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lineaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "prendaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineaDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      }
+    },
+    "/api/lives/{id}/lineas/{lineaId}/pago": {
+      "patch": {
+        "tags": [
+          "live-controller"
+        ],
+        "summary": "Pasar la línea de Pendiente a Pagado o al revés (RF-07)",
+        "operationId": "alternarPago",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lineaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineaDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      }
+    },
+    "/api/lives/{id}/lineas/{lineaId}/clienta": {
+      "patch": {
+        "tags": [
+          "live-controller"
+        ],
+        "summary": "Cambiar la clienta de una línea; si ya tenía línea, se unen (RF-06, D-19)",
+        "operationId": "cambiarClienta",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lineaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Destino"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineaDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      }
+    },
+    "/api/lives/{id}": {
+      "get": {
+        "tags": [
+          "live-controller"
+        ],
+        "summary": "Un live con su hoja completa (RF-08)",
+        "operationId": "obtener",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionDetalleDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      }
+    },
+    "/api/lives/lineas": {
+      "get": {
+        "tags": [
+          "live-controller"
+        ],
+        "summary": "Líneas de una clienta con su live y su entrega, el live más reciente primero",
+        "operationId": "compras",
+        "parameters": [
+          {
+            "name": "clientaId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CompraClienta"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      }
+    },
+    "/api/lives/en-bodega": {
+      "get": {
+        "tags": [
+          "live-controller"
+        ],
+        "summary": "Clientas con bolsas en bodega (D-47)",
+        "operationId": "bolsasEnBodega",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BolsasEnBodega"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      }
+    },
+    "/api/lives/compras-por-clienta": {
+      "get": {
+        "tags": [
+          "live-controller"
+        ],
+        "summary": "Compras por clienta para el ranking y las inactivas (lo llama ms-clientas, D-42)",
+        "description": "Solo líneas Pagadas de más de $0 en lives Cerrados. Período en días de Chile (aaaa-mm-dd), opcional.",
+        "operationId": "comprasPorClienta",
+        "parameters": [
+          {
+            "name": "desde",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "hasta",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResumenCompras"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      }
+    },
+    "/api/lives/{id}/anotaciones/{anotacionId}": {
+      "delete": {
+        "tags": [
+          "live-controller"
+        ],
+        "summary": "Deshacer una anotación (D-11)",
+        "description": "409 si la línea cambió después (D-22) o el live ya no está Abierto.",
+        "operationId": "deshacer",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "anotacionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CambioNoPago": {
+        "type": "object",
+        "properties": {
+          "noPago": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "noPago"
+        ]
+      },
+      "CambioPagoDto": {
+        "type": "object",
+        "properties": {
+          "fecha": {
+            "type": "string"
+          },
+          "usuarioId": {
+            "type": "string"
+          }
+        }
+      },
+      "LineaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "sesionId": {
+            "type": "string"
+          },
+          "clientaId": {
+            "type": "string"
+          },
+          "clientaNombre": {
+            "type": "string"
+          },
+          "prendas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrendaDto"
+            }
+          },
+          "estadoPago": {
+            "type": "string",
+            "enum": [
+              "PENDIENTE",
+              "PAGADO",
+              "NO_PAGO"
+            ]
+          },
+          "pagoActualizado": {
+            "$ref": "#/components/schemas/CambioPagoDto"
+          },
+          "bolsas": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "entregada": {
+            "type": "boolean"
+          },
+          "entregaId": {
+            "type": "string"
+          },
+          "actualizada": {
+            "type": "string"
+          }
+        }
+      },
+      "PrendaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "precio": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "VIGENTE",
+              "CANCELADA"
+            ]
+          }
+        }
+      },
+      "DatosEntrega": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "DESPACHO",
+              "RETIRO",
+              "FERIA"
+            ]
+          },
+          "direccion": {
+            "$ref": "#/components/schemas/DireccionDto"
+          }
+        },
+        "required": [
+          "tipo"
+        ]
+      },
+      "DireccionDto": {
+        "type": "object",
+        "properties": {
+          "calle": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 0
+          },
+          "comuna": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 0
+          },
+          "region": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 0
+          },
+          "referencia": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "calle",
+          "comuna"
+        ]
+      },
+      "EntregaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "sesionId": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "DESPACHO",
+              "RETIRO",
+              "FERIA"
+            ]
+          },
+          "direccion": {
+            "$ref": "#/components/schemas/DireccionDto"
+          }
+        }
+      },
+      "DatosBolsas": {
+        "type": "object",
+        "properties": {
+          "bolsas": {
+            "type": "integer",
+            "format": "int32",
+            "maximum": 99,
+            "minimum": 0
+          },
+          "entregada": {
+            "type": "boolean"
+          }
+        }
+      },
+      "NuevaSesion": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 0
+          }
+        }
+      },
+      "SesionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "inicio": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "ABIERTA",
+              "EN_CIERRE",
+              "CERRADA"
+            ]
+          }
+        }
+      },
+      "Destino": {
+        "type": "object",
+        "properties": {
+          "clientaId": {
+            "type": "string",
+            "maxLength": 36,
+            "minLength": 0
+          },
+          "nuevaClienta": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 0
+          },
+          "unoSolo": {
+            "type": "boolean"
+          }
+        }
+      },
+      "NuevaAnotacion": {
+        "type": "object",
+        "properties": {
+          "destino": {
+            "$ref": "#/components/schemas/Destino"
+          },
+          "precios": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32",
+              "maximum": 999000,
+              "minimum": 1000
+            },
+            "maxItems": 50,
+            "minItems": 0
+          }
+        },
+        "required": [
+          "destino",
+          "precios"
+        ]
+      },
+      "ResultadoAnotar": {
+        "type": "object",
+        "properties": {
+          "anotacionId": {
+            "type": "string"
+          },
+          "linea": {
+            "$ref": "#/components/schemas/LineaDto"
+          }
+        }
+      },
+      "SesionResumenDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "inicio": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "ABIERTA",
+              "EN_CIERRE",
+              "CERRADA"
+            ]
+          },
+          "clientas": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPagado": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "SesionDetalleDto": {
+        "type": "object",
+        "properties": {
+          "sesion": {
+            "$ref": "#/components/schemas/SesionDto"
+          },
+          "lineas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineaDto"
+            }
+          },
+          "entregas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EntregaDto"
+            }
+          }
+        }
+      },
+      "CompraClienta": {
+        "type": "object",
+        "properties": {
+          "sesion": {
+            "$ref": "#/components/schemas/SesionDto"
+          },
+          "linea": {
+            "$ref": "#/components/schemas/LineaDto"
+          },
+          "entrega": {
+            "$ref": "#/components/schemas/EntregaDto"
+          }
+        }
+      },
+      "BolsasEnBodega": {
+        "type": "object",
+        "properties": {
+          "clientaId": {
+            "type": "string"
+          },
+          "bolsas": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "ResumenCompras": {
+        "type": "object",
+        "properties": {
+          "clientaId": {
+            "type": "string"
+          },
+          "totalGastado": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "compras": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "ultimaCompra": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "jwt": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}

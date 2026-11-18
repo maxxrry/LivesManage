@@ -1,0 +1,709 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ms-clientas",
+    "description": "Fichas de clientas de LivesManage",
+    "version": "1"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8083",
+      "description": "Generated server url"
+    }
+  ],
+  "paths": {
+    "/api/configuracion/dias-inactividad": {
+      "get": {
+        "tags": [
+          "clienta-controller"
+        ],
+        "summary": "Días sin comprar para que una clienta cuente como inactiva",
+        "operationId": "diasInactividad",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiasInactividad"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "clienta-controller"
+        ],
+        "summary": "Cambiar los días de inactividad (solo Admin, 1 a 365)",
+        "operationId": "cambiarDiasInactividad",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiasInactividad"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiasInactividad"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      }
+    },
+    "/api/clientas/{id}": {
+      "get": {
+        "tags": [
+          "clienta-controller"
+        ],
+        "summary": "Ficha de una clienta",
+        "operationId": "obtener",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientaDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "clienta-controller"
+        ],
+        "summary": "Editar una clienta; un campo vacío se borra",
+        "operationId": "editar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DatosClienta"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientaDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "clienta-controller"
+        ],
+        "summary": "Borrar una clienta recién creada (Deshacer de una anotación, D-11)",
+        "description": "409 si se creó hace más de 10 minutos: después, una clienta solo se desactiva.",
+        "operationId": "borrarRecienCreada",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      }
+    },
+    "/api/clientas/{id}/direccion": {
+      "put": {
+        "tags": [
+          "clienta-controller"
+        ],
+        "summary": "Guardar la dirección de un despacho en la ficha (RF-10; lo llama ms-lives)",
+        "operationId": "guardarDireccion",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DireccionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientaDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      }
+    },
+    "/api/clientas": {
+      "get": {
+        "tags": [
+          "clienta-controller"
+        ],
+        "summary": "Listar clientas (también las desactivadas), por nombre",
+        "operationId": "listar",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClientaDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "clienta-controller"
+        ],
+        "summary": "Registrar una clienta",
+        "operationId": "crear",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DatosClienta"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientaDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      }
+    },
+    "/api/clientas/{id}/activa": {
+      "patch": {
+        "tags": [
+          "clienta-controller"
+        ],
+        "summary": "Desactivar o reactivar (solo Admin)",
+        "operationId": "cambiarActiva",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CambioActiva"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientaDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      }
+    },
+    "/api/clientas/{id}/indicadores": {
+      "get": {
+        "tags": [
+          "estadisticas-controller"
+        ],
+        "summary": "Indicadores de la ficha",
+        "description": "Solo cuentan los lives Cerrados. Una compra es una línea Pagada de más de $0.",
+        "operationId": "indicadores",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndicadoresClienta"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      }
+    },
+    "/api/clientas/ranking": {
+      "get": {
+        "tags": [
+          "estadisticas-controller"
+        ],
+        "summary": "Ranking por total gastado o por compras",
+        "description": "Período en días de calendario de Chile (aaaa-mm-dd), con ambos extremos incluidos.",
+        "operationId": "ranking",
+        "parameters": [
+          {
+            "name": "criterio",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "TOTAL",
+                "COMPRAS"
+              ]
+            }
+          },
+          {
+            "name": "desde",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "hasta",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PosicionRanking"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      }
+    },
+    "/api/clientas/inactivas": {
+      "get": {
+        "tags": [
+          "estadisticas-controller"
+        ],
+        "summary": "Clientas activas sin comprar hace más de los días configurados",
+        "operationId": "inactivas",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClientaInactiva"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      }
+    },
+    "/api/clientas/duplicados": {
+      "get": {
+        "tags": [
+          "clienta-controller"
+        ],
+        "summary": "Otra clienta con el mismo usuario de TikTok o teléfono (avisa, no bloquea)",
+        "operationId": "duplicados",
+        "parameters": [
+          {
+            "name": "usuarioTiktok",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "telefono",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "excluirId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Duplicados"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "DiasInactividad": {
+        "type": "object",
+        "properties": {
+          "dias": {
+            "type": "integer",
+            "format": "int32",
+            "maximum": 365,
+            "minimum": 1
+          }
+        },
+        "required": [
+          "dias"
+        ]
+      },
+      "DatosClienta": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 0
+          },
+          "usuarioTiktok": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 0
+          },
+          "telefono": {
+            "type": "string",
+            "maxLength": 30,
+            "minLength": 0
+          },
+          "direccion": {
+            "$ref": "#/components/schemas/DireccionDto"
+          }
+        },
+        "required": [
+          "nombre"
+        ]
+      },
+      "DireccionDto": {
+        "type": "object",
+        "properties": {
+          "calle": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 0
+          },
+          "comuna": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 0
+          },
+          "region": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 0
+          },
+          "referencia": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "calle",
+          "comuna"
+        ]
+      },
+      "ClientaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "usuarioTiktok": {
+            "type": "string"
+          },
+          "telefono": {
+            "type": "string"
+          },
+          "direccion": {
+            "$ref": "#/components/schemas/DireccionDto"
+          },
+          "activa": {
+            "type": "boolean"
+          },
+          "ultimaCompra": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CambioActiva": {
+        "type": "object",
+        "properties": {
+          "activa": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "activa"
+        ]
+      },
+      "IndicadoresClienta": {
+        "type": "object",
+        "properties": {
+          "totalGastado": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "compras": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "ticketPromedio": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "ultimaCompra": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "prendasCanceladas": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "livesSinPago": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PosicionRanking": {
+        "type": "object",
+        "properties": {
+          "clienta": {
+            "$ref": "#/components/schemas/ClientaDto"
+          },
+          "totalGastado": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "compras": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "ClientaInactiva": {
+        "type": "object",
+        "properties": {
+          "clienta": {
+            "$ref": "#/components/schemas/ClientaDto"
+          },
+          "ultimaCompra": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "diasSinComprar": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "Duplicados": {
+        "type": "object",
+        "properties": {
+          "tiktok": {
+            "$ref": "#/components/schemas/ClientaDto"
+          },
+          "telefono": {
+            "$ref": "#/components/schemas/ClientaDto"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "jwt": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}
