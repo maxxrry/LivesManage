@@ -171,7 +171,7 @@ Cada E2E lleva la etiqueta de su requisito (`{ tag: '@RF-05' }`) y prueba su cri
 | --- | --- | --- | --- |
 | RF-01 | Con credenciales válidas entra; con inválidas ve un mensaje genérico; un usuario desactivado no entra. | `rf-01.spec.ts` | `usuarios.test.ts`, `LoginPage.test.tsx` |
 | RF-04 | Con un live Abierto no se puede abrir otro; la lista muestra los totales. | `rf-04.spec.ts` | `sesiones.test.ts`, `fechas.test.ts`, `LivesPage.test.tsx` |
-| RF-05 | "flo 6000 4000" suma $10.000 a Florencia; "ana 5000" crea clienta; "flo 6000-" y "flo 6 4" muestran error y conservan el texto; el lápiz agrega prendas sin escribir el nombre. | `rf-05.spec.ts` | `parseAnotacion.test.ts`, `sugerirClientas.test.ts`, `anotar.test.ts`, `LivePage.test.tsx`, `agregarPrendas.test.tsx` |
+| RF-05 | "flo 6000 4000" suma $10.000 a Florencia y "flo 6-6-5" le suma $17.000 (D-46); "ana 5000" crea clienta; "flo 6000-" y "flo 6 4" muestran error y conservan el texto; el lápiz agrega prendas sin escribir el nombre. | `rf-05.spec.ts` | `parseAnotacion.test.ts`, `sugerirClientas.test.ts`, `anotar.test.ts`, `LivePage.test.tsx`, `agregarPrendas.test.tsx` |
 | RF-06 | Quitar una prenda de $6.000 baja la línea y el total en $6.000; restaurarla los repone. | `rf-06.spec.ts` | `corregir.test.ts`, `corregirLinea.test.tsx` |
 | RF-07 | Marcar Pagada una línea de $17.000 la destaca y sube el pagado en $17.000. | `rf-07.spec.ts` | `pago.test.ts`, `pagoLinea.test.tsx` |
 | RF-08 | El total del live es siempre la suma de las líneas visibles. | `rf-08.spec.ts` | `montos.test.ts`, `TotalesLive.test.tsx`, `hojaYTotales.test.tsx` |

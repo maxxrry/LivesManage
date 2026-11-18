@@ -33,12 +33,13 @@ Proyecto del ramo Desarrollo FullStack 2 (Duoc UC) y para un cliente real.
 - Hecho: backend paso 5, `ms-lives` (:8082, base `livesmanage_lives`): RF-04 a RF-08 (`/api/lives`: listar con totales, abrir, detalle, anotar, deshacer, prenda, cambiar clienta con unión, pago). Un solo live Abierto garantizado por índice único; `Totales` igual a `totalesDeLineas`; anotación con clienta nueva vía `ClientasCliente` (RestClient, reenvía el JWT); Deshacer borra la clienta creada con `DELETE /api/clientas/{id}` (solo 10 min, D-37).
 - Hecho: backend paso 6. Cierre en `ms-lives` (terminar, bolsa, entrega con dirección a la ficha vía `PUT /api/clientas/{id}/direccion`, agrupar, No pagó, finalizar con `RevisionCierre`, reabrir solo Admin), historial `GET /api/lives/lineas` y renombrar (ms-clientas avisa a ms-lives tras confirmar). Front conectado: con `VITE_API_URL`, `sesionesService` y `clientasService` usan la API vía `pedirConSesion`; ranking e inactivas se calculan en el front con datos reales hasta el paso 7. Probado un live completo en Chromium contra MySQL (D-38).
 - Hecho: precios completos en la anotación y en pantalla ("flo 6000 4000", D-39), con `formatearPrecio` y validación de múltiplos de $100 en `ms-lives`. Costo de despacho, abonos y saldo a favor los lleva la dueña fuera del sistema (D-40).
+- Hecho: D-46. Precios en miles unidos con guion ("flo 6-6-5"), mezclables con completos; en el lápiz, con o sin guion. "flo 6 4" sin guion es error que sugiere "flo 6-4", salvo que exista la clienta "flo 6" (`parseAnotacion(texto, existeClienta)`).
 - Hecho: agregar prendas desde el lápiz de una línea, escribiendo solo los precios (`AgregarPrendas`, `parsePrecios`, D-41). Cambiar clienta queda en el mismo panel. En el cierre el lápiz también agrega prendas, solo a líneas que ya existen (D-48).
 - Hecho: backend paso 7. `ms-lives` entrega el resumen `GET /api/lives/compras-por-clienta`; `ms-clientas` calcula ranking e inactivas (`Estadisticas`, `EstadisticasService`), agrega `ultimaCompra` a la lista y no borra clientas con líneas. El front usa esas rutas con `VITE_API_URL` (D-42).
 - Hecho: backend paso 9, parte de pruebas (D-43). `npm run e2e:backend` recorre un live completo contra los servicios reales con H2 y puertos propios; JaCoCo con mínimo de 60 % en `service` (`./mvnw verify`); `e2e/sin-recortes.spec.ts` mide los bordes de cada pantalla (`overflow-x: hidden` esconde lo cortado).
 - Hecho: respaldos (RNF-19, D-44). `scripts/respaldar.sh` guarda las tres bases en `respaldos/` y conserva los últimos 7 días con respaldo; `scripts/programar-respaldo.ps1` crea la tarea diaria de Windows. Restauración comprobada en un MySQL desechable.
 - RF-15 (importar cuaderno desde foto) se descartó: no existen `ms-importacion` ni su pantalla (D-45).
-- Decisiones D-01 a D-48 en `docs/decisiones.md`.
+- Decisiones D-01 a D-48 en `docs/decisiones.md` (D-46, D-47 y D-48 del 17/11/2026).
 - Hecho: RF-13 en el backend. `ms-clientas` calcula los indicadores de la ficha en `GET /api/clientas/{id}/indicadores` (`Estadisticas.indicadores`, D-29, D-42).
 - Hecho: D-47. Bolsas y entrega salen del cierre: en la ficha (`HistorialClienta`, `BolsasYEntrega`, `EntregaLinea` en `features/clientas`) cada compra de un live En cierre o Cerrado tiene bolsas (− y +), En bodega o Entregada, y Despacho, Retiro o Feria. Filtro "Con bolsas en bodega" en Clientas (`GET /api/lives/en-bodega`). Finalizar el cierre solo exige que no queden Pendientes. Sin "Enviar junto con".
 - Siguiente: pruebas con la tienda (UAT) y despliegue (AWS no es obligatorio; alojamiento por decidir). Entrega del ramo: 22/11/2026.
@@ -86,7 +87,7 @@ bash scripts/respaldar.test.sh    # prueba del script, sin MySQL
 - **Sesión de live**: Abierta → En cierre → Cerrada. Solo una Abierta a la vez. Cerrada es solo lectura (solo Admin reabre), salvo bolsas y entrega, que se registran en la ficha de la clienta (D-47).
 - **Línea**: una por clienta por sesión. Anotar para una clienta que ya tiene línea suma a esa línea.
 - **Prenda**: solo tiene precio. Sin talla, descripción ni código. Estado Vigente o Cancelada; nunca se borra.
-- **Precios**: en la sintaxis van completos (`6000` o `6.000` = $6.000, D-39); en el sistema son CLP enteros (`int`/`long`, nunca `float`/`double`).
+- **Precios**: en la sintaxis van completos (`6000` o `6.000` = $6.000, D-39) o en miles unidos con guion (`6-4`, D-46); en el sistema son CLP enteros (`int`/`long`, nunca `float`/`double`).
 - **Totales**: siempre calculados desde las prendas vigentes. El backend es la fuente de verdad; nunca se guarda un total escrito a mano.
 - **Pago** (por línea): Pendiente, Pagado o No pagó. "No pagó" solo se asigna al finalizar el cierre.
 - **Entrega**: Despacho (exige dirección), Retiro o Feria, por línea y desde la ficha de la clienta. Ya no se agrupan entregas (D-47).
@@ -103,10 +104,12 @@ parseAnotacion("flo 6000 4000")    // { nombre: "flo", precios: [6000, 4000] }
 parseAnotacion("flo 6000-4000")    // igual: separa con espacio o guion
 parseAnotacion("flo 6.000 3.500")  // { nombre: "flo", precios: [6000, 3500] }
 parseAnotacion("Cami 2 6000")      // { nombre: "Cami 2", precios: [6000] }
-parseAnotacion("flo 6 4")          // { error: "..." } y la UI conserva el texto
+parseAnotacion("flo 6-6-5")        // { nombre: "flo", precios: [6000, 6000, 5000] } (D-46)
+parseAnotacion("Cami 2 6-6")       // { nombre: "Cami 2", precios: [6000, 6000] }
+parseAnotacion("flo 6 4")          // { error: '... ¿Quisiste decir "flo 6-4"?' } y la UI conserva el texto
 ```
 
-Precios: de $1.000 a $999.000, en múltiplos de $100. Un número menor a 1000 es parte del nombre.
+Precios: de $1.000 a $999.000, en múltiplos de $100. Un número menor a 1000 sin guion es parte del nombre; unido con guion, es un precio en miles.
 
 ## Frontend
 

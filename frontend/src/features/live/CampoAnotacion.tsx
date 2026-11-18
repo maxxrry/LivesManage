@@ -25,11 +25,14 @@ export function CampoAnotacion({ clientas, idsConLinea, onAnotar }: CampoAnotaci
   const idLista = useId();
   const idError = useId();
 
-  const opciones = opcionesPara(nombreEscrito(texto), clientas, idsConLinea);
+  // D-46: "flo 6 4" solo anota $4.000 a "flo 6" si esa clienta ya existe; si no, pide el guion.
+  const existeClienta = (nombre: string) =>
+    clientas.some((c) => c.activa && c.nombre.toLocaleLowerCase('es') === nombre.toLocaleLowerCase('es'));
+  const opciones = opcionesPara(nombreEscrito(texto, existeClienta), clientas, idsConLinea);
 
   async function enviar(opcion: Opcion | undefined) {
     if (guardando.current.has(texto)) return; // un doble toque en una sugerencia no anota dos veces (D-39)
-    const resultado = parseAnotacion(texto);
+    const resultado = parseAnotacion(texto, existeClienta);
     if ('error' in resultado) {
       setError(resultado.error);
       return;

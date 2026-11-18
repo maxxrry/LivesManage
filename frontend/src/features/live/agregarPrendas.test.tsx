@@ -77,10 +77,10 @@ describe('Agregar prendas desde el lápiz (RF-05, D-41)', () => {
     const usuario = await abrir();
     await usuario.click(lapiz('Florencia Ruiz'));
 
-    await usuario.type(campoPrecios(), '6 4{Enter}');
+    await usuario.type(campoPrecios(), '3,5{Enter}');
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Escribe los precios completos');
-    expect(campoPrecios()).toHaveValue('6 4');
+    expect(screen.getByRole('alert')).toHaveTextContent('Escribe los precios completos o en miles');
+    expect(campoPrecios()).toHaveValue('3,5');
     expect(campoPrecios()).toHaveAttribute('aria-invalid', 'true');
     expect(anotar).not.toHaveBeenCalled();
   });

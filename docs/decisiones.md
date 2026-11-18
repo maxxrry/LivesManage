@@ -49,6 +49,7 @@ Registro de decisiones de diseño que complementan o precisan el ERS (`docs/ERS.
 | D-43 | 03/11/2026 | RNF-15, RNF-22, RNF-23 | E2E contra el backend real con H2 en memoria, cobertura con JaCoCo (mínimo 60 % en `service`) y prueba de contenido cortado en cada pantalla. |
 | D-44 | 04/11/2026 | RNF-19 | Respaldo diario con `scripts/respaldar.sh`: las tres bases en un archivo, los últimos 7 días con respaldo, en `respaldos/` dentro de OneDrive. |
 | D-45 | 05/11/2026 | RF-15, RNF-04, RNF-10 | Se descarta importar el cuaderno desde una foto, y con ello `ms-importacion`. |
+| D-46 | 17/11/2026 | RF-05, D-12, D-39, D-41 | Además de completos, los precios se anotan en miles unidos con guion ("flo 6-6-5"); "flo 6 4" sin guion es error y sugiere la forma con guion. |
 | D-47 | 17/11/2026 | RF-09, RF-10, RF-11, RF-13, D-25, D-26 | Bolsas y forma de entrega salen del cierre y se registran en la ficha de la clienta, también con el live Cerrado; se quita "Enviar junto con". |
 | D-48 | 17/11/2026 | RF-06, RF-09, D-41 | En el cierre, el lápiz de una línea también agrega prendas; no se crean clientas ni líneas nuevas. |
 
@@ -554,6 +555,19 @@ RF-15 era Deseable y la única función sin construir. Se evaluó el 04/11/2026 
 - Escribir o pegar el texto de la página con la foto a la vista: no necesita clave, pero no cumple RF-15 tal como estaba escrito y agrega una pantalla y una ruta en `ms-lives` a pocas semanas de la entrega.
 
 **Lo que se acepta a cambio:** pasar una página de papel al sistema sigue siendo manual.
+
+## D-46 · Precios en miles unidos con guion
+
+Pedido el 17/11/2026 al probar la app: en el cuaderno se anota "Gabriela Peña 6-6-5", y escribir "6000" por cada prenda es más lento. D-39 había quitado los miles porque "flo 6 4" sin guion creaba una clienta "flo 6".
+
+- **Anotación:** un número de 1 a 3 dígitos es un precio en miles si va unido con guion a otro precio: "flo 6-4", "flo 6 - 4", "flo 6-6-5" o "flo 6-2500". Los precios completos siguen igual, y se pueden mezclar ("flo 6000 6-4").
+- **Sin guion:** un número corto sigue siendo parte del nombre ("Cami 2 6-6" es "Cami 2"). Si el texto termina en dos o más números cortos sin guion ("flo 6 4"), es un error que sugiere "¿Quisiste decir "flo 6-4"?". Si ya existe una clienta activa llamada "flo 6", se le anota $4.000.
+- **Lápiz (D-41):** no hay nombre que confundir, así que los miles valen con o sin guion ("6 4").
+- **Dónde:** solo en `parseAnotacion.ts` (frontend). El backend recibe los precios ya convertidos y valida rangos y múltiplos de $100 como antes.
+
+**Alternativa descartada:** volver a la regla anterior a D-39 (el último grupo de números son precios). Es la que creaba clientas duplicadas.
+
+**Lo que se acepta a cambio:** "flo 6 4000" sigue siendo de la clienta "flo 6" con $4.000, como en D-39.
 
 ## D-47 · Bolsas y entrega en la ficha de la clienta
 

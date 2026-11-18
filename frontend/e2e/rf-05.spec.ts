@@ -44,11 +44,19 @@ test('"flo 6000-" muestra error y conserva el texto', { tag: '@RF-05' }, async (
   await expect(totalLive(page)).toHaveText('$58.000');
 });
 
-test('"flo 6 4" en miles da error y no crea una clienta', { tag: '@RF-05' }, async ({ page }) => {
+test('"flo 6-6-5" anota en miles: suma $17.000 a Florencia (D-46)', { tag: '@RF-05' }, async ({ page }) => {
+  await campo(page).fill('flo 6-6-5');
+  await campo(page).press('Enter');
+
+  await expect(page.getByRole('status')).toHaveText(/Florencia Ruiz: 6\.000 6\.000 5\.000 = \$17\.000/);
+  await expect(totalLive(page)).toHaveText('$75.000');
+});
+
+test('"flo 6 4" sin guion da error, sugiere "flo 6-4" y no crea una clienta', { tag: '@RF-05' }, async ({ page }) => {
   await campo(page).fill('flo 6 4');
   await campo(page).press('Enter');
 
-  await expect(page.getByRole('alert')).toContainText('Escribe los precios completos');
+  await expect(page.getByRole('alert')).toContainText('¿Quisiste decir "flo 6-4"?');
   await expect(campo(page)).toHaveValue('flo 6 4');
   await expect(totalLive(page)).toHaveText('$58.000');
 });

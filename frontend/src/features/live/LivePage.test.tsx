@@ -71,12 +71,21 @@ describe('Pantalla de live (RF-05)', () => {
     expect(anotar).not.toHaveBeenCalled();
   });
 
-  it('"flo 6 4" en miles da error: no anota ni crea una clienta "flo 6" (D-39)', async () => {
+  it('"flo 6-6" anota dos prendas de $6.000 a Florencia (D-46)', async () => {
+    const { usuario, campo } = await abrirLive();
+
+    await usuario.type(campo!, 'flo 6-6{Enter}');
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Florencia Ruiz: 6.000 6.000 = $12.000');
+    expect(anotar).toHaveBeenCalledWith('s-2', { clientaId: 'c-2' }, [6000, 6000]);
+  });
+
+  it('"flo 6 4" sin guion da error y sugiere "flo 6-4": no crea una clienta "flo 6" (D-39, D-46)', async () => {
     const { usuario, campo } = await abrirLive();
 
     await usuario.type(campo!, 'flo 6 4{Enter}');
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Escribe los precios completos');
+    expect(screen.getByRole('alert')).toHaveTextContent('¿Quisiste decir "flo 6-4"?');
     expect(campo).toHaveValue('flo 6 4');
     expect(anotar).not.toHaveBeenCalled();
     expect(screen.getByTestId('total-live')).toHaveTextContent('$58.000');

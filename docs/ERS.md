@@ -12,7 +12,7 @@
 | 02/11/2026 | 2.2 | Maxi | RF-05: el lápiz de una línea permite agregar prendas escribiendo solo los precios. |
 | 03/11/2026 | 2.3 | Maxi | Despliegue: AWS deja de ser obligatorio y el alojamiento queda por definir. |
 | 05/11/2026 | 2.4 | Maxi | Se descarta RF-15 (importar cuaderno desde foto), con RNF-04, RNF-10 y UAT-05, y se quita `ms-importacion` de la arquitectura. |
-| 17/11/2026 | 2.5 | Maxi | RF-06 y RF-09 (D-48): en el cierre, el lápiz de una línea también agrega prendas. RF-09 a RF-11 y RF-13 (D-47): el cierre ya no revisa bolsas ni pide la entrega; las bolsas (cantidad, En bodega o Entregada) y la forma de entrega se registran en la ficha de la clienta, también con el live Cerrado. Se quita la entrega agrupada. |
+| 17/11/2026 | 2.5 | Maxi | RF-05 (D-46): además de completos, los precios se pueden anotar en miles unidos con guion ("flo 6-6-5"); en el lápiz, con o sin guion. RF-06 y RF-09 (D-48): en el cierre, el lápiz de una línea también agrega prendas. RF-09 a RF-11 y RF-13 (D-47): el cierre ya no revisa bolsas ni pide la entrega; las bolsas (cantidad, En bodega o Entregada) y la forma de entrega se registran en la ficha de la clienta, también con el live Cerrado. Se quita la entrega agrupada. |
 
 ## 1. Introducción
 
@@ -62,7 +62,7 @@ Se compone de un frontend en React, usado principalmente desde el celular, y un 
 | Sesión de live | Registro de un live en el sistema. Agrupa todas las anotaciones hechas en él y pasa por los estados Abierta, En cierre y Cerrada. |
 | Línea | Equivalente a una línea del cuaderno: una clienta, sus prendas y su total dentro de una sesión. Una clienta tiene como máximo una línea por sesión. |
 | Prenda | Cada ítem anotado en una línea. Solo tiene precio; no tiene talla, descripción ni código. Puede estar Vigente o Cancelada. |
-| Sintaxis rápida | Formato de anotación: nombre seguido de los precios completos, separados por espacio o guion. Ej: "flo 6000 4000" son dos prendas de $6.000 y $4.000 para la clienta que coincide con "flo". |
+| Sintaxis rápida | Formato de anotación: nombre seguido de los precios, completos y separados por espacio o guion ("flo 6000 4000"), o en miles unidos con guion ("flo 6-4"). Ambos ejemplos son dos prendas de $6.000 y $4.000 para la clienta que coincide con "flo". |
 | Estado de pago | Estado de una línea: Pendiente, Pagado o No pagó. Reemplaza el destacado rosado del cuaderno. |
 | Bolsa | Bolsa física donde se juntan las prendas de cada clienta. Por cada compra se registra cuántas se armaron y si siguen en bodega o se entregaron (D-47). |
 | Forma de entrega | Cómo recibe la clienta sus prendas: Despacho a domicilio, Retiro o Entrega en feria. |
@@ -143,7 +143,7 @@ Lo usarán entre 2 y 3 personas: el desarrollador durante el proyecto y 1 o 2 pe
 * La persona que anota cuenta con un celular o PC con internet durante el live.
 * Una sola persona anota por live; si en el futuro anotan dos a la vez, se necesitará sincronización en tiempo real.
 * Las prendas no se identifican: cada una es solo un precio. Si la tienda quiere registrar talla o descripción, habrá que revisar el modelo de datos.
-* Los precios se anotan completos (6000 o 6.000), de $1.000 a $999.000 y en múltiplos de $100.
+* Los precios se anotan completos (6000 o 6.000) o en miles unidos con guion (6-4), de $1.000 a $999.000 y en múltiplos de $100 (D-46).
 * Los pagos se reciben fuera del sistema (transferencia o efectivo); el sistema solo registra si se pagó. El costo de despacho, los abonos y los saldos a favor los lleva la dueña con cada clienta, fuera del sistema.
 * El alojamiento del despliegue está por definir. AWS no es obligatorio para el ramo.
 
@@ -220,21 +220,21 @@ Estados de una sesión: **Abierta** (se anotan compras), **En cierre** (el live 
 
 **RF-05 · Anotar compra con sintaxis rápida**
 
-1. Con una sesión Abierta, el usuario escribe en el campo de anotación el nombre de la clienta seguido de los precios completos, separados por espacio o guion (ej: "flo 6000 4000").
+1. Con una sesión Abierta, el usuario escribe en el campo de anotación el nombre de la clienta seguido de los precios completos, separados por espacio o guion (ej: "flo 6000 4000"), o en miles unidos con guion (ej: "flo 6-4", D-46).
 2. Mientras escribe el nombre, el sistema sugiere clientas que coinciden (sin distinguir mayúsculas ni tildes), mostrando primero las que ya tienen línea en este live y luego las de compra más reciente.
 3. Al presionar Enter (o Agregar en el celular), la anotación se asigna a la sugerencia destacada. Si no hay coincidencias, o el usuario elige "Nueva clienta", el sistema crea una clienta con ese nombre.
 4. Si la clienta ya tiene una línea en la sesión, las prendas se agregan a esa línea; si no, se crea una línea nueva en estado Pendiente.
 5. El sistema recalcula el total de la línea y del live, limpia el campo y lo deja listo para la siguiente anotación.
 6. Durante unos segundos muestra un aviso con el resultado (ej: "Florencia Ruiz: 6.000 4.000 = $10.000") y la opción Deshacer.
-7. Con una sesión Abierta, el lápiz de una línea permite agregar prendas a esa clienta escribiendo solo los precios, sin repetir su nombre. Se aplican las mismas reglas de esta sección.
+7. Con una sesión Abierta o En cierre, el lápiz de una línea permite agregar prendas a esa clienta escribiendo solo los precios, sin repetir su nombre (D-48). Se aplican las mismas reglas de esta sección, salvo que los miles valen con o sin guion ("6 4"), porque no hay nombre que confundir (D-46).
 
 Validaciones y errores:
 
-* Debe haber un nombre y al menos un precio; cada precio va completo, de $1.000 a $999.000 y en múltiplos de $100. Acepta punto de miles ("flo 6.000 3.500").
+* Debe haber un nombre y al menos un precio, de $1.000 a $999.000 y en múltiplos de $100. Acepta punto de miles ("flo 6.000 3.500") y miles unidos con guion, también junto a precios completos ("flo 6-6-5", "flo 6-2500").
 * Los precios se separan con espacio o guion ("flo 6000 4000", "flo 6000-4000", "flo 6000 - 4000").
-* Un número menor a 1000 es parte del nombre ("Cami 2 6000" es la clienta "Cami 2"). Si el texto termina en uno ("flo 6 4"), es un error y no se crea ninguna clienta. Un número de 4 o más dígitos siempre es un precio.
+* Un número menor a 1000 sin guion es parte del nombre ("Cami 2 6000" y "Cami 2 6-6" son de la clienta "Cami 2"). Si el texto termina en dos o más números cortos sin guion ("flo 6 4"), es un error que sugiere la forma con guion ("¿Quisiste decir flo 6-4?") y no se crea ninguna clienta, salvo que ya exista una clienta "flo 6": entonces se le anota $4.000. Un número de 4 o más dígitos siempre es un precio.
 * Si el texto no cumple el formato, no se guarda nada, se indica el problema y el texto se conserva para corregirlo.
-* No se puede anotar en una sesión que no esté Abierta.
+* No se puede anotar en una sesión que no esté Abierta; En cierre, solo desde el lápiz de una línea existente (D-48).
 
 #### 3.2.4. Cierre del live
 
@@ -355,7 +355,7 @@ Cada RF tiene un criterio de aceptación verificable. El criterio se automatiza 
 | RF-02 | El vendedor no ve Usuarios y la API le responde 403 si intenta usarla. | Filtro de roles (JUnit); rutas protegidas (Vitest) | E2E-02 | UAT-01 |
 | RF-03 | El admin crea un vendedor que luego inicia sesión; un correo repetido se rechaza. | UsuarioService (JUnit) | E2E-03 | UAT-01 |
 | RF-04 | Con un live Abierto no se puede abrir otro; la lista muestra los totales de cada live. | SesionService (JUnit) | E2E-04 | UAT-02 |
-| RF-05 | "flo 6000 4000" suma $10.000 a la línea existente de Florencia; "ana 5000" crea clienta y línea; "flo 6000-" y "flo 6 4" muestran error y conservan el texto; desde el lápiz de Florencia, "6000 4000" suma $10.000 a su línea. | Intérprete de sintaxis (Vitest); LineaService (JUnit) | E2E-05 | UAT-02 |
+| RF-05 | "flo 6000 4000" suma $10.000 a la línea existente de Florencia; "flo 6-6-5" le suma $17.000; "ana 5000" crea clienta y línea; "flo 6000-" y "flo 6 4" muestran error y conservan el texto; desde el lápiz de Florencia, "6000 4000" suma $10.000 a su línea. | Intérprete de sintaxis (Vitest); LineaService (JUnit) | E2E-05 | UAT-02 |
 | RF-06 | Quitar una prenda de $6.000 baja la línea y el total del live en $6.000; restaurarla los repone. | Cálculo de totales (JUnit) | E2E-06 | UAT-02 |
 | RF-07 | Marcar Pagada una línea de $17.000 la destaca y sube el total pagado en $17.000. | LineaService (JUnit) | E2E-07 | UAT-02 |
 | RF-08 | Tras cada acción, el total del live es igual a la suma de las líneas visibles. | Componente de totales (Vitest) | E2E-08 | UAT-02 |

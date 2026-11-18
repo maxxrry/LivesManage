@@ -49,7 +49,7 @@ const PANTALLAS: [string, (page: Page) => Promise<unknown>][] = [
       await liveConNombreLargo(page);
       await page.getByRole('button', { name: `Editar línea de ${NOMBRE_LARGO}` }).click();
       const precios = page.getByRole('textbox', { name: 'Agregar prendas' });
-      await precios.fill('6 4');
+      await precios.fill('3,5'); // "6 4" ya es válido en el lápiz (D-46)
       await precios.press('Enter');
       await expect(page.getByRole('alert')).toBeVisible();
     },
