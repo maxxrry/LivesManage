@@ -12,6 +12,7 @@
 | 02/11/2026 | 2.2 | Maxi | RF-05: el lápiz de una línea permite agregar prendas escribiendo solo los precios. |
 | 03/11/2026 | 2.3 | Maxi | Despliegue: AWS deja de ser obligatorio y el alojamiento queda por definir. |
 | 05/11/2026 | 2.4 | Maxi | Se descarta RF-15 (importar cuaderno desde foto), con RNF-04, RNF-10 y UAT-05, y se quita `ms-importacion` de la arquitectura. |
+| 18/11/2026 | 2.6 | Maxi | RF-01 y RF-03 (D-49): cada usuario cambia su contraseña confirmando la actual, y la Admin restablece la de otro usuario. |
 | 17/11/2026 | 2.5 | Maxi | RF-05 (D-46): además de completos, los precios se pueden anotar en miles unidos con guion ("flo 6-6-5"); en el lápiz, con o sin guion. RF-06 y RF-09 (D-48): en el cierre, el lápiz de una línea también agrega prendas. RF-09 a RF-11 y RF-13 (D-47): el cierre ya no revisa bolsas ni pide la entrega; las bolsas (cantidad, En bodega o Entregada) y la forma de entrega se registran en la ficha de la clienta, también con el live Cerrado. Se quita la entrega agrupada. |
 
 ## 1. Introducción
@@ -197,9 +198,9 @@ Son 15 requisitos en seis módulos. Actores: **Admin** (administrador) y **Vende
 
 | **ID** | **Requisito** | **Actor** | **Descripción** | **Prioridad** |
 | --- | --- | --- | --- | --- |
-| RF-01 | Iniciar y cerrar sesión | Ambos | El usuario ingresa con correo y contraseña. Si los datos son incorrectos, se muestra un mensaje genérico sin indicar qué campo falló; un usuario desactivado no puede ingresar. Al cerrar sesión, el token se descarta del navegador. | Esencial |
+| RF-01 | Iniciar y cerrar sesión | Ambos | El usuario ingresa con correo y contraseña. Si los datos son incorrectos, se muestra un mensaje genérico sin indicar qué campo falló; un usuario desactivado no puede ingresar. Al cerrar sesión, el token se descarta del navegador. Cada usuario puede cambiar su contraseña confirmando la actual (D-49). | Esencial |
 | RF-02 | Controlar acceso por rol | Sistema | Pantallas y operaciones se restringen según el rol en el frontend y se validan en el API Gateway y en cada microservicio. | Esencial |
-| RF-03 | Gestionar usuarios | Admin | Crear, editar y desactivar usuarios (nombre, correo único, rol y contraseña inicial). No se eliminan físicamente. | Esencial |
+| RF-03 | Gestionar usuarios | Admin | Crear, editar y desactivar usuarios (nombre, correo único, rol y contraseña inicial), y restablecer la contraseña de otro usuario (D-49). No se eliminan físicamente. | Esencial |
 
 #### 3.2.2. Sesiones de live
 
@@ -353,7 +354,7 @@ Cada RF tiene un criterio de aceptación verificable. El criterio se automatiza 
 | --- | --- | --- | --- | --- |
 | RF-01 | Con credenciales válidas entra; con inválidas ve un mensaje genérico; un usuario desactivado no entra. | AuthService (JUnit); formulario de login (Vitest) | E2E-01 | UAT-01 |
 | RF-02 | El vendedor no ve Usuarios y la API le responde 403 si intenta usarla. | Filtro de roles (JUnit); rutas protegidas (Vitest) | E2E-02 | UAT-01 |
-| RF-03 | El admin crea un vendedor que luego inicia sesión; un correo repetido se rechaza. | UsuarioService (JUnit) | E2E-03 | UAT-01 |
+| RF-03 | El admin crea un vendedor que luego inicia sesión; un correo repetido se rechaza; tras restablecer su contraseña, el vendedor entra con la nueva. | UsuarioService (JUnit) | E2E-03 | UAT-01 |
 | RF-04 | Con un live Abierto no se puede abrir otro; la lista muestra los totales de cada live. | SesionService (JUnit) | E2E-04 | UAT-02 |
 | RF-05 | "flo 6000 4000" suma $10.000 a la línea existente de Florencia; "flo 6-6-5" le suma $17.000; "ana 5000" crea clienta y línea; "flo 6000-" y "flo 6 4" muestran error y conservan el texto; desde el lápiz de Florencia, "6000 4000" suma $10.000 a su línea. | Intérprete de sintaxis (Vitest); LineaService (JUnit) | E2E-05 | UAT-02 |
 | RF-06 | Quitar una prenda de $6.000 baja la línea y el total del live en $6.000; restaurarla los repone. | Cálculo de totales (JUnit) | E2E-06 | UAT-02 |

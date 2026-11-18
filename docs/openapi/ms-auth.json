@@ -59,6 +59,76 @@
         ]
       }
     },
+    "/api/usuarios/{id}/contrasena": {
+      "put": {
+        "tags": [
+          "usuario-controller"
+        ],
+        "summary": "Restablecer la contraseña de otro usuario (D-49)",
+        "description": "409 si es la propia: esa se cambia en /api/auth/contrasena.",
+        "operationId": "restablecerContrasena",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NuevaContrasena"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      }
+    },
+    "/api/auth/contrasena": {
+      "put": {
+        "tags": [
+          "auth-controller"
+        ],
+        "summary": "Cambiar mi contraseña (D-49)",
+        "description": "400 si la contraseña actual no coincide.",
+        "operationId": "cambiarContrasena",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CambioContrasena"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "jwt": []
+          }
+        ]
+      }
+    },
     "/api/usuarios": {
       "get": {
         "tags": [
@@ -282,6 +352,37 @@
             "type": "boolean"
           }
         }
+      },
+      "NuevaContrasena": {
+        "type": "object",
+        "properties": {
+          "contrasena": {
+            "type": "string",
+            "maxLength": 2147483647,
+            "minLength": 8
+          }
+        },
+        "required": [
+          "contrasena"
+        ]
+      },
+      "CambioContrasena": {
+        "type": "object",
+        "properties": {
+          "actual": {
+            "type": "string",
+            "minLength": 1
+          },
+          "nueva": {
+            "type": "string",
+            "maxLength": 2147483647,
+            "minLength": 8
+          }
+        },
+        "required": [
+          "actual",
+          "nueva"
+        ]
       },
       "NuevoUsuario": {
         "type": "object",

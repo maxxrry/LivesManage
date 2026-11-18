@@ -1,6 +1,6 @@
 # Documentación de la API – LivesManage
 
-Fecha: 17-11-2026 · Generada desde el OpenAPI (Swagger) de cada microservicio.
+Fecha: 18-11-2026 · Generada desde el OpenAPI (Swagger) de cada microservicio.
 
 ## 1. Visión general
 
@@ -49,14 +49,24 @@ Puerto local 8081, base `livesmanage_auth`, RF-01 a RF-03.
 
 | Método | Ruta | Descripción | Acceso | Éxito |
 | --- | --- | --- | --- | --- |
+| PUT | `/api/auth/contrasena` | Cambiar mi contraseña (D-49) | Admin y Vendedora | 204 |
 | POST | `/api/auth/login` | Iniciar sesión (RF-01) | Pública | 200 |
 | GET | `/api/auth/yo` | Usuario de la sesión, con sus datos al día | Admin y Vendedora | 200 |
 | GET | `/api/usuarios` | Listar usuarios, ordenados por nombre | Solo Admin | 200 |
 | POST | `/api/usuarios` | Crear un usuario con su contraseña inicial | Solo Admin | 201 |
 | PUT | `/api/usuarios/{id}` | Editar nombre, correo y rol | Solo Admin | 200 |
 | PATCH | `/api/usuarios/{id}/activo` | Desactivar o reactivar | Solo Admin | 200 |
+| PUT | `/api/usuarios/{id}/contrasena` | Restablecer la contraseña de otro usuario (D-49) | Solo Admin | 204 |
 
-### 4.1 POST `/api/auth/login`
+### 4.1 PUT `/api/auth/contrasena`
+
+Cambiar mi contraseña (D-49). 400 si la contraseña actual no coincide.
+
+- **Acceso:** Admin y Vendedora
+- **Respuesta exitosa:** 204 sin cuerpo
+- **Cuerpo:** `CambioContrasena`
+
+### 4.2 POST `/api/auth/login`
 
 Iniciar sesión (RF-01). 401 con un mensaje genérico si el correo no existe, la contraseña no coincide o el usuario está desactivado.
 
@@ -64,21 +74,21 @@ Iniciar sesión (RF-01). 401 con un mensaje genérico si el correo no existe, la
 - **Respuesta exitosa:** 200 con `LoginResponse`
 - **Cuerpo:** `LoginRequest`
 
-### 4.2 GET `/api/auth/yo`
+### 4.3 GET `/api/auth/yo`
 
 Usuario de la sesión, con sus datos al día.
 
 - **Acceso:** Admin y Vendedora
 - **Respuesta exitosa:** 200 con `UsuarioDto`
 
-### 4.3 GET `/api/usuarios`
+### 4.4 GET `/api/usuarios`
 
 Listar usuarios, ordenados por nombre.
 
 - **Acceso:** Solo Admin
 - **Respuesta exitosa:** 200 con `UsuarioDto[]`
 
-### 4.4 POST `/api/usuarios`
+### 4.5 POST `/api/usuarios`
 
 Crear un usuario con su contraseña inicial. 409 si el correo ya existe.
 
@@ -86,7 +96,7 @@ Crear un usuario con su contraseña inicial. 409 si el correo ya existe.
 - **Respuesta exitosa:** 201 con `UsuarioDto`
 - **Cuerpo:** `NuevoUsuario`
 
-### 4.5 PUT `/api/usuarios/{id}`
+### 4.6 PUT `/api/usuarios/{id}`
 
 Editar nombre, correo y rol. 409 si el correo ya existe o si la Admin intenta cambiar su propio rol.
 
@@ -95,7 +105,7 @@ Editar nombre, correo y rol. 409 si el correo ya existe o si la Admin intenta ca
 - **Parámetros:** `id` (ruta, texto, obligatorio)
 - **Cuerpo:** `EdicionUsuario`
 
-### 4.6 PATCH `/api/usuarios/{id}/activo`
+### 4.7 PATCH `/api/usuarios/{id}/activo`
 
 Desactivar o reactivar. 409 si la Admin intenta desactivarse a sí misma.
 
@@ -104,6 +114,15 @@ Desactivar o reactivar. 409 si la Admin intenta desactivarse a sí misma.
 - **Parámetros:** `id` (ruta, texto, obligatorio)
 - **Cuerpo:** `CambioActivo`
 
+### 4.8 PUT `/api/usuarios/{id}/contrasena`
+
+Restablecer la contraseña de otro usuario (D-49). 409 si es la propia: esa se cambia en /api/auth/contrasena.
+
+- **Acceso:** Solo Admin
+- **Respuesta exitosa:** 204 sin cuerpo
+- **Parámetros:** `id` (ruta, texto, obligatorio)
+- **Cuerpo:** `NuevaContrasena`
+
 ### Modelos de ms-auth
 
 **CambioActivo**
@@ -111,6 +130,13 @@ Desactivar o reactivar. 409 si la Admin intenta desactivarse a sí misma.
 | Campo | Tipo | Obligatorio | Reglas |
 | --- | --- | --- | --- |
 | `activo` | booleano | sí |  |
+
+**CambioContrasena**
+
+| Campo | Tipo | Obligatorio | Reglas |
+| --- | --- | --- | --- |
+| `actual` | texto | sí | largo mín. 1 |
+| `nueva` | texto | sí | largo mín. 8 |
 
 **EdicionUsuario**
 
@@ -133,6 +159,12 @@ Desactivar o reactivar. 409 si la Admin intenta desactivarse a sí misma.
 | --- | --- | --- | --- |
 | `token` | texto | no |  |
 | `usuario` | UsuarioDto | no |  |
+
+**NuevaContrasena**
+
+| Campo | Tipo | Obligatorio | Reglas |
+| --- | --- | --- | --- |
+| `contrasena` | texto | sí | largo mín. 8 |
 
 **NuevoUsuario**
 

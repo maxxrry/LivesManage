@@ -176,3 +176,24 @@ export async function cambiarActivoUsuario(id: string, activo: boolean): Promise
   usuario.activo = activo;
   return structuredClone(usuario);
 }
+
+/** D-49: cada usuario cambia su contraseña confirmando la actual (PUT /api/auth/contrasena). */
+export async function cambiarMiContrasena(actual: string, nueva: string): Promise<void> {
+  if (urlApi()) return pedirConSesion<void>('/api/auth/contrasena', { metodo: 'PUT', cuerpo: { actual, nueva } });
+  const usuario = usuarioConectado();
+  if (!usuario) throw new Error(SIN_PERMISO);
+  if (contrasenas[usuario.correo] !== actual) throw new Error('La contraseña actual no es correcta.');
+  if (nueva.length < 8) throw new Error('La contraseña debe tener al menos 8 caracteres.');
+  contrasenas[usuario.correo] = nueva;
+}
+
+/** D-49: la Admin restablece la contraseña de otro usuario. La propia se cambia con cambiarMiContrasena. */
+export async function restablecerContrasena(id: string, contrasena: string): Promise<void> {
+  if (urlApi()) {
+    return pedirConSesion<void>(`/api/usuarios/${encodeURIComponent(id)}/contrasena`, { metodo: 'PUT', cuerpo: { contrasena } });
+  }
+  const actual = exigirAdmin();
+  if (id === actual.id) throw new Error('Para cambiar tu propia contraseña usa "Cambiar mi contraseña".');
+  if (contrasena.length < 8) throw new Error('La contraseña debe tener al menos 8 caracteres.');
+  contrasenas[buscarUsuario(id).correo] = contrasena;
+}

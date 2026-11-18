@@ -1,5 +1,6 @@
 package cl.livesmanage.auth.service;
 
+import cl.livesmanage.auth.dto.CambioContrasena;
 import cl.livesmanage.auth.dto.EdicionUsuario;
 import cl.livesmanage.auth.dto.NuevoUsuario;
 import cl.livesmanage.auth.dto.UsuarioDto;
@@ -39,9 +40,7 @@ public class UsuarioService {
     @Transactional
     public UsuarioDto crear(NuevoUsuario datos, String idQuienCrea) {
         exigirAdminActiva(idQuienCrea);
-        if (datos.contrasena().getBytes(StandardCharsets.UTF_8).length > 72) {
-            throw new ReglaException(HttpStatus.BAD_REQUEST, "contrasena", "La contraseña es demasiado larga (máximo 72 caracteres).");
-        }
+        String hash = hashDe("contrasena", datos.contrasena());
         if (repositorio.existsByCorreo(datos.correo())) {
             throw ReglaException.correoRepetido();
         }
@@ -49,7 +48,7 @@ public class UsuarioService {
         usuario.setNombre(datos.nombre());
         usuario.setCorreo(datos.correo());
         usuario.setRol(datos.rol());
-        usuario.setContrasenaHash(encoder.encode(datos.contrasena()));
+        usuario.setContrasenaHash(hash);
         usuario = repositorio.saveAndFlush(usuario);
         log.info("Usuario {} creado con rol {}", usuario.getId(), usuario.getRol());
         return UsuarioDto.de(usuario);
@@ -83,6 +82,38 @@ public class UsuarioService {
         usuario.setActivo(activo);
         log.info("Usuario {} {}", id, activo ? "reactivado" : "desactivado");
         return UsuarioDto.de(usuario);
+    }
+
+    /** D-49: la Admin restablece la contraseña de otro usuario (ej: la vendedora la olvidó). La propia se cambia con la actual. */
+    @Transactional
+    public void restablecerContrasena(String id, String nueva, String idQuienEdita) {
+        exigirAdminActiva(idQuienEdita);
+        if (id.equals(idQuienEdita)) {
+            throw new ReglaException(HttpStatus.CONFLICT, null, "Para cambiar tu propia contraseña usa \"Cambiar mi contraseña\".");
+        }
+        Usuario usuario = buscar(id);
+        usuario.setContrasenaHash(hashDe("contrasena", nueva));
+        log.info("Contraseña del usuario {} restablecida por {}", id, idQuienEdita);
+    }
+
+    /** D-49: cada usuario cambia su contraseña confirmando la actual. 400 (no 401) si no coincide, para no cerrar la sesión. */
+    @Transactional
+    public void cambiarContrasena(String id, CambioContrasena datos) {
+        Usuario usuario = repositorio.findById(id).filter(Usuario::isActivo)
+                .orElseThrow(() -> new ReglaException(HttpStatus.FORBIDDEN, null, "No tienes permiso para hacer esto."));
+        if (datos.actual().getBytes(StandardCharsets.UTF_8).length > 72 || !encoder.matches(datos.actual(), usuario.getContrasenaHash())) {
+            throw new ReglaException(HttpStatus.BAD_REQUEST, "actual", "La contraseña actual no es correcta.");
+        }
+        usuario.setContrasenaHash(hashDe("nueva", datos.nueva()));
+        log.info("Usuario {} cambió su contraseña", id);
+    }
+
+    /** BCrypt solo usa los primeros 72 bytes: una contraseña más larga se rechaza en vez de recortarse en silencio. */
+    private String hashDe(String campo, String contrasena) {
+        if (contrasena.getBytes(StandardCharsets.UTF_8).length > 72) {
+            throw new ReglaException(HttpStatus.BAD_REQUEST, campo, "La contraseña es demasiado larga (máximo 72 caracteres).");
+        }
+        return encoder.encode(contrasena);
     }
 
     /** Una Admin desactivada o pasada a Vendedora pierde el acceso al instante, aunque su token diga ADMIN. */

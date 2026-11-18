@@ -52,6 +52,7 @@ Registro de decisiones de diseño que complementan o precisan el ERS (`docs/ERS.
 | D-46 | 17/11/2026 | RF-05, D-12, D-39, D-41 | Además de completos, los precios se anotan en miles unidos con guion ("flo 6-6-5"); "flo 6 4" sin guion es error y sugiere la forma con guion. |
 | D-47 | 17/11/2026 | RF-09, RF-10, RF-11, RF-13, D-25, D-26 | Bolsas y forma de entrega salen del cierre y se registran en la ficha de la clienta, también con el live Cerrado; se quita "Enviar junto con". |
 | D-48 | 17/11/2026 | RF-06, RF-09, D-41 | En el cierre, el lápiz de una línea también agrega prendas; no se crean clientas ni líneas nuevas. |
+| D-49 | 18/11/2026 | RF-01, RF-03, RNF-05 | Cambiar la propia contraseña (con la actual) y, solo la Admin, restablecer la de otro usuario. |
 
 ## D-01 · Estilos con Tailwind CSS
 
@@ -602,3 +603,13 @@ Pedido el 17/11/2026 al probar D-47: en el cierre, el lápiz abría directo "Cam
 **Alternativa descartada:** reabrir la anotación rápida en el cierre. Permitiría crear clientas y líneas nuevas después del live, y el cuaderno no lo hacía.
 
 **Lo que se acepta a cambio:** en el cierre no hay aviso con Deshacer; una prenda agregada por error se cancela con un toque (RF-06).
+
+## D-49 · Cambiar y restablecer contraseñas
+
+Pedido el 18/11/2026 antes del despliegue: no había forma de cambiar una contraseña, ni siquiera la de la Admin inicial, que solo se lee de `ADMIN_CONTRASENA` cuando la tabla de usuarios está vacía.
+
+- **Cambiar mi contraseña** (todos): entrada en el menú, pantalla `/mi-contrasena` y `PUT /api/auth/contrasena` con `{ actual, nueva }`. Si la actual no coincide responde 400 en el campo `actual`, no 401, para no cerrar la sesión.
+- **Restablecer** (solo Admin): botón "Contraseña" por usuario en Usuarios y `PUT /api/usuarios/{id}/contrasena` con `{ contrasena }`. La propia no se restablece por aquí (409): se cambia con la actual.
+- **Reglas:** al menos 8 caracteres y como máximo 72 bytes (límite de BCrypt); se guarda solo el hash (RNF-05). Las dos rutas responden 204.
+
+**Lo que se acepta a cambio:** un token emitido antes del cambio sigue sirviendo hasta que vence (8 horas, RNF-06). Para cortar el acceso de inmediato, la Admin desactiva al usuario.

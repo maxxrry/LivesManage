@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Pantalla } from '../../components/Pantalla';
 import {
   cambiarActivoUsuario,
   crearUsuario,
   editarUsuario,
   listarUsuarios,
+  restablecerContrasena,
   usuarioActual,
   usuarioDeLaSesion,
   type NuevoUsuario,
@@ -26,6 +27,7 @@ export function UsuariosPage() {
   const [creando, setCreando] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [confirmarBajaId, setConfirmarBajaId] = useState<string | null>(null);
+  const [contrasenaId, setContrasenaId] = useState<string | null>(null);
   const [aviso, setAviso] = useState('');
   const [ocupado, setOcupado] = useState(false);
 
@@ -172,8 +174,18 @@ export function UsuariosPage() {
                             </button>
                           </div>
                         </div>
+                      ) : contrasenaId === u.id ? (
+                        <RestablecerContrasena
+                          nombre={u.nombre}
+                          onGuardar={async (nueva) => {
+                            await restablecerContrasena(u.id, nueva);
+                            setContrasenaId(null);
+                            setAviso(`Se restableció la contraseña de ${u.nombre}. Entrégasela para su próximo ingreso.`);
+                          }}
+                          onCancelar={() => setContrasenaId(null)}
+                        />
                       ) : (
-                        <div className="flex gap-2 lg:w-52 lg:justify-end">
+                        <div className="flex flex-wrap gap-2 lg:w-80 lg:justify-end">
                           <button
                             type="button"
                             onClick={() => {
@@ -186,6 +198,20 @@ export function UsuariosPage() {
                           >
                             Editar
                           </button>
+                          {/* La propia se cambia en "Cambiar mi contraseña" (D-49). */}
+                          {!esPropio && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setContrasenaId(u.id);
+                                setAviso('');
+                              }}
+                              aria-label={`Restablecer la contraseña de ${u.nombre}`}
+                              className={BOTON_SECUNDARIO}
+                            >
+                              Contraseña
+                            </button>
+                          )}
                           {/* La Admin no se desactiva a sí misma (D-35). */}
                           {!esPropio &&
                             (u.activo ? (
@@ -219,5 +245,56 @@ export function UsuariosPage() {
         )}
       </div>
     </Pantalla>
+  );
+}
+
+/** D-49: la Admin le da una contraseña nueva a otro usuario (ej: la olvidó). */
+function RestablecerContrasena({ nombre, onGuardar, onCancelar }: { nombre: string; onGuardar: (nueva: string) => Promise<void>; onCancelar: () => void }) {
+  const [nueva, setNueva] = useState('');
+  const [error, setError] = useState('');
+  const [enviando, setEnviando] = useState(false);
+
+  async function alEnviar(e: FormEvent) {
+    e.preventDefault();
+    setError('');
+    setEnviando(true);
+    try {
+      await onGuardar(nueva);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo restablecer la contraseña.');
+      setEnviando(false);
+    }
+  }
+
+  return (
+    <form onSubmit={alEnviar} aria-label={`Contraseña de ${nombre}`} className="space-y-2 rounded-md border border-gray-200 bg-gray-50 p-3 lg:max-w-sm">
+      <label className="block text-sm font-medium">
+        Contraseña nueva para {nombre}
+        <input
+          type="password"
+          value={nueva}
+          onChange={(e) => setNueva(e.target.value)}
+          required
+          minLength={8}
+          autoComplete="new-password"
+          autoFocus
+          className="mt-1 min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 text-base font-normal focus:border-marca-600 focus:outline-none"
+        />
+      </label>
+      <p className="text-sm text-gray-600">Al menos 8 caracteres.</p>
+      {error && (
+        <p role="alert" className="text-sm text-red-700">
+          {error}
+        </p>
+      )}
+      <div className="flex gap-2">
+        <button type="submit" disabled={enviando} className="min-h-11 flex-1 rounded-md bg-marca-600 px-4 font-semibold text-white hover:bg-marca-700 disabled:opacity-50">
+          Guardar
+        </button>
+        <button type="button" onClick={onCancelar} className="min-h-11 flex-1 rounded-md border border-gray-300 bg-white px-4 font-semibold hover:bg-gray-100">
+          Cancelar
+        </button>
+      </div>
+    </form>
   );
 }

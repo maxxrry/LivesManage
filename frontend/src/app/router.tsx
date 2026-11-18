@@ -8,6 +8,7 @@ import { FichaClientaPage } from '../features/clientas/FichaClientaPage';
 import { EstadisticasPage } from '../features/estadisticas/EstadisticasPage';
 import { LivePage } from '../features/live/LivePage';
 import { LivesPage } from '../features/lives/LivesPage';
+import { MiContrasenaPage } from '../features/usuarios/MiContrasenaPage';
 import { UsuariosPage } from '../features/usuarios/UsuariosPage';
 
 /** Pantallas de ERS 3.1.1. */
@@ -25,6 +26,7 @@ export const rutas: RouteObject[] = [
       { path: 'estadisticas', element: <EstadisticasPage /> },
       { path: 'ranking', element: <Navigate to="/estadisticas" replace /> }, // enlaces guardados de antes de D-32
       { path: 'usuarios', element: <UsuariosPage /> },
+      { path: 'mi-contrasena', element: <MiContrasenaPage /> },
       { path: '*', element: <Pantalla titulo="Página no encontrada">{null}</Pantalla> },
     ],
   },

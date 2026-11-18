@@ -137,6 +137,14 @@ const PANTALLAS: [string, (page: Page) => Promise<unknown>][] = [
     },
   ],
   ['Usuarios', (page) => page.goto('/usuarios')],
+  ['Cambiar mi contraseña (D-49)', (page) => page.goto('/mi-contrasena')],
+  [
+    'Restablecer contraseña en Usuarios (D-49)',
+    async (page) => {
+      await page.goto('/usuarios');
+      await page.getByRole('button', { name: 'Restablecer la contraseña de Vendedora' }).click();
+    },
+  ],
   [
     'Nuevo usuario',
     async (page) => {

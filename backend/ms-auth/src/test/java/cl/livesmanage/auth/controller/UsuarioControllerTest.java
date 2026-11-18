@@ -171,4 +171,56 @@ class UsuarioControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.mensaje").value("El usuario no existe."));
     }
+
+    // D-49: cambiar y restablecer la contraseña
+
+    private ResultActions cambiarMia(String token, String actual, String nueva) throws Exception {
+        return mvc.perform(put("/api/auth/contrasena")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"actual\":\"" + actual + "\",\"nueva\":\"" + nueva + "\"}"));
+    }
+
+    private ResultActions restablecer(String token, String id, String nueva) throws Exception {
+        return mvc.perform(put("/api/usuarios/" + id + "/contrasena")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"contrasena\":\"" + nueva + "\"}"));
+    }
+
+    private ResultActions login(String correo, String contrasena) throws Exception {
+        return mvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"correo\":\"" + correo + "\",\"contrasena\":\"" + contrasena + "\"}"));
+    }
+
+    @Test
+    void cadaUsuarioCambiaSuContrasenaConfirmandoLaActual() throws Exception {
+        String correo = correoNuevo();
+        crear(tokenAdmin(), correo, "VENDEDOR").andExpect(status().isCreated());
+        String token = token(correo, "inicial123");
+
+        cambiarMia(token, "otra-cosa", "nueva-clave-1").andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.campos.actual").value("La contraseña actual no es correcta."));
+        cambiarMia(token, "inicial123", "corta").andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.campos.nueva").value("La contraseña debe tener al menos 8 caracteres."));
+        cambiarMia(token, "inicial123", "nueva-clave-1").andExpect(status().isNoContent());
+
+        login(correo, "inicial123").andExpect(status().isUnauthorized());
+        token(correo, "nueva-clave-1");
+    }
+
+    @Test
+    void laAdminRestableceLaContrasenaDeOtroUsuarioPeroNoLaPropia() throws Exception {
+        String correo = correoNuevo();
+        String id = idDe(crear(tokenAdmin(), correo, "VENDEDOR"));
+
+        restablecer(tokenAdmin(), id, "restablecida1").andExpect(status().isNoContent());
+        token(correo, "restablecida1");
+
+        restablecer(token(correo, "restablecida1"), id, "otra-clave-1").andExpect(status().isForbidden()); // la Vendedora no puede
+        String idAdmin = JsonPath.read(mvc.perform(get("/api/auth/yo").header("Authorization", "Bearer " + tokenAdmin()))
+                .andReturn().getResponse().getContentAsString(), "$.id");
+        restablecer(tokenAdmin(), idAdmin, "otra-clave-1").andExpect(status().isConflict());
+    }
 }

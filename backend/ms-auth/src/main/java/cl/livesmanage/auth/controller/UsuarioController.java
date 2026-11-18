@@ -2,6 +2,7 @@ package cl.livesmanage.auth.controller;
 
 import cl.livesmanage.auth.dto.CambioActivo;
 import cl.livesmanage.auth.dto.EdicionUsuario;
+import cl.livesmanage.auth.dto.NuevaContrasena;
 import cl.livesmanage.auth.dto.NuevoUsuario;
 import cl.livesmanage.auth.dto.UsuarioDto;
 import cl.livesmanage.auth.service.UsuarioService;
@@ -48,6 +49,14 @@ public class UsuarioController {
     @PutMapping("/{id}")
     public ResponseEntity<UsuarioDto> editar(@PathVariable String id, @Valid @RequestBody EdicionUsuario datos, @AuthenticationPrincipal Jwt jwt) {
         return ResponseEntity.ok(usuarioService.editar(id, datos, jwt.getSubject()));
+    }
+
+    @Operation(summary = "Restablecer la contraseña de otro usuario (D-49)", description = "409 si es la propia: esa se cambia en /api/auth/contrasena.")
+    @PutMapping("/{id}/contrasena")
+    public ResponseEntity<Void> restablecerContrasena(@PathVariable String id, @Valid @RequestBody NuevaContrasena datos,
+            @AuthenticationPrincipal Jwt jwt) {
+        usuarioService.restablecerContrasena(id, datos.contrasena(), jwt.getSubject());
+        return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "Desactivar o reactivar", description = "409 si la Admin intenta desactivarse a sí misma.")

@@ -32,6 +32,8 @@ Las imágenes son de la versión de celular, que es la que se usa durante el liv
 
 La sesión dura 8 horas, suficiente para un live y su cierre. Para salir, abre el menú y toca **Cerrar sesión**.
 
+**Cambiar tu contraseña:** en el menú, toca **Cambiar mi contraseña**, escribe la actual y dos veces la nueva (al menos 8 caracteres). La próxima vez que entres usa la nueva.
+
 <img src="manual/03-menu.png" alt="Menú principal" width="280">
 
 El menú (☰, arriba a la izquierda) lleva a **Lives**, **Clientas**, **Estadísticas** y, para la Admin, **Usuarios**. En el computador el menú queda fijo a la izquierda.
@@ -176,6 +178,7 @@ Arriba eliges el período: este mes, 3 meses (por defecto), 12 meses u **Otro…
 
 - **Nuevo usuario:** nombre, correo, rol (Administrador o Vendedor) y una contraseña inicial de al menos 8 caracteres.
 - **Editar:** cambia nombre, correo o rol.
+- **Contraseña:** si alguien olvidó su contraseña, toca **Contraseña** en su fila, escribe una nueva y entrégasela. Tu propia contraseña se cambia desde el menú, con **Cambiar mi contraseña**.
 - **Desactivar / Reactivar:** un usuario desactivado ya no puede entrar.
 - Nadie puede desactivarse ni cambiarse el rol a sí mismo.
 
@@ -187,6 +190,7 @@ La vendedora no ve esta pantalla. Si entra a la dirección directamente, la app 
 | --- | --- |
 | "No se pudo conectar con el servidor" | Revisa tu conexión a internet. Si sigue, avisa a quien administra la app. Lo que escribiste en el campo de anotación no se pierde. |
 | La app vuelve a pedir la contraseña | La sesión dura 8 horas. Vuelve a entrar. |
+| La vendedora olvidó su contraseña | La Admin la restablece en **Usuarios** → **Contraseña**. |
 | "Demasiados intentos" al entrar | Hubo 10 contraseñas mal escritas seguidas. Espera unos minutos. |
 | Anoté a la clienta equivocada | Toca **Deshacer** en el aviso, o usa el lápiz → **Cambiar clienta**. |
 | Una prenda se anotó de más | Toca el precio para cancelarlo. |

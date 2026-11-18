@@ -88,6 +88,14 @@ export function Layout() {
         </ul>
         <div className="mt-2 border-t border-gray-200 pt-2">
           <p className="truncate px-3 py-1 text-sm text-gray-500">{usuario.nombre}</p>
+          <NavLink
+            to="/mi-contrasena"
+            className={({ isActive }) =>
+              `flex min-h-11 items-center rounded-md px-3 text-base ${isActive ? 'bg-marca-100 font-semibold text-marca-700' : 'hover:bg-gray-100'}`
+            }
+          >
+            Cambiar mi contraseña
+          </NavLink>
           <button
             type="button"
             onClick={salir}
